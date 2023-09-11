@@ -1,0 +1,20 @@
+#outer-container {
+    height: calc(100vh - 130px);
+    text-align: center;
+    color:white;
+}
+
+.card-header {
+    background-color: #9EB384;
+}
+
+select {
+    width: 100px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px;
+    margin: 0 0 0 10px;
+    background-color: #f7f7f7; /* Set background color */
+    color: #333;
+}

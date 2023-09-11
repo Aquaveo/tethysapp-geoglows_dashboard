@@ -1,0 +1,56 @@
+{% extends "tethys_apps/app_no_nav.html" %}
+{% load tethys_gizmos static %}
+
+{% block app_content%}
+<div class="container-fluid" id="outer-container">
+  <div class="row h-100">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <label>Country: </label>
+          <select>
+            <option>1</option>
+            <option>2</option>
+          </select>
+        </div>
+        <div class="card-body">map</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-50">
+        <div class="card-header">
+          <label>Chart1: </label>
+          <select>
+            <option>1</option>
+            <option>2</option>
+          </select>
+          <select>
+            <option>Daily</option>
+            <option>Culmulative</option>
+          </select>
+        </div>
+        <div class="card-body">plot1</div>
+      </div>
+      <div class="card h-50">
+        <div class="card-header">
+          <label>Chart2: </label>
+          <select>
+            <option>1</option>
+            <option>2</option>
+          </select>
+          <select>
+            <option>Daily</option>
+            <option>Culmulative</option>
+          </select>
+        </div>
+        <div class="card-body">plot2</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+    {{ block.super }}
+    <link href="{% static 'geoglows_dashboard/css/home.css' %}" rel="stylesheet"/>
+{% endblock %}
