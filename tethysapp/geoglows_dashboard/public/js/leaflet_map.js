@@ -2,7 +2,6 @@ let mapObj;
 let startDateTime = new Date(new Date().setHours(0, 0, 0));
 let endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-
 let mapMarker = null;
 
 
@@ -48,6 +47,37 @@ let init_map = function() {
     })
     .addTo(mapObj);
 };
+
+
+function findReachID() {
+    $.ajax({
+        type: "GET",
+        async: true,
+        url:
+            URL_find_reach_id + 
+            L.Util.getParamString({
+                reach_id: $('#reach-id-input').val()
+            }),
+        success: function(response) {
+            if (mapMarker) {
+                mapObj.removeLayer(mapMarker)
+            }
+            mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj)
+            mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9)
+        },
+        error: function() {
+            alert("Unable to find the reach_id specified")
+        }
+    })
+}
+
+
+$('#search-addon').click(findReachID);
+$('#reach-id-input').keydown(event => {
+    if (event.keyCode === 13) {
+        findReachID();
+    }
+})
 
 
 $(function() {

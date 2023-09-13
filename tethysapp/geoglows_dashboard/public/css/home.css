@@ -23,6 +23,10 @@ select {
     color: #333;
 }
 
+.input-group {
+    width: 50%;
+}
+
 #leaflet-map {
     height: 100%;
 }
