@@ -33,9 +33,20 @@ let init_map = function() {
 
     mapObj.timeDimension.on('timeload', refreshLayer);
 
-    // Add Basemap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    const basemaps = {
+        "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(mapObj),    
+        "ESRI Topographic": L.esri.basemapLayer('Topographic'),
+        "ESRI Terrain": L.layerGroup(
+            [L.esri.basemapLayer('Terrain'), 
+            L.esri.basemapLayer('TerrainLabels')]
+        ),
+        "ESRI Grey": L.esri.basemapLayer('Gray'),
+    }
+
+    L.control.layers(basemaps, null, {
+        collapsed: false
     }).addTo(mapObj);
 
     // Add Esri layer

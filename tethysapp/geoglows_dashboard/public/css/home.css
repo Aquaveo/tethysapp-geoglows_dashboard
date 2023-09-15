@@ -1,11 +1,11 @@
 #outer-container {
     height: calc(100vh - 130px);
-    text-align: center;
     color:white;
 }
 
 .card-header {
     background-color: #9EB384;
+    text-align: center;
 }
 
 .card-body {
