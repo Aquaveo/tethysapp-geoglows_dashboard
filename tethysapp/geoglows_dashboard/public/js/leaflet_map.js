@@ -141,10 +141,10 @@ let findReachIDByID = function() {
 }
 
 
-$('#search-addon').click(findReachID);
+$('#search-addon').click(findReachIDByID);
 $('#reach-id-input').keydown(event => {
     if (event.keyCode === 13) {
-        findReachID();
+        findReachIDByID();
     }
 })
 
