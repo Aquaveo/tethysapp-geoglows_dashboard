@@ -1,9 +1,11 @@
 let mapObj;
+let SelectedSegment;
 let esriLayer;
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must be 4 0s?
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
+let reachID;
 
 
 let init_map = function() {
@@ -32,6 +34,7 @@ let init_map = function() {
     });
 
     mapObj.timeDimension.on('timeload', refreshLayer);
+    SelectedSegment = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
 
     const basemaps = {
         "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -58,7 +61,55 @@ let init_map = function() {
         opacity: 0.7
     })
     .addTo(mapObj);
+
+    $('.timecontrol-play').on('click', refreshLayer);
+
+    mapObj.on('click', function(event) {
+        if (mapMarker) {
+            mapObj.removeLayer(mapMarker);
+        }
+        mapMarker = L.marker(event.latlng).addTo(mapObj);
+        mapObj.flyTo(event.latlng, 10);
+        findReachIDByLatLon(event);
+    })
 };
+
+let findReachIDByLatLon = function(event) {
+    console.log("finding reach id ...");
+    L.esri.identifyFeatures({
+        url: 'https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer'
+    })
+    .on(mapObj)
+    // querying point with tolerance
+    .at([event.latlng['lat'], event.latlng['lng']])
+    .tolerance(10)  // map pixels to buffer search point
+    .precision(3)  // decimals in the returned coordinate pairs
+    .run(function (error, featureCollection) {
+        console.log(error);
+        console.log(featureCollection);
+        if (error) {
+            alert('Error finding the reach_id');
+            return
+        }
+        SelectedSegment.clearLayers();
+        SelectedSegment.addData(featureCollection.features[0].geometry);
+        reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
+        console.log(reachID);
+
+        // $.ajax({
+        //     type: 'GET',
+        //     url: URL_findUpstreamBoundaries,
+        //     data: {reachid: REACHID, project: project},
+        //     dataType: 'json',
+        //     success: function (response) {
+
+        //     },
+        //     error: function (response) {
+
+        //     },
+        // })
+    })
+}
 
 
 let refreshLayer = function() {
@@ -67,7 +118,7 @@ let refreshLayer = function() {
 }
 
 
-let findReachID = function() {
+let findReachIDByID = function() {
     $.ajax({
         type: "GET",
         async: true,
@@ -100,5 +151,4 @@ $('#reach-id-input').keydown(event => {
 
 $(function() {
     init_map();
-    $('.timecontrol-play').on('click', refreshLayer());
 })
