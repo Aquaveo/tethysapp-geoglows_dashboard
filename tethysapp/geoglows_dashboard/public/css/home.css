@@ -1,11 +1,15 @@
 #outer-container {
     height: calc(100vh - 130px);
-    text-align: center;
     color:white;
 }
 
 .card-header {
     background-color: #9EB384;
+    text-align: center;
+}
+
+.card-body {
+    padding: 0 0;
 }
 
 select {
@@ -17,4 +21,12 @@ select {
     margin: 0 0 0 10px;
     background-color: #f7f7f7; /* Set background color */
     color: #333;
+}
+
+.input-group {
+    width: 50%;
+}
+
+#leaflet-map {
+    height: 100%;
 }
