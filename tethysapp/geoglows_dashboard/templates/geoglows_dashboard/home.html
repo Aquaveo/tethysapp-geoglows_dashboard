@@ -1,34 +1,22 @@
 {% extends "tethys_apps/app_no_nav.html" %}
 {% load tethys_gizmos static %}
 
-{% block app_content %}
+{% block app_content%}
 <div class="container-fluid" id="outer-container">
   <div class="row h-100">
-    <div class="col-md-7">
+    <div class="col-md-6">
       <div class="card h-100">
         <div class="card-header">
-          <div class="row">
-            <div class="col-md-6" id="country-select">
-              <label>Country: </label>
-              <select>
-                <option>1</option>
-                <option>2</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <div class="input-group rounded">
-                <input type="search" class="form-control rounded" id="reach-id-input" placeholder="Search Reach ID" aria-label="Search" aria-describedby="search-addon" />
-                <span class="input-group-text border-0" id="search-addon">
-                  <i class="fas fa-search"></i>
-                </span>
-              </div>
-            </div>
-          </div>
+          <label>Country: </label>
+          <select>
+            <option>1</option>
+            <option>2</option>
+          </select>
         </div>
-        <div class="card-body"><div id="leaflet-map"></div></div>
+        <div class="card-body">map</div>
       </div>
     </div>
-    <div class="col-md-5">
+    <div class="col-md-6">
       <div class="card h-50">
         <div class="card-header">
           <label>Chart1: </label>
@@ -64,26 +52,5 @@
 
 {% block styles %}
     {{ block.super }}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-timedimension@1.1.1/dist/leaflet.timedimension.control.min.css" />
     <link href="{% static 'geoglows_dashboard/css/home.css' %}" rel="stylesheet"/>
-{% endblock %}
-
-{% block scripts %}
-  {{ block.super }}
-  <script src="{% static 'geoglows_dashboard/js/leaflet_map.js' %}" type="text/javascript"></script>
-{% endblock %}
-
-{% block global_scripts %}
-  {{ block.super }}
-  <script>
-    let URL_find_reach_id = "{% url 'geoglows_dashboard:find_reach_id' %}"
-  </script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/iso8601-js-period@0.2.1/iso8601.min.js"></script>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/leaflet-timedimension@1.1.1/dist/leaflet.timedimension.min.js"></script>
-  <!-- Load Esri Leaflet Vector from CDN -->
-  <script src="https://unpkg.com/esri-leaflet-vector@4.1.0/dist/esri-leaflet-vector.js" crossorigin=""></script>
 {% endblock %}

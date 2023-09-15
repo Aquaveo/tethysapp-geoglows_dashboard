@@ -1,8 +1,6 @@
 from django.shortcuts import render
 from tethys_sdk.routing import controller
 from tethys_sdk.gizmos import Button
-import geoglows.streamflow as gsf
-from django.http import JsonResponse
 
 @controller
 def home(request):
@@ -74,10 +72,3 @@ def home(request):
     }
 
     return render(request, 'geoglows_dashboard/home.html', context)
-
-
-@controller(url='findReachID')
-def find_reach_id(request):
-    reach_id = request.GET['reach_id']
-    lat, lon = gsf.reach_to_latlon(int(reach_id))
-    return JsonResponse({'lat': lat, 'lon': lon})
