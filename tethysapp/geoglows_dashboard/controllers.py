@@ -3,6 +3,7 @@ from tethys_sdk.routing import controller
 from tethys_sdk.gizmos import Button
 import geoglows.streamflow as gsf
 from django.http import JsonResponse
+import requests
 
 @controller
 def home(request):
@@ -81,3 +82,15 @@ def find_reach_id(request):
     reach_id = request.GET['reach_id']
     lat, lon = gsf.reach_to_latlon(int(reach_id))
     return JsonResponse({'lat': lat, 'lon': lon})
+
+
+@controller(name='getAvailableDates', url='getAvailableDates')
+def get_available_dates(request):
+    reach_id = request.GET['reach_id']
+    s = requests.Session()
+    dates = gsf.available_dates(reach_id, s=s)
+    s.close()
+
+    return JsonResponse(dict(
+        dates=list(map(lambda x: x.split(".")[0], dates["available_dates"])),
+    ))

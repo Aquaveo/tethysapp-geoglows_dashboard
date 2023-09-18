@@ -73,12 +73,14 @@
 {% block scripts %}
   {{ block.super }}
   <script src="{% static 'geoglows_dashboard/js/leaflet_map.js' %}" type="text/javascript"></script>
+  <script src="{% static 'geoglows_dashboard/js/plots.js' %}" type="module"></script>
 {% endblock %}
 
 {% block global_scripts %}
   {{ block.super }}
   <script>
     let URL_find_reach_id = "{% url 'geoglows_dashboard:find_reach_id' %}"
+    let URL_getAvailableDates = "{% url 'geoglows_dashboard:getAvailableDates' %}";
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>

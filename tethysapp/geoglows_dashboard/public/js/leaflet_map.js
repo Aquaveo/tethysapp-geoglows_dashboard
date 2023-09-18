@@ -5,7 +5,6 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
-let reachID;
 
 
 let init_map = function() {
@@ -70,46 +69,15 @@ let init_map = function() {
         }
         mapMarker = L.marker(event.latlng).addTo(mapObj);
         mapObj.flyTo(event.latlng, 10);
-        findReachIDByLatLon(event);
+        findReachIDByLatLon(event)
+            .then(function(reachID) {
+                setupDatePicker(reachID);
+            })
+            .catch(error => {
+                console.error("Error: ", error);
+            })
     })
 };
-
-let findReachIDByLatLon = function(event) {
-    console.log("finding reach id ...");
-    L.esri.identifyFeatures({
-        url: 'https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer'
-    })
-    .on(mapObj)
-    // querying point with tolerance
-    .at([event.latlng['lat'], event.latlng['lng']])
-    .tolerance(10)  // map pixels to buffer search point
-    .precision(3)  // decimals in the returned coordinate pairs
-    .run(function (error, featureCollection) {
-        console.log(error);
-        console.log(featureCollection);
-        if (error) {
-            alert('Error finding the reach_id');
-            return
-        }
-        SelectedSegment.clearLayers();
-        SelectedSegment.addData(featureCollection.features[0].geometry);
-        reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
-        console.log(reachID);
-
-        // $.ajax({
-        //     type: 'GET',
-        //     url: URL_findUpstreamBoundaries,
-        //     data: {reachid: REACHID, project: project},
-        //     dataType: 'json',
-        //     success: function (response) {
-
-        //     },
-        //     error: function (response) {
-
-        //     },
-        // })
-    })
-}
 
 
 let refreshLayer = function() {
@@ -152,3 +120,63 @@ $('#reach-id-input').keydown(event => {
 $(function() {
     init_map();
 })
+
+
+let findReachIDByLatLon = function(event) {
+    return new Promise(function(resolve, reject) {
+        L.esri.identifyFeatures({
+            url: 'https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer'
+        })
+        .on(mapObj)
+        // querying point with tolerance
+        .at([event.latlng['lat'], event.latlng['lng']])
+        .tolerance(10)  // map pixels to buffer search point
+        .precision(3)  // decimals in the returned coordinate pairs
+        .run(function (error, featureCollection) {
+            if (error) {
+                reject('Error finding the reach_id');
+            } else {
+                // draw the stream on the map
+                SelectedSegment.clearLayers();
+                SelectedSegment.addData(featureCollection.features[0].geometry);
+                let reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
+                console.log("reach_id: " + reachID);
+                resolve(reachID);
+            }
+        })
+    })
+}
+
+////////////////////////////
+
+function setupDatePicker(reachID) {
+
+    $.ajax({
+        type: "GET",
+        async: true,
+        url: URL_getAvailableDates + L.Util.getParamString({
+            reach_id: reachID
+        }),
+        success: function(response) {
+            let dates = response["dates"]
+            let latestAvailableDate = dates.sort(
+                (a, b) => parseFloat(b) - parseFloat(a)
+            )[0]
+            let selectedDate = new Date(
+                latestAvailableDate.slice(0, 4),
+                parseInt(latestAvailableDate.slice(4, 6)) - 1,
+                latestAvailableDate.slice(6, 8)
+            )
+            let currentDate = selectedDate
+            console.log(latestAvailableDate);
+            console.log(selectedDate);
+            console.log(currentDate);
+            // TODO add feature: the user can change the forecast_date
+            // getForecastData()
+        },
+        error: function() {
+            console.log("fail to get available dates")
+            REACHID = null
+        }
+    })
+}
