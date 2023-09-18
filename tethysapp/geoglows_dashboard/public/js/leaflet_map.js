@@ -150,33 +150,33 @@ let findReachIDByLatLon = function(event) {
 ////////////////////////////
 
 function setupDatePicker(reachID) {
-
-    $.ajax({
-        type: "GET",
-        async: true,
-        url: URL_getAvailableDates + L.Util.getParamString({
-            reach_id: reachID
-        }),
-        success: function(response) {
-            let dates = response["dates"]
-            let latestAvailableDate = dates.sort(
-                (a, b) => parseFloat(b) - parseFloat(a)
-            )[0]
-            let selectedDate = new Date(
-                latestAvailableDate.slice(0, 4),
-                parseInt(latestAvailableDate.slice(4, 6)) - 1,
-                latestAvailableDate.slice(6, 8)
-            )
-            let currentDate = selectedDate
-            console.log(latestAvailableDate);
-            console.log(selectedDate);
-            console.log(currentDate);
-            // TODO add feature: the user can change the forecast_date
-            // getForecastData()
-        },
-        error: function() {
-            console.log("fail to get available dates")
-            REACHID = null
-        }
+    return new Promise(function(resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getAvailableDates + L.Util.getParamString({
+                reach_id: reachID
+            }),
+            success: function(response) {
+                let dates = response["dates"]
+                let latestAvailableDate = dates.sort(
+                    (a, b) => parseFloat(b) - parseFloat(a)
+                )[0]
+                let selectedDate = new Date(
+                    latestAvailableDate.slice(0, 4),
+                    parseInt(latestAvailableDate.slice(4, 6)) - 1,
+                    latestAvailableDate.slice(6, 8)
+                )
+                console.log(latestAvailableDate);
+                console.log(selectedDate);
+                // TODO add feature: the user can change the forecast_date
+                // getForecastData()
+                resolve(selectedDate);
+            },
+            error: function() {
+                console.log("fail to get available dates");
+                reject("fail to get available dates");
+            }
+        })
     })
 }
