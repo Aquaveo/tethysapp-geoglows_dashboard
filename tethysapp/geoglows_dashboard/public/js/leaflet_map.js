@@ -71,7 +71,10 @@ let init_map = function() {
         mapObj.flyTo(event.latlng, 10);
         findReachIDByLatLon(event)
             .then(function(reachID) {
-                setupDatePicker(reachID);
+                return setupDatePicker(reachID);
+            })
+            .then(function(data) {
+                getForecastData(data);
             })
             .catch(error => {
                 console.error("Error: ", error);
@@ -170,13 +173,44 @@ function setupDatePicker(reachID) {
                 console.log(latestAvailableDate);
                 console.log(selectedDate);
                 // TODO add feature: the user can change the forecast_date
-                // getForecastData()
-                resolve(selectedDate);
+                resolve({'reachID': reachID, 'selectedDate': selectedDate});
             },
             error: function() {
                 console.log("fail to get available dates");
                 reject("fail to get available dates");
             }
         })
+    })
+}
+
+function getFormattedDate(date) {
+    return `${date.getFullYear()}${("0" + (date.getMonth() + 1)).slice(-2)}${(
+        "0" + date.getDate()
+    ).slice(-2)}.00`
+}
+
+
+function getForecastData(data) {
+    let reachID = data.reachID, selectedDate = data.selectedDate;
+    let startDate = new Date();
+    let dateOffset = 24 * 60 * 60 * 1000 * 7;
+    startDate.setTime(selectedDate.getTime() - dateOffset);
+    console.log(reachID, selectedDate, startDate);
+    $.ajax({
+        type: "GET",
+        async: true,
+        url: URL_getForecastData + L.Util.getParamString({
+            reach_id: reachID,
+            end_date: getFormattedDate(selectedDate),
+            start_date: getFormattedDate(startDate)
+        }),
+        success: function(response) {
+            console.log("success in getting forecast data!");
+            console.log(response);
+            $("#plot1").html(response["plot"])
+        },
+        error: function() {
+            console.e("fail to get forecast data");
+        }
     })
 }
