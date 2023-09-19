@@ -75,6 +75,7 @@ let init_map = function() {
             })
             .then(function(data) {
                 getForecastData(data);
+                getHistoricalData(data);
             })
             .catch(error => {
                 console.error("Error: ", error);
@@ -170,7 +171,6 @@ function setupDatePicker(reachID) {
                     parseInt(latestAvailableDate.slice(4, 6)) - 1,
                     latestAvailableDate.slice(6, 8)
                 )
-                console.log(latestAvailableDate);
                 console.log(selectedDate);
                 // TODO add feature: the user can change the forecast_date
                 resolve({'reachID': reachID, 'selectedDate': selectedDate});
@@ -206,11 +206,28 @@ function getForecastData(data) {
         }),
         success: function(response) {
             console.log("success in getting forecast data!");
-            console.log(response);
-            $("#plot1").html(response["plot"])
+            $("#plot1").html(response["plot"]);
         },
         error: function() {
-            console.e("fail to get forecast data");
+            console.error("fail to get forecast data");
+        }
+    })
+}
+
+
+function getHistoricalData(data) {
+    let reachID = data.reachID;
+    $.ajax({
+        type: "GET",
+        async: true,
+        url: URL_getHistoricalData + L.Util.getParamString({
+            reach_id: reachID
+        }),
+        success: function(response) {
+            $("#plot2").html(response["plot"]);
+        },
+        error: function() {
+            console.error("fail to get historical data");
         }
     })
 }
