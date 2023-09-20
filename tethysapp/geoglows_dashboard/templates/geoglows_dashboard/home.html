@@ -29,33 +29,49 @@
       </div>
     </div>
     <div class="col-md-5">
-      <div class="card h-50">
+      <div class="card h-50 plot-card">
         <div class="card-header">
           <label>Chart1: </label>
-          <select>
-            <option>1</option>
-            <option>2</option>
+          <select class="plot-select">
+            <option value="forecast" selected>Forecast</option>
+            <option value="historical">Historical</option>
+            <option value="flow-duration">Flow Duration</option>
           </select>
           <select>
             <option>Daily</option>
             <option>Culmulative</option>
           </select>
         </div>
-        <div class="card-body h-100" id="plot1"></div>
+        <div class="card-body h-100">
+          <div class="spinner">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div class="plot-container">Please select a stream</div>
+        </div>
       </div>
-      <div class="card h-50 ">
+      <div class="card h-50 plot-card">
         <div class="card-header">
           <label>Chart2: </label>
-          <select>
-            <option>1</option>
-            <option>2</option>
+          <select class="plot-select">
+            <option value="forecast">Forecast</option>
+            <option value="historical" selected>Historical</option>
+            <option value="flow-duration">Flow Duration</option>
           </select>
           <select>
             <option>Daily</option>
             <option>Culmulative</option>
           </select>
         </div>
-        <div class="card-body h-100" id="plot2"></div>
+        <div class="card-body h-100">
+          <div class="spinner">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div class="plot-container">Please select a stream</div>
+        </div>
       </div>
     </div>
   </div>

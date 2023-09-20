@@ -5,6 +5,11 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
+let plotData = {
+    "forecast": null,
+    "historical": null,
+    "flow-duration": null
+};
 
 
 let init_map = function() {
@@ -32,7 +37,7 @@ let init_map = function() {
         },
     });
 
-    mapObj.timeDimension.on('timeload', refreshLayer);
+    mapObj.timeDimension.on('timeload', refreshMapLayer);
     SelectedSegment = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
 
     const basemaps = {
@@ -61,7 +66,15 @@ let init_map = function() {
     })
     .addTo(mapObj);
 
-    $('.timecontrol-play').on('click', refreshLayer);
+    $('.timecontrol-play').on('click', refreshMapLayer);
+
+    $(".plot-card").each(function(index, card) {
+        let plotSelect = $(card).find(".plot-select");
+        let plotContainer = $(card).find(".plot-container");
+        plotSelect.on("change", function() {
+            plotContainer.html(plotData[plotSelect.val()]);
+        })        
+    })
 
     mapObj.on('click', function(event) {
         if (mapMarker) {
@@ -69,22 +82,27 @@ let init_map = function() {
         }
         mapMarker = L.marker(event.latlng).addTo(mapObj);
         mapObj.flyTo(event.latlng, 10);
+        showPlots(false);
         findReachIDByLatLon(event)
             .then(function(reachID) {
                 return setupDatePicker(reachID);
             })
             .then(function(data) {
-                getForecastData(data);
-                getHistoricalData(data);
+                return Promise.all([getForecastData(data), getHistoricalData(data)])
+            })
+            .then(function() {
+                showPlots(true);
+                drawPlots();
             })
             .catch(error => {
-                console.error("Error: ", error);
+                alert(error);
+                showStreamSelectionMessage();
             })
     })
 };
 
 
-let refreshLayer = function() {
+let refreshMapLayer = function() {
     let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
     esriLayer.setTimeRange(sliderTime, endDateTime);
 }
@@ -137,14 +155,13 @@ let findReachIDByLatLon = function(event) {
         .tolerance(10)  // map pixels to buffer search point
         .precision(3)  // decimals in the returned coordinate pairs
         .run(function (error, featureCollection) {
-            if (error) {
-                reject('Error finding the reach_id');
+            if (error || featureCollection.features.length == 0) {
+                reject(new Error("Fail to find the reach_id"));
             } else {
                 // draw the stream on the map
                 SelectedSegment.clearLayers();
                 SelectedSegment.addData(featureCollection.features[0].geometry);
                 let reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
-                console.log("reach_id: " + reachID);
                 resolve(reachID);
             }
         })
@@ -191,43 +208,89 @@ function getFormattedDate(date) {
 
 
 function getForecastData(data) {
-    let reachID = data.reachID, selectedDate = data.selectedDate;
-    let startDate = new Date();
-    let dateOffset = 24 * 60 * 60 * 1000 * 7;
-    startDate.setTime(selectedDate.getTime() - dateOffset);
-    console.log(reachID, selectedDate, startDate);
-    $.ajax({
-        type: "GET",
-        async: true,
-        url: URL_getForecastData + L.Util.getParamString({
-            reach_id: reachID,
-            end_date: getFormattedDate(selectedDate),
-            start_date: getFormattedDate(startDate)
-        }),
-        success: function(response) {
-            console.log("success in getting forecast data!");
-            $("#plot1").html(response["plot"]);
-        },
-        error: function() {
-            console.error("fail to get forecast data");
-        }
+    return new Promise(function(resolve, reject) {
+        let reachID = data.reachID, selectedDate = data.selectedDate;
+        let startDate = new Date();
+        let dateOffset = 24 * 60 * 60 * 1000 * 7;
+        startDate.setTime(selectedDate.getTime() - dateOffset);
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getForecastData + L.Util.getParamString({
+                reach_id: reachID,
+                end_date: getFormattedDate(selectedDate),
+                start_date: getFormattedDate(startDate)
+            }),
+            success: function(response) {
+                console.log("success in getting forecast data!");
+                plotData["forecast"] = response["plot"];
+                resolve("success in getting forecast data!")
+            },
+            error: function() {
+                console.error("fail to get forecast data");
+                reject("fail to get forecast data");
+            }
+        })
     })
 }
 
 
 function getHistoricalData(data) {
-    let reachID = data.reachID;
-    $.ajax({
-        type: "GET",
-        async: true,
-        url: URL_getHistoricalData + L.Util.getParamString({
-            reach_id: reachID
-        }),
-        success: function(response) {
-            $("#plot2").html(response["plot"]);
-        },
-        error: function() {
-            console.error("fail to get historical data");
-        }
+    return new Promise(function (resolve, reject) {
+        let reachID = data.reachID;
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getHistoricalData + L.Util.getParamString({
+                reach_id: reachID
+            }),
+            success: function(response) {
+                plotData["historical"] = response["plot"];
+                plotData["flow-duration"] = response["fdp"];
+                console.log("success in getting historical and flow duration data!");
+                resolve("success in getting historical and flow duration data!");
+            },
+            error: function() {
+                console.error("fail to get historical and flow duration data");
+                reject("fail to get historical and flow duration data")
+            }
+        })
     })
+}
+
+function drawPlots() {
+    $(".plot-card").each(function(index, card) {
+        let plotSelect = $(card).find(".plot-select");
+        let plotContainer = $(card).find(".plot-container");
+        let plotContent = plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
+        plotContainer.html(plotContent);
+    });
+}
+
+
+function showPlots(show) {
+    if (show) {
+        $(".plot-container").css("display", "flex");
+        showSpinners(!show);
+    } else {
+        $(".plot-container").css("display", "none");
+        showSpinners(!show);
+    }
+}
+
+
+function showSpinners(show) {
+    if (show) {
+        $(".spinner").css("display", "flex");
+    } else {
+        $(".spinner").css("display", "none");
+    }
+}
+
+
+function showStreamSelectionMessage() {
+    $(".plot-card").each(function(index, card) {
+        $(card).find(".plot-container").html("Please select a stream");
+    })
+    showPlots(true);
 }

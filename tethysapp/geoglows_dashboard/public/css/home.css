@@ -34,3 +34,18 @@ select {
 #leaflet-map {
     height: 100%;
 }
+
+.spinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.plot-container {
+    color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}

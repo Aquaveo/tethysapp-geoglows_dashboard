@@ -155,5 +155,6 @@ def get_historical_data(request):
             config={'autosizable': True, 'responsive': True},
             output_type='div',
             include_plotlyjs=False
-        )
+        ),
+        fdp=gpp.flow_duration_curve(hist, titles=title_headers, outformat='plotly_html'),
     ))
