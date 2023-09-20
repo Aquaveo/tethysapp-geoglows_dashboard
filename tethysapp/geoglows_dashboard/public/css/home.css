@@ -1,5 +1,9 @@
-#outer-container {
+#inner-app-content {
     height: calc(100vh - 130px);
+}
+
+#outer-container {
+    height: 100%;
     color:white;
 }
 
@@ -13,7 +17,7 @@
 }
 
 select {
-    width: 100px;
+    width: 150px;
     font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 5px;
@@ -28,5 +32,20 @@ select {
 }
 
 #leaflet-map {
+    height: 100%;
+}
+
+.spinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.plot-container {
+    color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     height: 100%;
 }

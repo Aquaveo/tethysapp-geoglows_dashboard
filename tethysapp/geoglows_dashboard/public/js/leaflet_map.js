@@ -5,7 +5,11 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
-let reachID;
+let plotData = {
+    "forecast": null,
+    "historical": null,
+    "flow-duration": null
+};
 
 
 let init_map = function() {
@@ -33,7 +37,7 @@ let init_map = function() {
         },
     });
 
-    mapObj.timeDimension.on('timeload', refreshLayer);
+    mapObj.timeDimension.on('timeload', refreshMapLayer);
     SelectedSegment = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
 
     const basemaps = {
@@ -62,7 +66,15 @@ let init_map = function() {
     })
     .addTo(mapObj);
 
-    $('.timecontrol-play').on('click', refreshLayer);
+    $('.timecontrol-play').on('click', refreshMapLayer);
+
+    $(".plot-card").each(function(index, card) {
+        let plotSelect = $(card).find(".plot-select");
+        let plotContainer = $(card).find(".plot-container");
+        plotSelect.on("change", function() {
+            plotContainer.html(plotData[plotSelect.val()]);
+        })        
+    })
 
     mapObj.on('click', function(event) {
         if (mapMarker) {
@@ -70,49 +82,27 @@ let init_map = function() {
         }
         mapMarker = L.marker(event.latlng).addTo(mapObj);
         mapObj.flyTo(event.latlng, 10);
-        findReachIDByLatLon(event);
+        showPlots(false);
+        findReachIDByLatLon(event)
+            .then(function(reachID) {
+                return setupDatePicker(reachID);
+            })
+            .then(function(data) {
+                return Promise.all([getForecastData(data), getHistoricalData(data)])
+            })
+            .then(function() {
+                showPlots(true);
+                drawPlots();
+            })
+            .catch(error => {
+                alert(error);
+                showStreamSelectionMessage();
+            })
     })
 };
 
-let findReachIDByLatLon = function(event) {
-    console.log("finding reach id ...");
-    L.esri.identifyFeatures({
-        url: 'https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer'
-    })
-    .on(mapObj)
-    // querying point with tolerance
-    .at([event.latlng['lat'], event.latlng['lng']])
-    .tolerance(10)  // map pixels to buffer search point
-    .precision(3)  // decimals in the returned coordinate pairs
-    .run(function (error, featureCollection) {
-        console.log(error);
-        console.log(featureCollection);
-        if (error) {
-            alert('Error finding the reach_id');
-            return
-        }
-        SelectedSegment.clearLayers();
-        SelectedSegment.addData(featureCollection.features[0].geometry);
-        reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
-        console.log(reachID);
 
-        // $.ajax({
-        //     type: 'GET',
-        //     url: URL_findUpstreamBoundaries,
-        //     data: {reachid: REACHID, project: project},
-        //     dataType: 'json',
-        //     success: function (response) {
-
-        //     },
-        //     error: function (response) {
-
-        //     },
-        // })
-    })
-}
-
-
-let refreshLayer = function() {
+let refreshMapLayer = function() {
     let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
     esriLayer.setTimeRange(sliderTime, endDateTime);
 }
@@ -152,3 +142,155 @@ $('#reach-id-input').keydown(event => {
 $(function() {
     init_map();
 })
+
+
+let findReachIDByLatLon = function(event) {
+    return new Promise(function(resolve, reject) {
+        L.esri.identifyFeatures({
+            url: 'https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer'
+        })
+        .on(mapObj)
+        // querying point with tolerance
+        .at([event.latlng['lat'], event.latlng['lng']])
+        .tolerance(10)  // map pixels to buffer search point
+        .precision(3)  // decimals in the returned coordinate pairs
+        .run(function (error, featureCollection) {
+            if (error || featureCollection.features.length == 0) {
+                reject(new Error("Fail to find the reach_id"));
+            } else {
+                // draw the stream on the map
+                SelectedSegment.clearLayers();
+                SelectedSegment.addData(featureCollection.features[0].geometry);
+                let reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
+                resolve(reachID);
+            }
+        })
+    })
+}
+
+////////////////////////////
+
+function setupDatePicker(reachID) {
+    return new Promise(function(resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getAvailableDates + L.Util.getParamString({
+                reach_id: reachID
+            }),
+            success: function(response) {
+                let dates = response["dates"]
+                let latestAvailableDate = dates.sort(
+                    (a, b) => parseFloat(b) - parseFloat(a)
+                )[0]
+                let selectedDate = new Date(
+                    latestAvailableDate.slice(0, 4),
+                    parseInt(latestAvailableDate.slice(4, 6)) - 1,
+                    latestAvailableDate.slice(6, 8)
+                )
+                console.log(selectedDate);
+                // TODO add feature: the user can change the forecast_date
+                resolve({'reachID': reachID, 'selectedDate': selectedDate});
+            },
+            error: function() {
+                console.log("fail to get available dates");
+                reject("fail to get available dates");
+            }
+        })
+    })
+}
+
+function getFormattedDate(date) {
+    return `${date.getFullYear()}${("0" + (date.getMonth() + 1)).slice(-2)}${(
+        "0" + date.getDate()
+    ).slice(-2)}.00`
+}
+
+
+function getForecastData(data) {
+    return new Promise(function(resolve, reject) {
+        let reachID = data.reachID, selectedDate = data.selectedDate;
+        let startDate = new Date();
+        let dateOffset = 24 * 60 * 60 * 1000 * 7;
+        startDate.setTime(selectedDate.getTime() - dateOffset);
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getForecastData + L.Util.getParamString({
+                reach_id: reachID,
+                end_date: getFormattedDate(selectedDate),
+                start_date: getFormattedDate(startDate)
+            }),
+            success: function(response) {
+                console.log("success in getting forecast data!");
+                plotData["forecast"] = response["plot"];
+                resolve("success in getting forecast data!")
+            },
+            error: function() {
+                console.error("fail to get forecast data");
+                reject("fail to get forecast data");
+            }
+        })
+    })
+}
+
+
+function getHistoricalData(data) {
+    return new Promise(function (resolve, reject) {
+        let reachID = data.reachID;
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getHistoricalData + L.Util.getParamString({
+                reach_id: reachID
+            }),
+            success: function(response) {
+                plotData["historical"] = response["plot"];
+                plotData["flow-duration"] = response["fdp"];
+                console.log("success in getting historical and flow duration data!");
+                resolve("success in getting historical and flow duration data!");
+            },
+            error: function() {
+                console.error("fail to get historical and flow duration data");
+                reject("fail to get historical and flow duration data")
+            }
+        })
+    })
+}
+
+function drawPlots() {
+    $(".plot-card").each(function(index, card) {
+        let plotSelect = $(card).find(".plot-select");
+        let plotContainer = $(card).find(".plot-container");
+        let plotContent = plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
+        plotContainer.html(plotContent);
+    });
+}
+
+
+function showPlots(show) {
+    if (show) {
+        $(".plot-container").css("display", "flex");
+        showSpinners(!show);
+    } else {
+        $(".plot-container").css("display", "none");
+        showSpinners(!show);
+    }
+}
+
+
+function showSpinners(show) {
+    if (show) {
+        $(".spinner").css("display", "flex");
+    } else {
+        $(".spinner").css("display", "none");
+    }
+}
+
+
+function showStreamSelectionMessage() {
+    $(".plot-card").each(function(index, card) {
+        $(card).find(".plot-container").html("Please select a stream");
+    })
+    showPlots(true);
+}

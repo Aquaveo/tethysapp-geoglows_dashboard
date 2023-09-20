@@ -29,33 +29,49 @@
       </div>
     </div>
     <div class="col-md-5">
-      <div class="card h-50">
+      <div class="card h-50 plot-card">
         <div class="card-header">
           <label>Chart1: </label>
-          <select>
-            <option>1</option>
-            <option>2</option>
+          <select class="plot-select">
+            <option value="forecast" selected>Forecast</option>
+            <option value="historical">Historical</option>
+            <option value="flow-duration">Flow Duration</option>
           </select>
           <select>
             <option>Daily</option>
             <option>Culmulative</option>
           </select>
         </div>
-        <div class="card-body">plot1</div>
+        <div class="card-body h-100">
+          <div class="spinner">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div class="plot-container">Please select a stream</div>
+        </div>
       </div>
-      <div class="card h-50">
+      <div class="card h-50 plot-card">
         <div class="card-header">
           <label>Chart2: </label>
-          <select>
-            <option>1</option>
-            <option>2</option>
+          <select class="plot-select">
+            <option value="forecast">Forecast</option>
+            <option value="historical" selected>Historical</option>
+            <option value="flow-duration">Flow Duration</option>
           </select>
           <select>
             <option>Daily</option>
             <option>Culmulative</option>
           </select>
         </div>
-        <div class="card-body">plot2</div>
+        <div class="card-body h-100">
+          <div class="spinner">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div class="plot-container">Please select a stream</div>
+        </div>
       </div>
     </div>
   </div>
@@ -70,15 +86,14 @@
     <link href="{% static 'geoglows_dashboard/css/home.css' %}" rel="stylesheet"/>
 {% endblock %}
 
-{% block scripts %}
-  {{ block.super }}
-  <script src="{% static 'geoglows_dashboard/js/leaflet_map.js' %}" type="text/javascript"></script>
-{% endblock %}
 
 {% block global_scripts %}
   {{ block.super }}
   <script>
     let URL_find_reach_id = "{% url 'geoglows_dashboard:find_reach_id' %}"
+    let URL_getAvailableDates = "{% url 'geoglows_dashboard:getAvailableDates' %}";
+    let URL_getForecastData = "{% url 'geoglows_dashboard:getForecastData' %}";
+    let URL_getHistoricalData = "{% url 'geoglows_dashboard:getHistoricalData' %}";
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>
@@ -86,4 +101,12 @@
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/leaflet-timedimension@1.1.1/dist/leaflet.timedimension.min.js"></script>
   <!-- Load Esri Leaflet Vector from CDN -->
   <script src="https://unpkg.com/esri-leaflet-vector@4.1.0/dist/esri-leaflet-vector.js" crossorigin=""></script>
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
+{% endblock %}
+
+
+{% block scripts %}
+  {{ block.super }}
+  <script src="{% static 'geoglows_dashboard/js/leaflet_map.js' %}" type="text/javascript"></script>
 {% endblock %}
