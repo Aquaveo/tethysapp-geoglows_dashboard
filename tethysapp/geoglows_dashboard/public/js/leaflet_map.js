@@ -114,6 +114,7 @@ function initializeSelects() {
     })
 }
 
+
 let refreshMapLayer = function() {
     let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
     esriLayer.setTimeRange(sliderTime, endDateTime);
@@ -201,7 +202,6 @@ let findReachIDByLatLon = function(event) {
     })
 }
 
-////////////////////////////
 
 function setupDatePicker(reachID) {
     return new Promise(function(resolve, reject) {
