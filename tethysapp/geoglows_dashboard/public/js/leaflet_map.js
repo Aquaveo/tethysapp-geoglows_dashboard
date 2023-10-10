@@ -68,11 +68,15 @@ let init_map = function() {
 
     $('.timecontrol-play').on('click', refreshMapLayer);
 
+    initializeSelects();
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
         let plotContainer = $(card).find(".plot-container");
         plotSelect.on("change", function() {
-            plotContainer.html(plotData[plotSelect.val()]);
+            let value = $(this).val();
+            plotContainer.html(plotData[value]);
+            $(".plot-select").not(this).find('option').prop('disabled', false);
+            $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
         })        
     })
 
@@ -85,6 +89,7 @@ let init_map = function() {
         showPlots(false);
         findReachIDByLatLon(event)
             .then(function(reachID) {
+                $('#reach-id-input').val(reachID);
                 return setupDatePicker(reachID);
             })
             .then(function(data) {
@@ -92,6 +97,7 @@ let init_map = function() {
             })
             .then(function() {
                 showPlots(true);
+                clearPlots();
                 drawPlots();
             })
             .catch(error => {
@@ -101,6 +107,12 @@ let init_map = function() {
     })
 };
 
+function initializeSelects() {
+    $(".plot-select").each(function() {
+        let value = $(this).val();
+        $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
+    })
+}
 
 let refreshMapLayer = function() {
     let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
@@ -108,25 +120,30 @@ let refreshMapLayer = function() {
 }
 
 
-let findReachIDByID = function() {
-    $.ajax({
-        type: "GET",
-        async: true,
-        url:
-            URL_find_reach_id + 
-            L.Util.getParamString({
-                reach_id: $('#reach-id-input').val()
-            }),
-        success: function(response) {
-            if (mapMarker) {
-                mapObj.removeLayer(mapMarker)
+function findReachIDByID() {
+    return new Promise(function (resolve, reject) {
+        console.log("Searching ...");
+        $.ajax({
+            type: "GET",
+            async: true,
+            url:
+                URL_find_reach_id + 
+                L.Util.getParamString({
+                    reach_id: $('#reach-id-input').val()
+                }),
+            success: function(response) {
+                if (mapMarker) {
+                    mapObj.removeLayer(mapMarker)
+                }
+                mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj)
+                mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9)
+                resolve($('#reach-id-input').val())
+            },
+            error: function() {
+                alert("Unable to find the reach_id specified")
+                reject("Unable to find the reach_id specified")
             }
-            mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj)
-            mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9)
-        },
-        error: function() {
-            alert("Unable to find the reach_id specified")
-        }
+        })
     })
 }
 
@@ -134,7 +151,23 @@ let findReachIDByID = function() {
 $('#search-addon').click(findReachIDByID);
 $('#reach-id-input').keydown(event => {
     if (event.keyCode === 13) {
-        findReachIDByID();
+        findReachIDByID()
+        .then(function(reachID) {
+            showPlots(false);
+            return setupDatePicker(reachID);
+        })
+        .then(function(data) {
+            return Promise.all([getForecastData(data), getHistoricalData(data)])
+        })
+        .then(function() {
+            showPlots(true);
+            clearPlots();
+            drawPlots();
+        })
+        .catch(error => {
+            alert(error);
+            showStreamSelectionMessage();
+        })
     }
 })
 
@@ -258,6 +291,10 @@ function getHistoricalData(data) {
     })
 }
 
+function clearPlots() {
+    $(".plot-container").empty();
+}
+
 function drawPlots() {
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
@@ -271,11 +308,10 @@ function drawPlots() {
 function showPlots(show) {
     if (show) {
         $(".plot-container").css("display", "flex");
-        showSpinners(!show);
     } else {
         $(".plot-container").css("display", "none");
-        showSpinners(!show);
     }
+    showSpinners(!show);
 }
 
 
