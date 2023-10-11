@@ -5,7 +5,7 @@ from tethys_sdk.gizmos import Button
 import geoglows.streamflow as gsf
 import geoglows.plots as gpp
 import requests
-import hydrostats.data
+from .gee.plots import flow_regime
 
 
 from plotly.offline import plot as offline_plot
@@ -157,4 +157,5 @@ def get_historical_data(request):
             include_plotlyjs=False
         ),
         fdp=gpp.flow_duration_curve(hist, titles=title_headers, outformat='plotly_html'),
+        flow_regime=flow_regime(hist, 2013)
     ))

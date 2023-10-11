@@ -8,7 +8,8 @@ let mapMarker = null;
 let plotData = {
     "forecast": null,
     "historical": null,
-    "flow-duration": null
+    "flow-duration": null,
+    "flow-regime": null
 };
 
 
@@ -280,6 +281,7 @@ function getHistoricalData(data) {
             success: function(response) {
                 plotData["historical"] = response["plot"];
                 plotData["flow-duration"] = response["fdp"];
+                plotData["flow-regime"] = response["flow_regime"]
                 console.log("success in getting historical and flow duration data!");
                 resolve("success in getting historical and flow duration data!");
             },
