@@ -151,6 +151,7 @@ def get_historical_data(request):
         margin={"t": 0},
     )
     return JsonResponse(dict(
+        hist=hist,
         plot = offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
@@ -161,3 +162,9 @@ def get_historical_data(request):
         flow_regime=flow_regime(hist, int(selected_year)) 
     ))
     
+
+@controller(name='updateFlowRegime', url='updateFlowRegime')
+def update_flow_regime(request):
+    hist = request['hist']
+    selected_year = request['selected_year']
+    return JsonResponse(dict(flow_regime=flow_regime(hist, int(selected_year))))

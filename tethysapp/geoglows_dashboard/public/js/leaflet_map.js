@@ -9,6 +9,8 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
+
+let historicalData = null;
 let plotData = {
     "forecast": null,
     "historical": null,
@@ -92,6 +94,9 @@ let init_map = function() {
     });
     $('#yearpicker').on('changeDate', function(e) {
         selectedYear = e.date.getFullYear();
+        if (plotData["flow-regime"] != null) {
+            updateFlowRegime(selectedYear)
+        }
         $('#yearpicker').datepicker('hide');
     });
 
@@ -294,11 +299,12 @@ function getHistoricalData(data) {
                 selected_year: selectedYear
             }),
             success: function(response) {
+                historicalData = response["hist"]
                 plotData["historical"] = response["plot"];
                 plotData["flow-duration"] = response["fdp"];
-                plotData["flow-regime"] = response["flow_regime"]
-                console.log("success in getting historical and flow duration data!");
-                resolve("success in getting historical and flow duration data!");
+                plotData["flow-regime"] = response["flow_regime"];
+                console.log("success in getting historical data!");
+                resolve("success in getting historical data!");
             },
             error: function() {
                 console.error("fail to get historical and flow duration data");
@@ -307,6 +313,26 @@ function getHistoricalData(data) {
         })
     })
 }
+
+
+function updateFlowRegime(year) {
+    $.ajax({
+        type: "GET",
+        async: false,
+        url: URL_updateFlowRegime + L.Util.getParamString({
+            hist: historicalData,
+            selected_year: year
+        }),
+        succsess: function(response) {
+            plotData["flow-regime"] = response["flow_regime"];
+            console.log("success in drawing new data!");
+        },
+        error: function() {
+            console.error("fail to draw the flow regime plot");
+        }
+    })
+}
+
 
 function clearPlots() {
     $(".plot-container").empty();
