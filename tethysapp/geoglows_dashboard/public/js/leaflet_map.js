@@ -1,6 +1,10 @@
 let mapObj;
 let SelectedSegment;
 let esriLayer;
+
+const currentYear = new Date().getFullYear();
+let selectedYear;
+
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must be 4 0s?
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
@@ -80,6 +84,16 @@ let init_map = function() {
             $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
         })        
     })
+
+    $('#yearpicker').datepicker({
+        minViewMode: 2,
+        format: 'yyyy',
+        endDate: currentYear.toString()
+    });
+    $('#yearpicker').on('changeDate', function(e) {
+        selectedYear = e.date.getFullYear();
+        $('#yearpicker').datepicker('hide');
+    });
 
     mapObj.on('click', function(event) {
         if (mapMarker) {
@@ -276,7 +290,8 @@ function getHistoricalData(data) {
             type: "GET",
             async: true,
             url: URL_getHistoricalData + L.Util.getParamString({
-                reach_id: reachID
+                reach_id: reachID,
+                selected_year: selectedYear
             }),
             success: function(response) {
                 plotData["historical"] = response["plot"];

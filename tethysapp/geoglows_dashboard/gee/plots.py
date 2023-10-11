@@ -26,7 +26,7 @@ def stream_estimate(df, val):
     return streamflow_estimate
 
 
-def flow_regime(hist, desired_year):
+def flow_regime(hist, selected_year):
     """_summary_
 
     Args:
@@ -36,7 +36,7 @@ def flow_regime(hist, desired_year):
     """
     
     hdf = hist.copy()
-    hdf = hdf[hdf.index.year >= 1991]  # TODO maybe delete this?
+    hdf = hdf[hdf.index.year >= 1991]
     hdf = hdf[hdf.index.year <= 2020]
 
     highflow = []
@@ -59,7 +59,7 @@ def flow_regime(hist, desired_year):
         below_normal.append(stream_estimate(filtered_month_mean, 0.13))
         # lowflow.append(stream_estimate(filtered_month_mean, 0.87))
         
-    year_data = hist[hist.index.year == desired_year]
+    year_data = hist[hist.index.year == selected_year]
     months = ["Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"]
     dataframe = pd.DataFrame(months)
     dataframe["high"] = highflow
@@ -85,7 +85,7 @@ def flow_regime(hist, desired_year):
 
 
     layout = go.Layout(
-        title=f"{desired_year} Monthly Streamflow with HydroSOS",
+        title=f"{selected_year} Monthly Streamflow with HydroSOS",
         yaxis={'title': 'Discharge'},
         xaxis={'title': 'Month of Year'},
     )
