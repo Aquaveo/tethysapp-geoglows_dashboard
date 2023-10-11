@@ -138,6 +138,7 @@ def get_historical_data(request):
     # get data
     s = requests.Session()
     reach_id = request.GET['reach_id']
+    selected_year = request.GET['selected_year']
     hist = gsf.historic_simulation(reach_id, s=s)
     rper = gsf.return_periods(reach_id, s=s)
     s.close()
@@ -157,5 +158,6 @@ def get_historical_data(request):
             include_plotlyjs=False
         ),
         fdp=gpp.flow_duration_curve(hist, titles=title_headers, outformat='plotly_html'),
-        flow_regime=flow_regime(hist, 2013)
+        flow_regime=flow_regime(hist, int(selected_year)) 
     ))
+    

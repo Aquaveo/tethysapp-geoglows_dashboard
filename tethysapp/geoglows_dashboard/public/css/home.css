@@ -28,7 +28,7 @@ select {
 }
 
 .input-group {
-    width: 50%;
+    width: 70%;
 }
 
 #leaflet-map {
@@ -48,4 +48,8 @@ select {
     justify-content: center;
     align-items: center;
     height: 100%;
+}
+
+#yearpicker {
+    width: 70%;
 }
