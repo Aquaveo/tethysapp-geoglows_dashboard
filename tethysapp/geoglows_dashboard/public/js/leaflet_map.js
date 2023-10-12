@@ -272,7 +272,8 @@ function getForecastData(data) {
             url: URL_getForecastData + L.Util.getParamString({
                 reach_id: reachID,
                 end_date: getFormattedDate(selectedDate),
-                start_date: getFormattedDate(startDate)
+                start_date: getFormattedDate(startDate),
+                test: 'True'
             }),
             success: function(response) {
                 console.log("success in getting forecast data!");
@@ -296,7 +297,8 @@ function getHistoricalData(data) {
             async: true,
             url: URL_getHistoricalData + L.Util.getParamString({
                 reach_id: reachID,
-                selected_year: selectedYear
+                selected_year: selectedYear,
+                test: 'True'
             }),
             success: function(response) {
                 historicalData = response["hist"]

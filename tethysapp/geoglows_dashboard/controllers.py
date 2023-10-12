@@ -6,6 +6,8 @@ import geoglows.streamflow as gsf
 import geoglows.plots as gpp
 import requests
 from .gee.plots import flow_regime
+import os
+import pandas as pd
 
 
 from plotly.offline import plot as offline_plot
@@ -106,19 +108,35 @@ def get_available_dates(request):
     
 @controller(name='getForecastData', url='getForecastData')
 def get_forecast_data(request):
+    print(os.getcwd())
     # get data
     s = requests.Session()
     reach_id = request.GET['reach_id']
     start_date = request.GET['start_date']
     end_date = request.GET['end_date']
-    records = gsf.forecast_records(reach_id, start_date=start_date.split('.')[0], end_date=end_date.split('.')[0], s=s)
-    stats = gsf.forecast_stats(reach_id, forecast_date=end_date, s=s)
-    ensembles = gsf.forecast_ensembles(reach_id, forecast_date=end_date, s=s)
-    rperiods = gsf.return_periods(reach_id, s=s)
-
+    isTest = (request.GET['test'] == 'True')
+    
+    folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
+    files = {"records": None, "stats": None, "ensembles": None, "rperiods": None}
+    if isTest:
+        for file in files.keys():
+            if file == "rperiods":
+                files[file] = pd.read_csv(folder_path + file + ".csv", index_col=[0])
+            else:
+                files[file] = pd.read_csv(folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
+        print("all forecast data is read!")
+    else:
+        files["records"] = gsf.forecast_records(reach_id, start_date=start_date.split('.')[0], end_date=end_date.split('.')[0], s=s)
+        files["stats"] = gsf.forecast_stats(reach_id, forecast_date=end_date, s=s)
+        files["ensembles"] = gsf.forecast_ensembles(reach_id, forecast_date=end_date, s=s)
+        files["rperiods"] = gsf.return_periods(reach_id, s=s)
+        # for file in files.keys():
+        #     files[file].to_csv(folder_path + file + ".csv")
+        
+            
     s.close()
     # return json of plot html
-    plot = gpp.hydroviewer(records, stats, ensembles, rperiods, outformat='plotly')
+    plot = gpp.hydroviewer(files["records"], files["stats"], files["ensembles"], files["rperiods"], outformat='plotly')
     plot.update_layout(
         title=None,
         margin={"t": 0},
@@ -139,27 +157,42 @@ def get_historical_data(request):
     s = requests.Session()
     reach_id = request.GET['reach_id']
     selected_year = request.GET['selected_year']
-    hist = gsf.historic_simulation(reach_id, s=s)
-    rper = gsf.return_periods(reach_id, s=s)
+    isTest = request.GET['test'] == 'True'
+    
+    files = {"hist": None, "rperiods": None}
+    folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
+    if isTest:
+        for file in files.keys():
+            if file == "rperiods":
+                files[file] = pd.read_csv(folder_path + file + ".csv", index_col=[0])
+            else:
+                files[file] = pd.read_csv(folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
+        print("all historical data is read!")
+    else:
+        files["hist"] = gsf.historic_simulation(reach_id, s=s)
+        files["rperiods"] = gsf.return_periods(reach_id, s=s)
+        # for file in files.keys():
+        #     files[file].to_csv(folder_path + file + ".csv")
+            
     s.close()
     # process data
     title_headers = {'Reach ID': reach_id}
     # return json of plot html
-    plot = gpp.historic_simulation(hist, rper, titles=title_headers, outformat='plotly')
+    plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
     plot.update_layout(
         title=None,
         margin={"t": 0},
     )
     return JsonResponse(dict(
-        hist=hist,
+        hist=files["hist"],
         plot = offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
             output_type='div',
             include_plotlyjs=False
         ),
-        fdp=gpp.flow_duration_curve(hist, titles=title_headers, outformat='plotly_html'),
-        flow_regime=flow_regime(hist, int(selected_year)) 
+        fdp=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
+        flow_regime=flow_regime(files["hist"], int(selected_year)) 
     ))
     
 
