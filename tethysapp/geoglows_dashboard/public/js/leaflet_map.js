@@ -1,3 +1,5 @@
+const isTest = true;
+
 let mapObj;
 let SelectedSegment;
 let esriLayer;
@@ -10,7 +12,6 @@ const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
 
-let historicalData = null;
 let plotData = {
     "forecast": null,
     "historical": null,
@@ -18,6 +19,10 @@ let plotData = {
     "flow-regime": null
 };
 
+
+$(function() {
+    init_map();
+})
 
 let init_map = function() {
     mapObj = L.map('leaflet-map', {
@@ -117,7 +122,6 @@ let init_map = function() {
             })
             .then(function() {
                 showPlots(true);
-                clearPlots();
                 drawPlots();
             })
             .catch(error => {
@@ -182,7 +186,6 @@ $('#reach-id-input').keydown(event => {
         })
         .then(function() {
             showPlots(true);
-            clearPlots();
             drawPlots();
         })
         .catch(error => {
@@ -190,11 +193,6 @@ $('#reach-id-input').keydown(event => {
             showStreamSelectionMessage();
         })
     }
-})
-
-
-$(function() {
-    init_map();
 })
 
 
@@ -229,7 +227,8 @@ function setupDatePicker(reachID) {
             type: "GET",
             async: true,
             url: URL_getAvailableDates + L.Util.getParamString({
-                reach_id: reachID
+                reach_id: reachID,
+                is_test: isTest.toString()
             }),
             success: function(response) {
                 let dates = response["dates"]
@@ -273,7 +272,7 @@ function getForecastData(data) {
                 reach_id: reachID,
                 end_date: getFormattedDate(selectedDate),
                 start_date: getFormattedDate(startDate),
-                test: 'True'
+                is_test: isTest.toString()
             }),
             success: function(response) {
                 console.log("success in getting forecast data!");
@@ -298,7 +297,7 @@ function getHistoricalData(data) {
             url: URL_getHistoricalData + L.Util.getParamString({
                 reach_id: reachID,
                 selected_year: selectedYear,
-                test: 'True'
+                is_test: isTest.toString()
             }),
             success: function(response) {
                 historicalData = response["hist"]
@@ -309,8 +308,8 @@ function getHistoricalData(data) {
                 resolve("success in getting historical data!");
             },
             error: function() {
-                console.error("fail to get historical and flow duration data");
-                reject("fail to get historical and flow duration data")
+                console.error("fail to get historical data");
+                reject("fail to get historical data")
             }
         })
     })
@@ -322,15 +321,15 @@ function updateFlowRegime(year) {
         type: "GET",
         async: false,
         url: URL_updateFlowRegime + L.Util.getParamString({
-            hist: historicalData,
             selected_year: year
         }),
-        succsess: function(response) {
+        success: function(response) {
             plotData["flow-regime"] = response["flow_regime"];
-            console.log("success in drawing new data!");
+            drawPlots();
+            console.log("success in drawing new flow regime plot");
         },
         error: function() {
-            console.error("fail to draw the flow regime plot");
+            console.error("fail to draw new flow regime plot");
         }
     })
 }
@@ -341,6 +340,7 @@ function clearPlots() {
 }
 
 function drawPlots() {
+    clearPlots();
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
         let plotContainer = $(card).find(".plot-container");
@@ -351,11 +351,7 @@ function drawPlots() {
 
 
 function showPlots(show) {
-    if (show) {
-        $(".plot-container").css("display", "flex");
-    } else {
-        $(".plot-container").css("display", "none");
-    }
+    $(".plot-container").css("display", show ? "flex" : "none");
     showSpinners(!show);
 }
 

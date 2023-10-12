@@ -4,16 +4,17 @@ from tethys_sdk.routing import controller
 from tethys_sdk.gizmos import Button
 import geoglows.streamflow as gsf
 import geoglows.plots as gpp
-import requests
-from .gee.plots import flow_regime
-import os
-import pandas as pd
-
-
 from plotly.offline import plot as offline_plot
+import requests
+import pandas as pd
+import json
+
+from .gee.plots import flow_regime
 
 
-# from .plots import hydroviewer
+test_folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
+cache_folder_path = "tethysapp/geoglows_dashboard/public/data/cache/"
+
 
 @controller
 def home(request):
@@ -97,10 +98,18 @@ def find_reach_id(request):
 @controller(name='getAvailableDates', url='getAvailableDates')
 def get_available_dates(request):
     reach_id = request.GET['reach_id']
-    s = requests.Session()
-    dates = gsf.available_dates(reach_id, s=s)
-    s.close()
-
+    is_test = request.GET['is_test'] == 'true'
+    if is_test:
+        dates = json.load(open(test_folder_path + "dates.json"))
+    else:
+        s = requests.Session()
+        dates = gsf.available_dates(reach_id, s=s)
+        s.close()
+        
+    # cache the data
+    with open(cache_folder_path + "dates.json", "w") as file: 
+        json.dump(dates, file)
+        
     return JsonResponse(dict(
         dates=list(map(lambda x: x.split(".")[0], dates["available_dates"])),
     ))
@@ -108,30 +117,29 @@ def get_available_dates(request):
     
 @controller(name='getForecastData', url='getForecastData')
 def get_forecast_data(request):
-    print(os.getcwd())
     # get data
     s = requests.Session()
     reach_id = request.GET['reach_id']
     start_date = request.GET['start_date']
     end_date = request.GET['end_date']
-    isTest = (request.GET['test'] == 'True')
+    is_test = (request.GET['is_test'] == 'true')
     
-    folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
     files = {"records": None, "stats": None, "ensembles": None, "rperiods": None}
-    if isTest:
+    if is_test:
         for file in files.keys():
             if file == "rperiods":
-                files[file] = pd.read_csv(folder_path + file + ".csv", index_col=[0])
+                files[file] = pd.read_csv(test_folder_path + file + ".csv", index_col=[0])
             else:
-                files[file] = pd.read_csv(folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
-        print("all forecast data is read!")
+                files[file] = pd.read_csv(test_folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
     else:
         files["records"] = gsf.forecast_records(reach_id, start_date=start_date.split('.')[0], end_date=end_date.split('.')[0], s=s)
         files["stats"] = gsf.forecast_stats(reach_id, forecast_date=end_date, s=s)
         files["ensembles"] = gsf.forecast_ensembles(reach_id, forecast_date=end_date, s=s)
         files["rperiods"] = gsf.return_periods(reach_id, s=s)
-        # for file in files.keys():
-        #     files[file].to_csv(folder_path + file + ".csv")
+    
+    # cache the data
+    for file in files.keys():
+        files[file].to_csv(cache_folder_path + file + ".csv")
         
             
     s.close()
@@ -157,22 +165,22 @@ def get_historical_data(request):
     s = requests.Session()
     reach_id = request.GET['reach_id']
     selected_year = request.GET['selected_year']
-    isTest = request.GET['test'] == 'True'
+    is_test = (request.GET['is_test'] == 'true')
     
     files = {"hist": None, "rperiods": None}
-    folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
-    if isTest:
+    if is_test:
         for file in files.keys():
             if file == "rperiods":
-                files[file] = pd.read_csv(folder_path + file + ".csv", index_col=[0])
+                files[file] = pd.read_csv(test_folder_path + file + ".csv", index_col=[0])
             else:
-                files[file] = pd.read_csv(folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
-        print("all historical data is read!")
+                files[file] = pd.read_csv(test_folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
     else:
         files["hist"] = gsf.historic_simulation(reach_id, s=s)
-        files["rperiods"] = gsf.return_periods(reach_id, s=s)
-        # for file in files.keys():
-        #     files[file].to_csv(folder_path + file + ".csv")
+        files["rperiods"] = gsf.return_periods(reach_id, s=s)  # TODO read rperiods from cache folder if it exists
+    
+    # cache the data
+    for file in files.keys():
+        files[file].to_csv(cache_folder_path + file + ".csv")
             
     s.close()
     # process data
@@ -184,7 +192,6 @@ def get_historical_data(request):
         margin={"t": 0},
     )
     return JsonResponse(dict(
-        hist=files["hist"],
         plot = offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
@@ -198,6 +205,6 @@ def get_historical_data(request):
 
 @controller(name='updateFlowRegime', url='updateFlowRegime')
 def update_flow_regime(request):
-    hist = request['hist']
-    selected_year = request['selected_year']
+    selected_year = request.GET['selected_year']
+    hist = pd.read_csv(cache_folder_path + "hist.csv", parse_dates=['datetime'], index_col=[0])
     return JsonResponse(dict(flow_regime=flow_regime(hist, int(selected_year))))
