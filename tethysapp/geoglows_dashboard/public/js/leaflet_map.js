@@ -106,28 +106,29 @@ let init_map = function() {
     });
 
     mapObj.on('click', function(event) {
-        if (mapMarker) {
-            mapObj.removeLayer(mapMarker);
-        }
-        mapMarker = L.marker(event.latlng).addTo(mapObj);
-        mapObj.flyTo(event.latlng, 10);
-        showPlots(false);
-        findReachIDByLatLon(event)
-            .then(function(reachID) {
-                $('#reach-id-input').val(reachID);
-                return setupDatePicker(reachID);
-            })
-            .then(function(data) {
-                return Promise.all([getForecastData(data), getHistoricalData(data)])
-            })
-            .then(function() {
-                showPlots(true);
-                drawPlots();
-            })
-            .catch(error => {
-                alert(error);
-                showStreamSelectionMessage();
-            })
+        if (!isYearPickerEmpty()) {
+            if (mapMarker) {
+                mapObj.removeLayer(mapMarker);
+            }
+            mapMarker = L.marker(event.latlng).addTo(mapObj);
+            mapObj.flyTo(event.latlng, 10);
+            showPlots(false);
+            findReachIDByLatLon(event)
+                .then(function(reachID) {
+                    $('#reach-id-input').val(reachID);
+                    return setupDatePicker(reachID);
+                })
+                .then(function(data) {
+                    return Promise.all([getForecastData(data), getHistoricalData(data)])
+                })
+                .then(function() {
+                    drawPlots();
+                })
+                .catch(error => {
+                    alert(error);
+                    showStreamSelectionMessage();
+                })
+        }        
     })
 };
 
@@ -176,22 +177,23 @@ function findReachIDByID() {
 $('#search-addon').click(findReachIDByID);
 $('#reach-id-input').keydown(event => {
     if (event.keyCode === 13) {
-        findReachIDByID()
-        .then(function(reachID) {
-            showPlots(false);
-            return setupDatePicker(reachID);
-        })
-        .then(function(data) {
-            return Promise.all([getForecastData(data), getHistoricalData(data)])
-        })
-        .then(function() {
-            showPlots(true);
-            drawPlots();
-        })
-        .catch(error => {
-            alert(error);
-            showStreamSelectionMessage();
-        })
+        if (!isYearPickerEmpty()) {
+            findReachIDByID()
+            .then(function(reachID) {
+                showPlots(false);
+                return setupDatePicker(reachID);
+            })
+            .then(function(data) {
+                return Promise.all([getForecastData(data), getHistoricalData(data)])
+            })
+            .then(function() {
+                drawPlots();
+            })
+            .catch(error => {
+                alert(error);
+                showStreamSelectionMessage();
+            })
+        }
     }
 })
 
@@ -340,6 +342,7 @@ function clearPlots() {
 }
 
 function drawPlots() {
+    showPlots(true);
     clearPlots();
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
@@ -370,4 +373,13 @@ function showStreamSelectionMessage() {
         $(card).find(".plot-container").html("Please select a stream");
     })
     showPlots(true);
+}
+
+
+function isYearPickerEmpty() {
+    let isEmpty = $("#yearpicker").val() == "";
+    if (isEmpty) {
+        alert("Please pick a year!");
+    }
+    return isEmpty;
 }
