@@ -1,3 +1,5 @@
+const isTest = true;
+
 let mapObj;
 let SelectedSegment;
 let esriLayer;
@@ -9,6 +11,7 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapMarker = null;
+
 let plotData = {
     "forecast": null,
     "historical": null,
@@ -16,6 +19,10 @@ let plotData = {
     "flow-regime": null
 };
 
+
+$(function() {
+    init_map();
+})
 
 let init_map = function() {
     mapObj = L.map('leaflet-map', {
@@ -92,33 +99,36 @@ let init_map = function() {
     });
     $('#yearpicker').on('changeDate', function(e) {
         selectedYear = e.date.getFullYear();
+        if (plotData["flow-regime"] != null) {
+            updateFlowRegime(selectedYear)
+        }
         $('#yearpicker').datepicker('hide');
     });
 
     mapObj.on('click', function(event) {
-        if (mapMarker) {
-            mapObj.removeLayer(mapMarker);
-        }
-        mapMarker = L.marker(event.latlng).addTo(mapObj);
-        mapObj.flyTo(event.latlng, 10);
-        showPlots(false);
-        findReachIDByLatLon(event)
-            .then(function(reachID) {
-                $('#reach-id-input').val(reachID);
-                return setupDatePicker(reachID);
-            })
-            .then(function(data) {
-                return Promise.all([getForecastData(data), getHistoricalData(data)])
-            })
-            .then(function() {
-                showPlots(true);
-                clearPlots();
-                drawPlots();
-            })
-            .catch(error => {
-                alert(error);
-                showStreamSelectionMessage();
-            })
+        if (!isYearPickerEmpty()) {
+            if (mapMarker) {
+                mapObj.removeLayer(mapMarker);
+            }
+            mapMarker = L.marker(event.latlng).addTo(mapObj);
+            mapObj.flyTo(event.latlng, 10);
+            showPlots(false);
+            findReachIDByLatLon(event)
+                .then(function(reachID) {
+                    $('#reach-id-input').val(reachID);
+                    return setupDatePicker(reachID);
+                })
+                .then(function(data) {
+                    return Promise.all([getForecastData(data), getHistoricalData(data)])
+                })
+                .then(function() {
+                    drawPlots();
+                })
+                .catch(error => {
+                    alert(error);
+                    showStreamSelectionMessage();
+                })
+        }        
     })
 };
 
@@ -167,29 +177,24 @@ function findReachIDByID() {
 $('#search-addon').click(findReachIDByID);
 $('#reach-id-input').keydown(event => {
     if (event.keyCode === 13) {
-        findReachIDByID()
-        .then(function(reachID) {
-            showPlots(false);
-            return setupDatePicker(reachID);
-        })
-        .then(function(data) {
-            return Promise.all([getForecastData(data), getHistoricalData(data)])
-        })
-        .then(function() {
-            showPlots(true);
-            clearPlots();
-            drawPlots();
-        })
-        .catch(error => {
-            alert(error);
-            showStreamSelectionMessage();
-        })
+        if (!isYearPickerEmpty()) {
+            findReachIDByID()
+            .then(function(reachID) {
+                showPlots(false);
+                return setupDatePicker(reachID);
+            })
+            .then(function(data) {
+                return Promise.all([getForecastData(data), getHistoricalData(data)])
+            })
+            .then(function() {
+                drawPlots();
+            })
+            .catch(error => {
+                alert(error);
+                showStreamSelectionMessage();
+            })
+        }
     }
-})
-
-
-$(function() {
-    init_map();
 })
 
 
@@ -224,7 +229,8 @@ function setupDatePicker(reachID) {
             type: "GET",
             async: true,
             url: URL_getAvailableDates + L.Util.getParamString({
-                reach_id: reachID
+                reach_id: reachID,
+                is_test: isTest.toString()
             }),
             success: function(response) {
                 let dates = response["dates"]
@@ -267,7 +273,8 @@ function getForecastData(data) {
             url: URL_getForecastData + L.Util.getParamString({
                 reach_id: reachID,
                 end_date: getFormattedDate(selectedDate),
-                start_date: getFormattedDate(startDate)
+                start_date: getFormattedDate(startDate),
+                is_test: isTest.toString()
             }),
             success: function(response) {
                 console.log("success in getting forecast data!");
@@ -291,28 +298,52 @@ function getHistoricalData(data) {
             async: true,
             url: URL_getHistoricalData + L.Util.getParamString({
                 reach_id: reachID,
-                selected_year: selectedYear
+                selected_year: selectedYear,
+                is_test: isTest.toString()
             }),
             success: function(response) {
+                historicalData = response["hist"]
                 plotData["historical"] = response["plot"];
                 plotData["flow-duration"] = response["fdp"];
-                plotData["flow-regime"] = response["flow_regime"]
-                console.log("success in getting historical and flow duration data!");
-                resolve("success in getting historical and flow duration data!");
+                plotData["flow-regime"] = response["flow_regime"];
+                console.log("success in getting historical data!");
+                resolve("success in getting historical data!");
             },
             error: function() {
-                console.error("fail to get historical and flow duration data");
-                reject("fail to get historical and flow duration data")
+                console.error("fail to get historical data");
+                reject("fail to get historical data")
             }
         })
     })
 }
+
+
+function updateFlowRegime(year) {
+    $.ajax({
+        type: "GET",
+        async: false,
+        url: URL_updateFlowRegime + L.Util.getParamString({
+            selected_year: year
+        }),
+        success: function(response) {
+            plotData["flow-regime"] = response["flow_regime"];
+            drawPlots();
+            console.log("success in drawing new flow regime plot");
+        },
+        error: function() {
+            console.error("fail to draw new flow regime plot");
+        }
+    })
+}
+
 
 function clearPlots() {
     $(".plot-container").empty();
 }
 
 function drawPlots() {
+    showPlots(true);
+    clearPlots();
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
         let plotContainer = $(card).find(".plot-container");
@@ -323,11 +354,7 @@ function drawPlots() {
 
 
 function showPlots(show) {
-    if (show) {
-        $(".plot-container").css("display", "flex");
-    } else {
-        $(".plot-container").css("display", "none");
-    }
+    $(".plot-container").css("display", show ? "flex" : "none");
     showSpinners(!show);
 }
 
@@ -346,4 +373,13 @@ function showStreamSelectionMessage() {
         $(card).find(".plot-container").html("Please select a stream");
     })
     showPlots(true);
+}
+
+
+function isYearPickerEmpty() {
+    let isEmpty = $("#yearpicker").val() == "";
+    if (isEmpty) {
+        alert("Please pick a year!");
+    }
+    return isEmpty;
 }
