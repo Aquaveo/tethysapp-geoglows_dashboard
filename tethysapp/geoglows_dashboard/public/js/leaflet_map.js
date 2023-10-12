@@ -1,7 +1,8 @@
 const isTest = true;
+let isDrawing = false;
 
 let mapObj;
-let selectedStream, selectedCountry;
+let mapMarker, selectedStream, selectedCountry;
 let esriLayer;
 
 let countries = {};
@@ -12,7 +13,6 @@ let selectedYear;
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must be 4 0s?
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-let mapMarker = null;
 
 let plotData = {
     "forecast": null,
@@ -21,10 +21,12 @@ let plotData = {
     "flow-regime": null
 };
 
+let drawnFeatures;
 
 $(function() {
     loadCountries();
     initMap();
+    initDrawControl();
 })
 
 let initMap = function() {
@@ -116,7 +118,7 @@ let initMap = function() {
     });
 
     mapObj.on('click', function(event) {
-        if (!isYearPickerEmpty()) {
+        if (!isDrawing && !isYearPickerEmpty()) {
             if (mapMarker) {
                 mapObj.removeLayer(mapMarker);
             }
@@ -158,7 +160,7 @@ let refreshMapLayer = function() {
 
 function findReachIDByID() {
     return new Promise(function (resolve, reject) {
-        console.log("Searching ...");
+        console.log("Searching stream id...");
         $.ajax({
             type: "GET",
             async: true,
@@ -419,5 +421,35 @@ function loadCountries() {
         .catch((error) => {
             console.error("Error:", error);
         });
-
 }
+
+
+// Plot Methods
+function initDrawControl() {
+    // Initialize layer for drawn features
+    drawnFeatures = new L.FeatureGroup();
+    mapObj.addLayer(drawnFeatures);
+
+    // Initialize draw controls
+    let drawControl = new L.Control.Draw({
+        draw: {
+            // polyline: false,
+            // polygon: false,
+            // circle: false,
+            // rectangle: false,
+        }
+    });
+
+    mapObj.addControl(drawControl);
+
+    mapObj.on("draw:drawstart", function(e) {
+        isDrawing = true;
+    })
+
+    // Bind to draw event
+    mapObj.on("draw:created", function(e) {
+        drawnFeatures.clearLayers();
+        drawnFeatures.addLayer(e.layer);
+        isDrawing = false;
+    });
+};
