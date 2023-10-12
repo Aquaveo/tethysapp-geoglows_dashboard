@@ -1,8 +1,10 @@
 const isTest = true;
 
 let mapObj;
-let SelectedSegment;
+let selectedStream, selectedCountry;
 let esriLayer;
+
+let countries = {};
 
 const currentYear = new Date().getFullYear();
 let selectedYear;
@@ -21,10 +23,11 @@ let plotData = {
 
 
 $(function() {
-    init_map();
+    loadCountries();
+    initMap();
 })
 
-let init_map = function() {
+let initMap = function() {
     mapObj = L.map('leaflet-map', {
         zoom: 3,
         center: [0, 0],
@@ -50,7 +53,14 @@ let init_map = function() {
     });
 
     mapObj.timeDimension.on('timeload', refreshMapLayer);
-    SelectedSegment = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+    selectedCountry = L.geoJSON().addTo(mapObj);
+
+    $("#country-selector").on("change", function() {
+        selectedCountry.clearLayers();
+        selectedCountry.addData(countries[$(this).val()].geometry);
+        mapObj.fitBounds(selectedCountry.getBounds());
+    })
 
     const basemaps = {
         "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -213,8 +223,8 @@ let findReachIDByLatLon = function(event) {
                 reject(new Error("Fail to find the reach_id"));
             } else {
                 // draw the stream on the map
-                SelectedSegment.clearLayers();
-                SelectedSegment.addData(featureCollection.features[0].geometry);
+                selectedStream.clearLayers();
+                selectedStream.addData(featureCollection.features[0].geometry);
                 let reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
                 resolve(reachID);
             }
@@ -382,4 +392,32 @@ function isYearPickerEmpty() {
         alert("Please pick a year!");
     }
     return isEmpty;
+}
+
+
+function loadCountries() {
+    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("countries.geojson was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            data = JSON.parse(JSON.stringify(data));
+            console.log(data);
+            for (let country of data.features) {
+                let name = country.properties.ADMIN;
+                let geometry = country.geometry;
+                countries[name] = {"name": name, "geometry": geometry};
+                $("#country-selector").append($("<option>", {
+                    value: name,
+                    text: name
+                }))
+            }
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+
 }
