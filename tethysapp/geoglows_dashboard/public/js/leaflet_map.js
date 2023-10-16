@@ -1,8 +1,11 @@
 const isTest = true;
+let isDrawing = false;
 
 let mapObj;
-let SelectedSegment;
+let mapMarker, selectedStream, selectedCountry;
 let esriLayer;
+
+let countries = {};
 
 const currentYear = new Date().getFullYear();
 let selectedYear;
@@ -10,7 +13,6 @@ let selectedYear;
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must be 4 0s?
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-let mapMarker = null;
 
 let plotData = {
     "forecast": null,
@@ -19,12 +21,15 @@ let plotData = {
     "flow-regime": null
 };
 
+let drawnFeatures;
 
 $(function() {
-    init_map();
+    loadCountries();
+    initMap();
+    initDrawControl();
 })
 
-let init_map = function() {
+let initMap = function() {
     mapObj = L.map('leaflet-map', {
         zoom: 3,
         center: [0, 0],
@@ -50,7 +55,14 @@ let init_map = function() {
     });
 
     mapObj.timeDimension.on('timeload', refreshMapLayer);
-    SelectedSegment = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+    selectedCountry = L.geoJSON().addTo(mapObj);
+
+    $("#country-selector").on("change", function() {
+        selectedCountry.clearLayers();
+        selectedCountry.addData(countries[$(this).val()].geometry);
+        mapObj.fitBounds(selectedCountry.getBounds());
+    })
 
     const basemaps = {
         "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -106,7 +118,7 @@ let init_map = function() {
     });
 
     mapObj.on('click', function(event) {
-        if (!isYearPickerEmpty()) {
+        if (!isDrawing && !isYearPickerEmpty()) {
             if (mapMarker) {
                 mapObj.removeLayer(mapMarker);
             }
@@ -148,7 +160,7 @@ let refreshMapLayer = function() {
 
 function findReachIDByID() {
     return new Promise(function (resolve, reject) {
-        console.log("Searching ...");
+        console.log("Searching stream id...");
         $.ajax({
             type: "GET",
             async: true,
@@ -213,8 +225,8 @@ let findReachIDByLatLon = function(event) {
                 reject(new Error("Fail to find the reach_id"));
             } else {
                 // draw the stream on the map
-                SelectedSegment.clearLayers();
-                SelectedSegment.addData(featureCollection.features[0].geometry);
+                selectedStream.clearLayers();
+                selectedStream.addData(featureCollection.features[0].geometry);
                 let reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
                 resolve(reachID);
             }
@@ -383,3 +395,61 @@ function isYearPickerEmpty() {
     }
     return isEmpty;
 }
+
+
+function loadCountries() {
+    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("countries.geojson was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            data = JSON.parse(JSON.stringify(data));
+            console.log(data);
+            for (let country of data.features) {
+                let name = country.properties.ADMIN;
+                let geometry = country.geometry;
+                countries[name] = {"name": name, "geometry": geometry};
+                $("#country-selector").append($("<option>", {
+                    value: name,
+                    text: name
+                }))
+            }
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+}
+
+
+// Plot Methods
+function initDrawControl() {
+    // Initialize layer for drawn features
+    drawnFeatures = new L.FeatureGroup();
+    mapObj.addLayer(drawnFeatures);
+
+    // Initialize draw controls
+    let drawControl = new L.Control.Draw({
+        draw: {
+            // polyline: false,
+            // polygon: false,
+            // circle: false,
+            // rectangle: false,
+        }
+    });
+
+    mapObj.addControl(drawControl);
+
+    mapObj.on("draw:drawstart", function(e) {
+        isDrawing = true;
+    })
+
+    // Bind to draw event
+    mapObj.on("draw:created", function(e) {
+        drawnFeatures.clearLayers();
+        drawnFeatures.addLayer(e.layer);
+        isDrawing = false;
+    });
+};
