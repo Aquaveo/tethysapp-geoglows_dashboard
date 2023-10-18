@@ -1,82 +1,84 @@
-{% extends "tethys_apps/app_no_nav.html" %}
+{% extends "tethys_apps/app_header_content.html" %}
 {% load tethys_gizmos static %}
 
 {% block app_content %}
 <div class="container-fluid" id="outer-container">
-  <div class="row h-100">
+  <div class="row" style="height:5%">
+    <ul class="nav">
+      <li class="nav-item">
+        <a class="nav-link active" aria-current="page" href="" id="stream-tab">Streamflow</a>
+      </li>
+      <li class="nav-item" id="precip-tab">
+        <a class="nav-link active" href="" id="precip-tab">Precipitation</a>
+      </li>
+    </ul>
+  </div>
+  <div class="row" style="height:95%">
     <div class="col-md-7">
-      <div class="card h-100">
+        <div class="card h-100">
         <div class="card-header">
-          <div class="row">
+            <div class="row">
             <div class="col-md-4" id="country-select">
-              <label>Country: </label>
-              <select id="country-selector"></select>
+                <label>Country: </label>
+                <select id="country-selector"></select>
             </div>
             <div class="col-md-4">
-              <div class="input-group rounded">
+                <div class="input-group rounded">
                 <input type="search" class="form-control rounded" id="reach-id-input" placeholder="Search Reach ID" aria-label="Search" aria-describedby="search-addon" />
                 <span class="input-group-text border-0" id="search-addon">
-                  <i class="fas fa-search"></i>
+                    <i class="fas fa-search"></i>
                 </span>
-              </div>
+                </div>
             </div>
             <div class="col-md-4">
-              <input class="date-own form-control" id="yearpicker" type="text" placeholder="Select a Year">
+                <input class="date-own form-control" id="yearpicker" type="text" placeholder="Select a Year">
             </div>
-          </div>
+            </div>
         </div>
         <div class="card-body"><div id="leaflet-map"></div></div>
-      </div>
+        </div>
     </div>
     <div class="col-md-5">
-      <div class="card h-50 plot-card">
+        <div class="card h-50 plot-card">
         <div class="card-header">
-          <label>Chart1: </label>
-          <select class="plot-select">
-            <option value="forecast" selected>Forecast</option>
-            <option value="historical">Historical</option>
-            <option value="flow-duration">Flow Duration</option>
-            <option value="flow-regime">Flow Regime</option>
-          </select>
-          <select>
+            <label>Chart1: </label>
+            <select class="plot-select">
+            </select>
+            <select>
             <option>Daily</option>
             <option>Culmulative</option>
-          </select>
+            </select>
         </div>
         <div class="card-body h-100">
-          <div class="spinner">
+            <div class="spinner">
             <div class="spinner-border text-success" role="status">
-              <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
-          </div>
-          <div class="plot-container">Please select a stream</div>
+            </div>
+            <div class="plot-container">Please select a stream</div>
         </div>
-      </div>
-      <div class="card h-50 plot-card">
+        </div>
+        <div class="card h-50 plot-card">
         <div class="card-header">
-          <label>Chart2: </label>
-          <select class="plot-select">
-            <option value="forecast">Forecast</option>
-            <option value="historical" selected>Historical</option>
-            <option value="flow-duration">Flow Duration</option>
-            <option value="flow-regime">Flow Regime</option>
-          </select>
-          <select>
+            <label>Chart2: </label>
+            <select class="plot-select">
+            </select>
+            <select>
             <option>Daily</option>
             <option>Culmulative</option>
-          </select>
+            </select>
         </div>
         <div class="card-body h-100">
-          <div class="spinner">
+            <div class="spinner">
             <div class="spinner-border text-success" role="status">
-              <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
-          </div>
-          <div class="plot-container">Please select a stream</div>
+            </div>
+            <div class="plot-container">Please select a stream</div>
         </div>
-      </div>
+        </div>
     </div>
-  </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -116,7 +118,7 @@
 
 {% block scripts %}
   {{ block.super }}
-  <script src="{% static 'geoglows_dashboard/js/leaflet_map.js' %}" type="text/javascript"></script>
+  <script src="{% static 'geoglows_dashboard/js/home.js' %}" type="text/javascript"></script>
   <!-- Boostrap Datepicker-->
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.10.0/js/bootstrap-datepicker.min.js"></script>
 {% endblock %}

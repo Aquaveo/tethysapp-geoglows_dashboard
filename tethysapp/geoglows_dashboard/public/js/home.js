@@ -14,21 +14,114 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 
-let plotData = {
-    "forecast": null,
-    "historical": null,
-    "flow-duration": null,
-    "flow-regime": null
-};
+let streamTabId = "#stream-tab", precipTabId = "#precip-tab";
+let selectedTab = streamTabId;
+let tabs = {
+    [streamTabId]: {
+        "plotName": { 
+            "forecast": "Forecast",
+            "historical": "Historical",
+            "flow-duration": "Flow Duration",
+            "flow-regime": "Flow Regime"
+        }, 
+        "plotData": {
+            "forecast": null,
+            "historical": null,
+            "flow-duration": null,
+            "flow-regime": null
+        }
+    }, 
+    [precipTabId]: {
+        "plotName": {
+            "avg-precip-soil": "Average Precipitation and Soil Moisture", 
+            "gldas-soil": "GLDAS Soil Moisture", 
+            "gldas-precip": "GLDAS Precipitation", 
+            "imerg-precip": "IMERG Precipitation", 
+            "era5-precip": "ERA% Precipitation"
+        }, 
+        "plotData": {
+            "avg-precip-soil": null, 
+            "gldas-soil": null, 
+            "gldas-precip": null, 
+            "imerg-precip": null, 
+            "era5-precip": null
+        }
+    }
+}
 
 let drawnFeatures;
 
+
 $(function() {
-    loadCountries();
+    initTabs();
     initMap();
+    initYearPeaker();
+    initSearchBox();
+    initCountrySelector();
     initDrawControl();
 })
 
+
+let initTabs = function() {
+    for (let tab in tabs) {
+        $(tab).on('click', function(event) {
+            event.preventDefault();
+            selectedTab = tab;
+            initPlots();
+        })
+    }
+    initPlots();
+}
+
+
+let initYearPeaker = function() {
+    $('#yearpicker').datepicker({
+        minViewMode: 2,
+        format: 'yyyy',
+        endDate: currentYear.toString()
+    });
+    $('#yearpicker').on('changeDate', function(e) {
+        selectedYear = e.date.getFullYear();
+        if (selectedTab == streamTabId && tabs[streamTabId].plotData["flow-regime"] != null) {
+            updateFlowRegime(selectedYear)
+        }
+        $('#yearpicker').datepicker('hide');
+    });
+}
+
+
+let initPlots = function() {
+    // add options to the select
+    $(".plot-select").each(function(tabIndex) {
+        $(this).empty();
+        let plots = tabs[selectedTab].plotName;
+        let plotIndex = 0;
+        for (let key in plots) {
+            $(this).append(new Option(plots[key], key, false, tabIndex == plotIndex));
+            plotIndex++;
+        }
+    })
+
+    // two selects can't choose the same option
+    $(".plot-select").each(function() {
+        let value = $(this).val();
+        $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
+    })
+
+    // load plot when the select value changes
+    $(".plot-card").each(function(_, card) {
+        let plotSelect = $(card).find(".plot-select");
+        let plotContainer = $(card).find(".plot-container");
+        plotSelect.on("change", function() {
+            let value = $(this).val();
+            plotContainer.html(tabs[selectedTab].plotData[value]);
+            $(".plot-select").not(this).find('option').prop('disabled', false);
+            $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
+        })        
+    })
+}
+
+// TODO change map layer when the tab changes
 let initMap = function() {
     mapObj = L.map('leaflet-map', {
         zoom: 3,
@@ -56,13 +149,6 @@ let initMap = function() {
 
     mapObj.timeDimension.on('timeload', refreshMapLayer);
     selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
-    selectedCountry = L.geoJSON().addTo(mapObj);
-
-    $("#country-selector").on("change", function() {
-        selectedCountry.clearLayers();
-        selectedCountry.addData(countries[$(this).val()].geometry);
-        mapObj.fitBounds(selectedCountry.getBounds());
-    })
 
     const basemaps = {
         "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -92,31 +178,6 @@ let initMap = function() {
 
     $('.timecontrol-play').on('click', refreshMapLayer);
 
-    initializeSelects();
-    $(".plot-card").each(function(index, card) {
-        let plotSelect = $(card).find(".plot-select");
-        let plotContainer = $(card).find(".plot-container");
-        plotSelect.on("change", function() {
-            let value = $(this).val();
-            plotContainer.html(plotData[value]);
-            $(".plot-select").not(this).find('option').prop('disabled', false);
-            $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
-        })        
-    })
-
-    $('#yearpicker').datepicker({
-        minViewMode: 2,
-        format: 'yyyy',
-        endDate: currentYear.toString()
-    });
-    $('#yearpicker').on('changeDate', function(e) {
-        selectedYear = e.date.getFullYear();
-        if (plotData["flow-regime"] != null) {
-            updateFlowRegime(selectedYear)
-        }
-        $('#yearpicker').datepicker('hide');
-    });
-
     mapObj.on('click', function(event) {
         if (!isDrawing && !isYearPickerEmpty()) {
             if (mapMarker) {
@@ -144,10 +205,42 @@ let initMap = function() {
     })
 };
 
-function initializeSelects() {
-    $(".plot-select").each(function() {
-        let value = $(this).val();
-        $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
+
+let loadCountries = function() {
+    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("countries.geojson was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            data = JSON.parse(JSON.stringify(data));
+            console.log(data);
+            for (let country of data.features) {
+                let name = country.properties.ADMIN;
+                let geometry = country.geometry;
+                countries[name] = {"name": name, "geometry": geometry};
+                $("#country-selector").append($("<option>", {
+                    value: name,
+                    text: name
+                }))
+            }
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+}
+
+
+let initCountrySelector = function() {
+    loadCountries();
+    selectedCountry = L.geoJSON().addTo(mapObj);
+
+    $("#country-selector").on("change", function() {
+        selectedCountry.clearLayers();
+        selectedCountry.addData(countries[$(this).val()].geometry);
+        mapObj.fitBounds(selectedCountry.getBounds());
     })
 }
 
@@ -158,7 +251,7 @@ let refreshMapLayer = function() {
 }
 
 
-function findReachIDByID() {
+let findReachIDByID = function() {
     return new Promise(function (resolve, reject) {
         console.log("Searching stream id...");
         $.ajax({
@@ -185,29 +278,30 @@ function findReachIDByID() {
     })
 }
 
-
-$('#search-addon').click(findReachIDByID);
-$('#reach-id-input').keydown(event => {
-    if (event.keyCode === 13) {
-        if (!isYearPickerEmpty()) {
-            findReachIDByID()
-            .then(function(reachID) {
-                showPlots(false);
-                return setupDatePicker(reachID);
-            })
-            .then(function(data) {
-                return Promise.all([getForecastData(data), getHistoricalData(data)])
-            })
-            .then(function() {
-                drawPlots();
-            })
-            .catch(error => {
-                alert(error);
-                showStreamSelectionMessage();
-            })
+let initSearchBox = function() {
+    $('#search-addon').click(findReachIDByID);
+    $('#reach-id-input').keydown(event => {
+        if (event.keyCode === 13) {
+            if (!isYearPickerEmpty()) {
+                findReachIDByID()
+                .then(function(reachID) {
+                    showPlots(false);
+                    return setupDatePicker(reachID);
+                })
+                .then(function(data) {
+                    return Promise.all([getForecastData(data), getHistoricalData(data)])
+                })
+                .then(function() {
+                    drawPlots();
+                })
+                .catch(error => {
+                    alert(error);
+                    showStreamSelectionMessage();
+                })
+            }
         }
-    }
-})
+    })
+}
 
 
 let findReachIDByLatLon = function(event) {
@@ -235,7 +329,7 @@ let findReachIDByLatLon = function(event) {
 }
 
 
-function setupDatePicker(reachID) {
+let setupDatePicker = function(reachID) {
     return new Promise(function(resolve, reject) {
         $.ajax({
             type: "GET",
@@ -254,7 +348,6 @@ function setupDatePicker(reachID) {
                     parseInt(latestAvailableDate.slice(4, 6)) - 1,
                     latestAvailableDate.slice(6, 8)
                 )
-                console.log(selectedDate);
                 // TODO add feature: the user can change the forecast_date
                 resolve({'reachID': reachID, 'selectedDate': selectedDate});
             },
@@ -266,14 +359,14 @@ function setupDatePicker(reachID) {
     })
 }
 
-function getFormattedDate(date) {
+let getFormattedDate = function(date) {
     return `${date.getFullYear()}${("0" + (date.getMonth() + 1)).slice(-2)}${(
         "0" + date.getDate()
     ).slice(-2)}.00`
 }
 
 
-function getForecastData(data) {
+let getForecastData = function(data) {
     return new Promise(function(resolve, reject) {
         let reachID = data.reachID, selectedDate = data.selectedDate;
         let startDate = new Date();
@@ -290,7 +383,7 @@ function getForecastData(data) {
             }),
             success: function(response) {
                 console.log("success in getting forecast data!");
-                plotData["forecast"] = response["plot"];
+                tabs[streamTabId].plotData["forecast"] = response["plot"];
                 resolve("success in getting forecast data!")
             },
             error: function() {
@@ -315,9 +408,9 @@ function getHistoricalData(data) {
             }),
             success: function(response) {
                 historicalData = response["hist"]
-                plotData["historical"] = response["plot"];
-                plotData["flow-duration"] = response["fdp"];
-                plotData["flow-regime"] = response["flow_regime"];
+                tabs[streamTabId].plotData["historical"] = response["plot"];
+                tabs[streamTabId].plotData["flow-duration"] = response["fdp"];
+                tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
                 console.log("success in getting historical data!");
                 resolve("success in getting historical data!");
             },
@@ -338,7 +431,7 @@ function updateFlowRegime(year) {
             selected_year: year
         }),
         success: function(response) {
-            plotData["flow-regime"] = response["flow_regime"];
+            tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
             drawPlots();
             console.log("success in drawing new flow regime plot");
         },
@@ -359,7 +452,7 @@ function drawPlots() {
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
         let plotContainer = $(card).find(".plot-container");
-        let plotContent = plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
+        let plotContent = tabs[selectedTab].plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
         plotContainer.html(plotContent);
     });
 }
@@ -397,33 +490,6 @@ function isYearPickerEmpty() {
 }
 
 
-function loadCountries() {
-    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("countries.geojson was not ok");
-            }
-            return response.json();
-        })
-        .then((data) => {
-            data = JSON.parse(JSON.stringify(data));
-            console.log(data);
-            for (let country of data.features) {
-                let name = country.properties.ADMIN;
-                let geometry = country.geometry;
-                countries[name] = {"name": name, "geometry": geometry};
-                $("#country-selector").append($("<option>", {
-                    value: name,
-                    text: name
-                }))
-            }
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
-}
-
-
 // Plot Methods
 function initDrawControl() {
     // Initialize layer for drawn features
@@ -433,7 +499,7 @@ function initDrawControl() {
     // Initialize draw controls
     let drawControl = new L.Control.Draw({
         draw: {
-            // polyline: false,
+            polyline: false,
             // polygon: false,
             // circle: false,
             // rectangle: false,

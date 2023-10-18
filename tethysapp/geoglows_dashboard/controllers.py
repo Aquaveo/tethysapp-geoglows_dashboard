@@ -9,7 +9,7 @@ import requests
 import pandas as pd
 import json
 
-from .gee.plots import flow_regime
+from .gee.flow_regime import flow_regime
 
 
 test_folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
