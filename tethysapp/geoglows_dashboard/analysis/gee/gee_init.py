@@ -2,7 +2,7 @@ import logging
 import ee
 from ee.ee_exception import EEException
 import os
-from ..app import GeoglowsDashboard as app  # where is GeloglowsDashboard?? TODO
+from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app 
 
 
 log = logging.getLogger(f'tethys.apps.{__name__}')

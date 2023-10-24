@@ -73,23 +73,6 @@ let initTabs = function() {
     initPlots();
 }
 
-
-let initYearPeaker = function() {
-    $('#yearpicker').datepicker({
-        minViewMode: 2,
-        format: 'yyyy',
-        endDate: currentYear.toString()
-    });
-    $('#yearpicker').on('changeDate', function(e) {
-        selectedYear = e.date.getFullYear();
-        if (selectedTab == streamTabId && tabs[streamTabId].plotData["flow-regime"] != null) {
-            updateFlowRegime(selectedYear)
-        }
-        $('#yearpicker').datepicker('hide');
-    });
-}
-
-
 let initPlots = function() {
     // add options to the select
     $(".plot-select").each(function(tabIndex) {
@@ -120,6 +103,49 @@ let initPlots = function() {
         })        
     })
 }
+
+
+let initYearPeaker = function() {
+    $('#yearpicker').datepicker({
+        minViewMode: 2,
+        format: 'yyyy',
+        endDate: currentYear.toString()
+    });
+    $('#yearpicker').on('changeDate', function(e) {
+        selectedYear = e.date.getFullYear();
+        if (selectedTab == streamTabId && tabs[streamTabId].plotData["flow-regime"] != null) {
+            updateFlowRegime(selectedYear)
+        }
+        $('#yearpicker').datepicker('hide');
+    });
+}
+
+
+let initSearchBox = function() {
+    $('#search-addon').click(findReachIDByID);
+    $('#reach-id-input').keydown(event => {
+        if (event.keyCode === 13) {
+            if (!isYearPickerEmpty()) {
+                findReachIDByID()
+                .then(function(reachID) {
+                    showPlots(false);
+                    return setupDatePicker(reachID);
+                })
+                .then(function(data) {
+                    return Promise.all([getForecastData(data), getHistoricalData(data)])
+                })
+                .then(function() {
+                    drawPlots();
+                })
+                .catch(error => {
+                    alert(error);
+                    showStreamSelectionMessage();
+                })
+            }
+        }
+    })
+}
+
 
 // TODO change map layer when the tab changes
 let initMap = function() {
@@ -278,31 +304,6 @@ let findReachIDByID = function() {
     })
 }
 
-let initSearchBox = function() {
-    $('#search-addon').click(findReachIDByID);
-    $('#reach-id-input').keydown(event => {
-        if (event.keyCode === 13) {
-            if (!isYearPickerEmpty()) {
-                findReachIDByID()
-                .then(function(reachID) {
-                    showPlots(false);
-                    return setupDatePicker(reachID);
-                })
-                .then(function(data) {
-                    return Promise.all([getForecastData(data), getHistoricalData(data)])
-                })
-                .then(function() {
-                    drawPlots();
-                })
-                .catch(error => {
-                    alert(error);
-                    showStreamSelectionMessage();
-                })
-            }
-        }
-    })
-}
-
 
 let findReachIDByLatLon = function(event) {
     return new Promise(function(resolve, reject) {
@@ -352,12 +353,12 @@ let setupDatePicker = function(reachID) {
                 resolve({'reachID': reachID, 'selectedDate': selectedDate});
             },
             error: function() {
-                console.log("fail to get available dates");
                 reject("fail to get available dates");
             }
         })
     })
 }
+
 
 let getFormattedDate = function(date) {
     return `${date.getFullYear()}${("0" + (date.getMonth() + 1)).slice(-2)}${(
@@ -395,7 +396,7 @@ let getForecastData = function(data) {
 }
 
 
-function getHistoricalData(data) {
+let getHistoricalData = function(data) {
     return new Promise(function (resolve, reject) {
         let reachID = data.reachID;
         $.ajax({
@@ -423,7 +424,7 @@ function getHistoricalData(data) {
 }
 
 
-function updateFlowRegime(year) {
+let updateFlowRegime = function(year) {
     $.ajax({
         type: "GET",
         async: false,
@@ -438,6 +439,37 @@ function updateFlowRegime(year) {
         error: function() {
             console.error("fail to draw new flow regime plot");
         }
+    })
+}
+
+
+let getAveragePrecipitationAndSoilMoisturePlot = function() {
+    let areaData = {
+        area:[
+            [
+                [32.35177734545915, -4.673917894096025],
+                [32.35177734545915, -5.746113966624088],
+                [34.19748047045915, -5.746113966624088],
+                [34.19748047045915, -4.673917894096025]
+            ]
+        ]
+    }
+    console.log(JSON.stringify(areaData));
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "POST",
+            url: URL_getAveragePrecipitationAndSoilMoisturePlot,
+            data: JSON.stringify(areaData),
+            dataType: "json",
+            success: function(response) {
+                tabs[precipTabId].plotData["avg-precip-soil"] = response["plot"];
+                drawPlots();
+                console.log("success in drawing average precipitation and soil moisture plot");
+            },
+            error: function() {
+                console.error("fail to draw average precipitation and soil moisture plot");
+            }
+        })
     })
 }
 

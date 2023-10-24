@@ -92,7 +92,6 @@ def flow_regime(hist, selected_year):
     
     figure = go.Figure(scatter_plots, layout=layout)    
     
-    
     return offline_plot(
         figure,
         config={'autosizable': True, 'responsive': True},
