@@ -7,6 +7,23 @@
     color:white;
 }
 
+.nav {
+    background-color: #9EB384;
+}
+
+a.nav-link {
+    color: white;
+}
+
+a.nav-link:hover {
+    color: white;
+}
+
+.nav-link.active {
+    background-color: #435334;
+    color: white;
+}
+
 .card-header {
     background-color: #9EB384;
     text-align: center;

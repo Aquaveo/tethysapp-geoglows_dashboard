@@ -68,8 +68,15 @@ let initTabs = function() {
             event.preventDefault();
             selectedTab = tab;
             initPlots();
+            drawPlots();
         })
     }
+    $('.nav-link').click(function() {
+        // Remove 'active' class from all tabs
+        $('.nav-link').removeClass('active');
+        // Add 'active' class to the clicked tab
+        $(this).addClass('active');
+    });    
     initPlots();
 }
 
