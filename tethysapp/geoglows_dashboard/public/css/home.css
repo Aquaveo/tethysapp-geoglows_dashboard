@@ -1,10 +1,27 @@
 #inner-app-content {
-    height: calc(100vh - 130px);
+    height: calc(100vh - 50px);
 }
 
 #outer-container {
     height: 100%;
     color:white;
+}
+
+.nav {
+    background-color: #9EB384;
+}
+
+a.nav-link {
+    color: white;
+}
+
+a.nav-link:hover {
+    color: white;
+}
+
+.nav-link.active {
+    background-color: #435334;
+    color: white;
 }
 
 .card-header {

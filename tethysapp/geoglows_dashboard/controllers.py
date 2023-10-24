@@ -9,7 +9,8 @@ import requests
 import pandas as pd
 import json
 
-from .gee.plots import flow_regime
+from .analysis.flow_regime import flow_regime
+from .analysis.gee.average_precip_soil import AveragePrecipitationAndSoilMoisture
 
 
 test_folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
@@ -90,6 +91,7 @@ def home(request):
 
 @controller(url='findReachID')
 def find_reach_id(request):
+    # breakpoint()
     reach_id = request.GET['reach_id']
     lat, lon = gsf.reach_to_latlon(int(reach_id))
     return JsonResponse({'lat': lat, 'lon': lon})
@@ -117,7 +119,6 @@ def get_available_dates(request):
     
 @controller(name='getForecastData', url='getForecastData')
 def get_forecast_data(request):
-    # get data
     s = requests.Session()
     reach_id = request.GET['reach_id']
     start_date = request.GET['start_date']
@@ -208,3 +209,12 @@ def update_flow_regime(request):
     selected_year = request.GET['selected_year']
     hist = pd.read_csv(cache_folder_path + "hist.csv", parse_dates=['datetime'], index_col=[0])
     return JsonResponse(dict(flow_regime=flow_regime(hist, int(selected_year))))
+
+
+@controller(name='get_average_precipitation_and_soil_moisture', url='get_average_precipitation_and_soil_moisture')
+def get_average_precipitation_and_soil_moisture(request):
+    data = json.loads(request.body.decode('utf-8'))
+    area = data['area']
+    plot = AveragePrecipitationAndSoilMoisture(area).run()
+    return JsonResponse(dict(plot=plot))
+    
