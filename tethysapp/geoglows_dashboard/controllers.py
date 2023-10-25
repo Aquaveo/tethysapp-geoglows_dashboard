@@ -11,6 +11,9 @@ import json
 
 from .analysis.flow_regime import flow_regime
 from .analysis.gee.average_precip_soil import AveragePrecipitationAndSoilMoisture
+from .analysis.gee.gldas_precip_soil import GLDASSoilMoistureAndPrecipitation
+from .analysis.gee.imerg_precip import IMERGPrecipitation
+from .analysis.gee.era5_precipitation import ERA5Precipitation
 
 
 test_folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
@@ -217,4 +220,36 @@ def get_average_precipitation_and_soil_moisture(request):
     area = data['area']
     plot = AveragePrecipitationAndSoilMoisture(area).run()
     return JsonResponse(dict(plot=plot))
+
+
+@controller(name="get_gldas_soil_moisture_and_precipitation", url="get_gldas_soil_moisture_and_precipitation")
+def get_gldas_soil_moisture_and_precipitation(request):
+    data = json.loads(request.body.decode('utf-8'))
+    area = data['area']
+    start_date = data['startDate']
+    end_date = data['endDate']
+    plotter = GLDASSoilMoistureAndPrecipitation(area, start_date, end_date)
+    plotter.get_gldas_data()
+    soil = plotter.plot_soil_moisture()
+    precip = plotter.plot_precipitation()
+    return JsonResponse(dict(soil=soil, precip=precip))
+
+
+@controller(name="get_imerg_precipitation", url="get_imerg_precipitation")
+def get_imerg_precipitation(request):
+    data = json.loads(request.body.decode('utf-8'))
+    area = data['area']
+    start_date = data['startDate']
+    end_date = data['endDate']
+    return JsonResponse(dict(imerg_precip=IMERGPrecipitation(area, start_date, end_date).run()))
+
+
+@controller(name="get_era5_precipitation", url="get_era5_precipitation")
+def get_era5_precipitation(request):
+    data = json.loads(request.body.decode('utf-8'))
+    area = data['area']
+    start_date = data['startDate']
+    end_date = data['endDate']
+    return JsonResponse(dict(era5_precip=ERA5Precipitation(area, start_date, end_date).run()))
+    
     
