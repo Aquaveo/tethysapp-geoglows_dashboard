@@ -563,7 +563,7 @@ let getGeePlots = function() {
                 tabs[precipTabId].plotData["gldas-precip"] = response["gldas_precip"];
                 tabs[precipTabId].plotData["imerg-precip"] = response["imerg_precip"];
                 tabs[precipTabId].plotData["era5-precip"] = response["era5_precip"];
-                tabs[precipTabId].plotData["gfs-forecast"] = response["gfs_forcast"];
+                tabs[precipTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
                 drawPlots();
                 console.log("success in drawing GEE plots");
             },
