@@ -226,4 +226,3 @@ def get_gee_plots(request):
         era5_precip=era5_precip,
         gfs_forecast=gfs_forecast
     ))
-
