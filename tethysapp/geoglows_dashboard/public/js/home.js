@@ -83,12 +83,7 @@ let initTabs = function() {
 
 let initPrecipitationPlots = function() {
     if (!isYearPickerEmpty()) {
-        Promise.all([
-            getAveragePrecipitationAndSoilMoisturePlot(),
-            getGLDASSoilMoistureAndPrecipitationPlots(),
-            getIMERGPrecipitationPlot(),
-            getERA5PrecipitationPlot()
-        ]).then(function() {
+        getGeePlots().then(function() {
             drawPlots();
         })
     }
@@ -547,43 +542,8 @@ let updateFlowRegime = function(year) {
 }
 
 
-let getAveragePrecipitationAndSoilMoisturePlot = function() {
-    let areaData = {
-        area:[
-            [
-                [32.35177734545915, -4.673917894096025],
-                [32.35177734545915, -5.746113966624088],
-                [34.19748047045915, -5.746113966624088],
-                [34.19748047045915, -4.673917894096025]
-            ]
-        ]
-    }
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "POST",
-            url: URL_getAveragePrecipitationAndSoilMoisturePlot,
-            data: JSON.stringify(areaData),
-            dataType: "json",
-            success: function(response) {
-                tabs[precipTabId].plotData["avg-precip-soil"] = response["plot"];
-                drawPlots();
-                console.log("success in drawing average precipitation and soil moisture plot");
-            },
-            error: function() {
-                console.error("fail to draw average precipitation and soil moisture plot");
-            }
-        })
-    })
-}
-
-
-let getGLDASSoilMoistureAndPrecipitationPlots = function() {
-    // let endDate;
-    // if (selectedYear == currentYear) {
-    //     endDate = new Date().toISOString().split('T')[0];
-    // } else {
-    //     endDate = `${selectedYear + 1}-01-01`;
-    // }
+let getGeePlots = function() {
+    console.log("Get GEE plots...");
     let areaData = {
         area:[33.4720, -13.0357],
         startDate: `${selectedYear}-01-01`,
@@ -592,69 +552,21 @@ let getGLDASSoilMoistureAndPrecipitationPlots = function() {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "POST",
-            url: URL_getGLDASSoilMoistureAndPrecipitation,
+            url: URL_getGEEPlots,
             data: JSON.stringify(areaData),
             dataType: "json",
             success: function(response) {
-                tabs[precipTabId].plotData["gldas-soil"] = response["soil"];
-                tabs[precipTabId].plotData["gldas-precip"] = response["precip"];
-                drawPlots();
-                console.log("success in drawing GLDAS soil moisture and precipitation plot");
-            },
-            error: function() {
-                console.error("fail to draw GLDAS soil moisture and precipitation plot");
-            }
-        })
-    })
-}
-
-
-let getIMERGPrecipitationPlot = function() {
-    let areaData = {
-        area:[33.4720, -13.0357],
-        startDate: `${selectedYear}-01-01`,
-        endDate: `${selectedYear + 1}-01-01`
-    }
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "POST",
-            url: URL_getIMERGPrecipitation,
-            data: JSON.stringify(areaData),
-            dataType: "json",
-            success: function(response) {
+                tabs[precipTabId].plotData["avg-precip-soil"] = response["gldas_precip_soil"];
+                tabs[precipTabId].plotData["gldas-soil"] = response["gldas_soil"];
+                tabs[precipTabId].plotData["gldas-precip"] = response["gldas_precip"];
                 tabs[precipTabId].plotData["imerg-precip"] = response["imerg_precip"];
-                drawPlots();
-                console.log("success in drawing IMERG precipitation plot");
-            },
-            error: function() {
-                console.error("fail to draw IMERG precipitation plot");
-            }
-        })
-    })
-}
-
-
-let getERA5PrecipitationPlot = function() {
-    let areaData = {
-        area:[33.4720, -13.0357],
-        startDate: `${selectedYear}-01-01`,
-        endDate: `${selectedYear + 1}-01-01`
-    }
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "POST",
-            url: URL_getERA5Precipitation,
-            data: JSON.stringify(areaData),
-            dataType: "json",
-            success: function(response) {
                 tabs[precipTabId].plotData["era5-precip"] = response["era5_precip"];
                 drawPlots();
-                console.log("success in drawing ERA5 precipitation plot");
+                console.log("success in drawing GEE plots");
             },
             error: function() {
-                console.error("fail to draw ERA5 precipitation plot");
+                console.error("fail to draw GEE plots");
             }
         })
     })
 }
-
