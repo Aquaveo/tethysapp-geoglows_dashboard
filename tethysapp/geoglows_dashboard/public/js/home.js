@@ -37,7 +37,7 @@ let tabs = {
             "gldas-soil": "GLDAS Soil Moisture", 
             "gldas-precip": "GLDAS Precipitation", 
             "imerg-precip": "IMERG Precipitation", 
-            "era5-precip": "ERA% Precipitation"
+            "era5-precip": "ERA5 Precipitation"
         }, 
         "plotData": {
             "avg-precip-soil": null, 
@@ -76,8 +76,22 @@ let initTabs = function() {
         $('.nav-link').removeClass('active');
         // Add 'active' class to the clicked tab
         $(this).addClass('active');
-    });    
+    });
     initPlots();
+    drawPlots();
+}
+
+let initPrecipitationPlots = function() {
+    if (!isYearPickerEmpty()) {
+        Promise.all([
+            getAveragePrecipitationAndSoilMoisturePlot(),
+            getGLDASSoilMoistureAndPrecipitationPlots(),
+            getIMERGPrecipitationPlot(),
+            getERA5PrecipitationPlot()
+        ]).then(function() {
+            drawPlots();
+        })
+    }
 }
 
 let initPlots = function() {
@@ -99,7 +113,7 @@ let initPlots = function() {
     })
 
     // load plot when the select value changes
-    $(".plot-card").each(function(_, card) {
+    $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
         let plotContainer = $(card).find(".plot-container");
         plotSelect.on("change", function() {
@@ -284,6 +298,89 @@ let refreshMapLayer = function() {
 }
 
 
+function clearPlots() {
+    $(".plot-container").empty();
+}
+
+
+function drawPlots() {
+    showPlots(true);
+    clearPlots();
+    $(".plot-card").each(function(index, card) {
+        let plotSelect = $(card).find(".plot-select");
+        let plotContainer = $(card).find(".plot-container");
+        let plotContent = tabs[selectedTab].plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
+        plotContainer.html(plotContent);
+    });
+}
+
+
+function showPlots(show) {
+    $(".plot-container").css("display", show ? "flex" : "none");
+    showSpinners(!show);
+}
+
+
+function showSpinners(show) {
+    if (show) {
+        $(".spinner").css("display", "flex");
+    } else {
+        $(".spinner").css("display", "none");
+    }
+}
+
+
+function showStreamSelectionMessage() {
+    $(".plot-card").each(function(index, card) {
+        $(card).find(".plot-container").html("Please select a stream");
+    })
+    showPlots(true);
+}
+
+
+function isYearPickerEmpty() {
+    let isEmpty = $("#yearpicker").val() == "";
+    if (isEmpty) {
+        alert("Please pick a year!");
+    }
+    return isEmpty;
+}
+
+
+// Plot Methods
+function initDrawControl() {
+    // Initialize layer for drawn features
+    drawnFeatures = new L.FeatureGroup();
+    mapObj.addLayer(drawnFeatures);
+
+    // Initialize draw controls
+    let drawControl = new L.Control.Draw({
+        draw: {
+            polyline: false,
+            // polygon: false,
+            // circle: false,
+            // rectangle: false,
+        }
+    });
+
+    mapObj.addControl(drawControl);
+
+    mapObj.on("draw:drawstart", function(e) {
+        isDrawing = true;
+    })
+
+    // Bind to draw event
+    mapObj.on("draw:created", function(e) {
+        drawnFeatures.clearLayers();
+        drawnFeatures.addLayer(e.layer);
+        isDrawing = false;
+    });
+};
+
+
+/////////////////// Draw Plots ///////////////////
+
+
 let findReachIDByID = function() {
     return new Promise(function (resolve, reject) {
         console.log("Searching stream id...");
@@ -461,7 +558,6 @@ let getAveragePrecipitationAndSoilMoisturePlot = function() {
             ]
         ]
     }
-    console.log(JSON.stringify(areaData));
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "POST",
@@ -481,80 +577,84 @@ let getAveragePrecipitationAndSoilMoisturePlot = function() {
 }
 
 
-function clearPlots() {
-    $(".plot-container").empty();
-}
-
-function drawPlots() {
-    showPlots(true);
-    clearPlots();
-    $(".plot-card").each(function(index, card) {
-        let plotSelect = $(card).find(".plot-select");
-        let plotContainer = $(card).find(".plot-container");
-        let plotContent = tabs[selectedTab].plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
-        plotContainer.html(plotContent);
-    });
-}
-
-
-function showPlots(show) {
-    $(".plot-container").css("display", show ? "flex" : "none");
-    showSpinners(!show);
-}
-
-
-function showSpinners(show) {
-    if (show) {
-        $(".spinner").css("display", "flex");
-    } else {
-        $(".spinner").css("display", "none");
+let getGLDASSoilMoistureAndPrecipitationPlots = function() {
+    // let endDate;
+    // if (selectedYear == currentYear) {
+    //     endDate = new Date().toISOString().split('T')[0];
+    // } else {
+    //     endDate = `${selectedYear + 1}-01-01`;
+    // }
+    let areaData = {
+        area:[33.4720, -13.0357],
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear + 1}-01-01`
     }
-}
-
-
-function showStreamSelectionMessage() {
-    $(".plot-card").each(function(index, card) {
-        $(card).find(".plot-container").html("Please select a stream");
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "POST",
+            url: URL_getGLDASSoilMoistureAndPrecipitation,
+            data: JSON.stringify(areaData),
+            dataType: "json",
+            success: function(response) {
+                tabs[precipTabId].plotData["gldas-soil"] = response["soil"];
+                tabs[precipTabId].plotData["gldas-precip"] = response["precip"];
+                drawPlots();
+                console.log("success in drawing GLDAS soil moisture and precipitation plot");
+            },
+            error: function() {
+                console.error("fail to draw GLDAS soil moisture and precipitation plot");
+            }
+        })
     })
-    showPlots(true);
 }
 
 
-function isYearPickerEmpty() {
-    let isEmpty = $("#yearpicker").val() == "";
-    if (isEmpty) {
-        alert("Please pick a year!");
+let getIMERGPrecipitationPlot = function() {
+    let areaData = {
+        area:[33.4720, -13.0357],
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear + 1}-01-01`
     }
-    return isEmpty;
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "POST",
+            url: URL_getIMERGPrecipitation,
+            data: JSON.stringify(areaData),
+            dataType: "json",
+            success: function(response) {
+                tabs[precipTabId].plotData["imerg-precip"] = response["imerg_precip"];
+                drawPlots();
+                console.log("success in drawing IMERG precipitation plot");
+            },
+            error: function() {
+                console.error("fail to draw IMERG precipitation plot");
+            }
+        })
+    })
 }
 
 
-// Plot Methods
-function initDrawControl() {
-    // Initialize layer for drawn features
-    drawnFeatures = new L.FeatureGroup();
-    mapObj.addLayer(drawnFeatures);
-
-    // Initialize draw controls
-    let drawControl = new L.Control.Draw({
-        draw: {
-            polyline: false,
-            // polygon: false,
-            // circle: false,
-            // rectangle: false,
-        }
-    });
-
-    mapObj.addControl(drawControl);
-
-    mapObj.on("draw:drawstart", function(e) {
-        isDrawing = true;
+let getERA5PrecipitationPlot = function() {
+    let areaData = {
+        area:[33.4720, -13.0357],
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear + 1}-01-01`
+    }
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "POST",
+            url: URL_getERA5Precipitation,
+            data: JSON.stringify(areaData),
+            dataType: "json",
+            success: function(response) {
+                tabs[precipTabId].plotData["era5-precip"] = response["era5_precip"];
+                drawPlots();
+                console.log("success in drawing ERA5 precipitation plot");
+            },
+            error: function() {
+                console.error("fail to draw ERA5 precipitation plot");
+            }
+        })
     })
+}
 
-    // Bind to draw event
-    mapObj.on("draw:created", function(e) {
-        drawnFeatures.clearLayers();
-        drawnFeatures.addLayer(e.layer);
-        isDrawing = false;
-    });
-};
