@@ -290,7 +290,7 @@ class PrecipitationAndSoilMoisturePlots:
             output_type='div',
             include_plotlyjs=False
         )
-        
+      
         
     def run(self):
         self.get_gldas_data()
