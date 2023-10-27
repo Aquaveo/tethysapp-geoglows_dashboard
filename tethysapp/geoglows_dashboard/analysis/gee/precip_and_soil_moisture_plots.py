@@ -6,27 +6,33 @@ from plotly.subplots import make_subplots
 from plotly.offline import plot as offline_plot
 
 
-class AveragePrecipitationAndSoilMoisture:
-    def __init__(self, area): 
-        self.area = ee.Geometry.Polygon(area)
-
+class PrecipitationAndSoilMoisturePlots:
+    def __init__(self, area, start, end):
+        self.area = area
+        self.start = start
+        self.end = end
+        
+        
     @staticmethod
     def get_date():
         now = date.today().strftime("%Y-%m-%d")
         y2d_start = date(date.today().year, 1, 1).strftime("%Y-%m-%d")
         return now, y2d_start
-
+    
+    
     def clip_to_bounds(self, img):
         return img.updateMask(ee.Image.constant(1).clip(self.area).mask())
+
 
     def avg_gldas(self, img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=self.area,
+            geometry=self.area
         ))
-
+        
+    
     def get_gldas_data(self):
-        now, y2d_start = AveragePrecipitationAndSoilMoisture.get_date()
+        now, y2d_start = PrecipitationAndSoilMoisturePlots.get_date()
         gldas_monthly = ee.ImageCollection(
             [f'users/rachelshaylahuber55/gldas_monthly/gldas_monthly_avg_{i:02}' for i in range(1, 13)])
         gldas_monthly = gldas_monthly.map(self.avg_gldas)
@@ -50,19 +56,20 @@ class AveragePrecipitationAndSoilMoisture:
         # code will look for columns names 'date' and 'data_values' so rename to those
         cum_df_gldas['date'] = cum_df_gldas[0].dt.strftime("%Y-%m-%d")
         cum_df_gldas["data_values"] = cum_df_gldas['val_per_day']
-        gldas_avg_df['date'] = pd.to_datetime(gldas_avg_df['date'])
-        cum_df_gldas['date'] = pd.to_datetime(cum_df_gldas['date'])
         self.gldas_avg_df = gldas_avg_df
         self.cum_df_gldas = cum_df_gldas
-
-
-    def plot_data(self):
+        
+    
+    def plot_gldas_precip_and_soil_moisture(self, gldas_avg_df, cum_df_gldas):
+        self.get_gldas_data()
+        gldas_avg_df['date'] = pd.to_datetime(gldas_avg_df['date'])
+        cum_df_gldas['date'] = pd.to_datetime(cum_df_gldas['date'])
+        
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.add_trace(go.Bar(x=self.cum_df_gldas['date'], y=-self.cum_df_gldas['data_values'], marker_color="#0d61cb", opacity=0.7, name="Precipitation"))
+        fig.add_trace(go.Bar(x=cum_df_gldas['date'], y=-cum_df_gldas['data_values'], marker_color="#0d61cb", opacity=0.7, name="Precipitation"))
         fig.update_yaxes(title_text='Precipitation (mm)')
-        # fig.update_yaxes(title_text='Precipitation (mm)', range=[-17, 0]) # TODO don't hardcode
 
-        fig.add_trace(go.Scatter(x=self.gldas_avg_df['date'], y=self.gldas_avg_df['RootMoist_inst'], marker_color="rgb(0.2, 0.2, 0.2)", name='Soil Moisture'), secondary_y=True)
+        fig.add_trace(go.Scatter(x=gldas_avg_df['date'], y=gldas_avg_df['RootMoist_inst'], marker_color="rgb(0.2, 0.2, 0.2)", name='Soil Moisture'), secondary_y=True)
         fig.update_layout(
             yaxis2=dict(
                 title='Soil Moisture (kg/m^2)',
@@ -88,14 +95,3 @@ class AveragePrecipitationAndSoilMoisture:
         )
 
         return fig
-
-
-    def run(self):
-        self.get_gldas_data()
-        return offline_plot(
-            self.plot_data(),
-            config={'autosizable': True, 'responsive': True},
-            output_type='div',
-            include_plotlyjs=False
-        )
-    
