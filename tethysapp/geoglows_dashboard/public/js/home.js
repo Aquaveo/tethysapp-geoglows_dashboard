@@ -33,18 +33,20 @@ let tabs = {
     }, 
     [precipTabId]: {
         "plotName": {
-            "avg-precip-soil": "Average Precipitation and Soil Moisture", 
+            "gldas-precip-soil": "Average Precipitation and Soil Moisture", 
             "gldas-soil": "GLDAS Soil Moisture", 
             "gldas-precip": "GLDAS Precipitation", 
             "imerg-precip": "IMERG Precipitation", 
-            "era5-precip": "ERA5 Precipitation"
+            "era5-precip": "ERA5 Precipitation",
+            "gfs-forecast": "GFS Forecast Precipitation"
         }, 
         "plotData": {
-            "avg-precip-soil": null, 
+            "gldas-precip-soil": null, 
             "gldas-soil": null, 
             "gldas-precip": null, 
             "imerg-precip": null, 
-            "era5-precip": null
+            "era5-precip": null,
+            "gfs-forecast": null
         }
     }
 }
@@ -556,11 +558,12 @@ let getGeePlots = function() {
             data: JSON.stringify(areaData),
             dataType: "json",
             success: function(response) {
-                tabs[precipTabId].plotData["avg-precip-soil"] = response["gldas_precip_soil"];
+                tabs[precipTabId].plotData["gldas-precip-soil"] = response["gldas_precip_soil"];
                 tabs[precipTabId].plotData["gldas-soil"] = response["gldas_soil"];
                 tabs[precipTabId].plotData["gldas-precip"] = response["gldas_precip"];
                 tabs[precipTabId].plotData["imerg-precip"] = response["imerg_precip"];
                 tabs[precipTabId].plotData["era5-precip"] = response["era5_precip"];
+                tabs[precipTabId].plotData["gfs-forecast"] = response["gfs_forcast"];
                 drawPlots();
                 console.log("success in drawing GEE plots");
             },

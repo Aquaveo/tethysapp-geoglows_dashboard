@@ -10,10 +10,6 @@ import pandas as pd
 import json
 
 from .analysis.flow_regime import flow_regime
-from .analysis.gee.average_precip_soil import AveragePrecipitationAndSoilMoisture
-from .analysis.gee.gldas_precip_soil import GLDASSoilMoistureAndPrecipitation
-from .analysis.gee.imerg_precip import IMERGPrecipitation
-from .analysis.gee.era5_precipitation import ERA5Precipitation
 from .analysis.gee.precip_and_soil_moisture_plots import PrecipitationAndSoilMoisturePlots
 
 
@@ -221,12 +217,13 @@ def get_gee_plots(request):
     area = data['area']
     start_date = data['startDate']
     end_date = data['endDate']
-    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip = PrecipitationAndSoilMoisturePlots(area, start_date, end_date).run()
+    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast = PrecipitationAndSoilMoisturePlots(area, start_date, end_date).run()
     return JsonResponse(dict(
         gldas_precip_soil=gldas_precip_soil, 
         gldas_precip=gldas_precip, 
         gldas_soil=gldas_soil, 
         imerg_precip=imerg_precip, 
-        era5_precip=era5_precip
+        era5_precip=era5_precip,
+        gfs_forecast=gfs_forecast
     ))
 
