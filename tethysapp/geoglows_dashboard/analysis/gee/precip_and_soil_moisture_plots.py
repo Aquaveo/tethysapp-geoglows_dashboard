@@ -1,5 +1,6 @@
 import ee
 import datetime
+from datetime import timedelta
 import pandas as pd
 import numpy as np
 import calendar
@@ -290,7 +291,33 @@ class PrecipitationAndSoilMoisturePlots:
             output_type='div',
             include_plotlyjs=False
         )
-      
+
+
+    def plot_gfs_forecast_data(self):
+        current_date = datetime.datetime.now().date()
+        one_week_ago = current_date - timedelta(days=7)
+        future_date = current_date + timedelta(days=2)
+        future_date_string = future_date.strftime("%Y-%m-%d")
+        one_week_ago_string = one_week_ago.strftime("%Y-%m-%d")
+        ic = ee.ImageCollection("NOAA/GFS0P25").filterDate(one_week_ago_string, future_date_string)
+        last_time = ic.sort('system:time_start', False).first()
+        data_collection = ee.ImageCollection("NOAA/GFS0P25");
+        forecast_date = ee.Date(last_time.get('system:time_start'))
+        forecast00 = data_collection.filterDate(forecast_date,forecast_date.advance(6,'hour'))#.filter(ee.Filter.lt('forecast_time',forecast_date.advance(1,'day').millis()))
+        new_ic = forecast00.filterMetadata('forecast_hours', 'greater_than', 0).select("total_precipitation_surface").map(self.avg_in_bounds)
+        df = pd.DataFrame(
+            new_ic.aggregate_array('avg_value').getInfo(),
+            index = pd.to_datetime(np.array(new_ic.aggregate_array('forecast_time').getInfo())*1e6)
+        )
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df.index, y = df["total_precipitation_surface"]))
+        return offline_plot(
+            fig,
+            config={'autosizable': True, 'responsive': True},
+            output_type='div',
+            include_plotlyjs=False
+        )
+
         
     def run(self):
         self.get_gldas_data()
@@ -299,4 +326,5 @@ class PrecipitationAndSoilMoisturePlots:
         gldas_soil = self.plot_gldas_soil_moisture()
         imerg_precip = self.plot_imerg_precipitation()
         era5_precip = self.plot_era5_precipitation()
-        return [gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip]
+        gfs_forecast = self.plot_gfs_forecast_data()
+        return [gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast]

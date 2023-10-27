@@ -217,11 +217,12 @@ def get_gee_plots(request):
     area = data['area']
     start_date = data['startDate']
     end_date = data['endDate']
-    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip = PrecipitationAndSoilMoisturePlots(area, start_date, end_date).run()
+    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast = PrecipitationAndSoilMoisturePlots(area, start_date, end_date).run()
     return JsonResponse(dict(
         gldas_precip_soil=gldas_precip_soil, 
         gldas_precip=gldas_precip, 
         gldas_soil=gldas_soil, 
         imerg_precip=imerg_precip, 
-        era5_precip=era5_precip
+        era5_precip=era5_precip,
+        gfs_forecast=gfs_forecast
     ))
