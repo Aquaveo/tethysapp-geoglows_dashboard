@@ -14,7 +14,7 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 
-let streamTabId = "#stream-tab", precipTabId = "#precip-tab";
+let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
 let tabs = {
     [streamTabId]: {
@@ -31,7 +31,7 @@ let tabs = {
             "flow-regime": null
         }
     }, 
-    [precipTabId]: {
+    [otherTabId]: {
         "plotName": {
             "gldas-precip-soil": "Average Precipitation and Soil Moisture", 
             "gldas-soil": "GLDAS Soil Moisture", 
@@ -558,12 +558,12 @@ let getGeePlots = function() {
             data: JSON.stringify(areaData),
             dataType: "json",
             success: function(response) {
-                tabs[precipTabId].plotData["gldas-precip-soil"] = response["gldas_precip_soil"];
-                tabs[precipTabId].plotData["gldas-soil"] = response["gldas_soil"];
-                tabs[precipTabId].plotData["gldas-precip"] = response["gldas_precip"];
-                tabs[precipTabId].plotData["imerg-precip"] = response["imerg_precip"];
-                tabs[precipTabId].plotData["era5-precip"] = response["era5_precip"];
-                tabs[precipTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
+                tabs[otherTabId].plotData["gldas-precip-soil"] = response["gldas_precip_soil"];
+                tabs[otherTabId].plotData["gldas-soil"] = response["gldas_soil"];
+                tabs[otherTabId].plotData["gldas-precip"] = response["gldas_precip"];
+                tabs[otherTabId].plotData["imerg-precip"] = response["imerg_precip"];
+                tabs[otherTabId].plotData["era5-precip"] = response["era5_precip"];
+                tabs[otherTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
                 drawPlots();
                 console.log("success in drawing GEE plots");
             },
