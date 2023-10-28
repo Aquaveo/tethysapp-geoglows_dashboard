@@ -26,7 +26,7 @@ def stream_estimate(df, val):
     return streamflow_estimate
 
 
-def flow_regime(hist, selected_year):
+def plot_flow_regime(hist, selected_year):
     """_summary_
 
     Args:
