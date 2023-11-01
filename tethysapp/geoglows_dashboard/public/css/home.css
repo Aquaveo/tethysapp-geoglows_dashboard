@@ -69,4 +69,5 @@ select {
 
 #yearpicker {
     width: 70%;
+    display: inline-block;
 }
