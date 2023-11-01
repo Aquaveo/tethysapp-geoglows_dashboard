@@ -10,6 +10,7 @@ import pandas as pd
 import json
 
 from .analysis.flow_regime import plot_flow_regime
+from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import PrecipitationAndSoilMoisturePlots
 
 
@@ -210,6 +211,13 @@ def update_flow_regime(request):
     hist = pd.read_csv(cache_folder_path + "hist.csv", parse_dates=['datetime'], index_col=[0])
     return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
 
+
+@controller(name='get_annual_discharge', url='get_annual_discharge')
+def get_annual_discharge(request):
+    reach_id = request.GET['reach_id']
+    plot = plot_annual_discharge_volumes(110229254) # TODO use reach_id after switching to Geoglows-v2
+    return JsonResponse(dict(plot=plot))
+    
 
 @controller(name='get_gee_plots', url='get_gee_plots')
 def get_gee_plots(request):

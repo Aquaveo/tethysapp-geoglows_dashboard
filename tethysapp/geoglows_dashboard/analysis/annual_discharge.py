@@ -2,6 +2,7 @@ import numpy as np
 import s3fs
 import xarray
 import plotly.graph_objs as go
+from plotly.offline import plot as offline_plot
 
 
 def plot_annual_discharge_volumes(reach_id):
@@ -27,11 +28,13 @@ def plot_annual_discharge_volumes(reach_id):
     scatter_plots.append(go.Scatter(x=annual_volumes.index, y=annual_volumes["trendline"], name="trendline"))
     layout = go.Layout(
         title="Annual Discharge Volumes vs Time",
-        yaxis={"title": "Annual Water Volumes ($Million Meters^{3}$)"},
+        yaxis={"title": "Annual Water Volumes (MillionMeters<sup>3</sup>)"},
         xaxis={"title": "Time"}
     )
-    go.Figure(scatter_plots, layout)
-    
-    
-if __name__ == "__main__":
-    plot_annual_discharge_volumes([110229254, ])
+    # TODO return an error message when there's an exception
+    return offline_plot(
+        go.Figure(scatter_plots, layout),
+        config={'autosizable': True, 'responsive': True},
+        output_type='div',
+        include_plotlyjs=False
+    )

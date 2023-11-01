@@ -1,4 +1,4 @@
-const isTest = true;
+const isTest = false;
 let isDrawing = false;
 
 let mapObj;
@@ -22,7 +22,8 @@ let tabs = {
             "forecast": "Forecast",
             "historical": "Historical",
             "flow-duration": "Flow Duration",
-            "flow-regime": "Flow Regime"
+            "flow-regime": "Flow Regime",
+            "annual-discharge": "Annual Discharge"
         }, 
         "plotData": {
             "forecast": null,
@@ -236,7 +237,7 @@ let initMap = function() {
                     return setupDatePicker(reachID);
                 })
                 .then(function(data) {
-                    return Promise.all([getForecastData(data), getHistoricalData(data)])
+                    return Promise.all([getForecastData(data), getHistoricalData(data), getAnnualDischarge(data)])
                 })
                 .then(function() {
                     drawPlots();
@@ -519,6 +520,29 @@ let getHistoricalData = function(data) {
             error: function() {
                 console.error("fail to get historical data");
                 reject("fail to get historical data")
+            }
+        })
+    })
+}
+
+let getAnnualDischarge = function(data) {
+    return new Promise(function(resolve, reject) {
+        let reachID = data.reachID;
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getAnnualDischarge + L.Util.getParamString({
+                reach_id: reachID
+            }),
+            success: function(response) {
+                plot = response["plot"]
+                tabs[streamTabId].plotData["annual-discharge"] = response["plot"];
+                console.log("success in getting annual discharge!");
+                resolve("success in getting annual discharge!");
+            },
+            error: function() {
+                console.error("fail to get annual discharge!");
+                reject("fail to get annual discharge!")
             }
         })
     })
