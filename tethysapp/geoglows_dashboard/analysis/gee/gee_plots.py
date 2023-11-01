@@ -10,11 +10,11 @@ from plotly.offline import plot as offline_plot
 
 
 class PrecipitationAndSoilMoisturePlots:
-    def __init__(self, area, start, end):
-        self.area = ee.Geometry.Point(area)
+    def __init__(self, start, end, area):
         self.start = start
         self.end = end
-    
+        self.area = area
+        
     
     def clip_to_bounds(self, img):
         return img.updateMask(ee.Image.constant(1).clip(self.area).mask())

@@ -8,6 +8,8 @@ from plotly.offline import plot as offline_plot
 import requests
 import pandas as pd
 import json
+import ast
+import ee
 
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
@@ -219,13 +221,26 @@ def get_annual_discharge(request):
     return JsonResponse(dict(plot=plot))
     
 
+def parse_coordinates_string(type, coordinate_string):
+    coordinates = ast.literal_eval(coordinate_string)
+    if (type == "point"):
+        return ee.Geometry.Point([coordinates['lng'], coordinates['lat']])
+    else:
+        result = [[]]
+        for point in coordinates[0]:
+            result[0].append([point['lng'], point['lat']])
+        return ee.Geometry.Polygon(result)    
+
+
 @controller(name='get_gee_plots', url='get_gee_plots')
 def get_gee_plots(request):
     data = json.loads(request.body.decode('utf-8'))
-    area = data['area']
+    type = data['type']
+    coordinates = str(data['coordinates'])
+    area = parse_coordinates_string(type, coordinates)
     start_date = data['startDate']
     end_date = data['endDate']
-    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast = PrecipitationAndSoilMoisturePlots(area, start_date, end_date).run()
+    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast = PrecipitationAndSoilMoisturePlots(start_date, end_date, area).run()
     return JsonResponse(dict(
         gldas_precip_soil=gldas_precip_soil, 
         gldas_precip=gldas_precip, 

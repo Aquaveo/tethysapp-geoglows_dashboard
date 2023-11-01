@@ -70,14 +70,12 @@ let initTabs = function() {
             event.preventDefault();
             selectedTab = tab;
             initPlotSelects();
-            if (tab == otherTabId && tabs[tab].plotData["gldas-precip-soil"] == null) {
-                showPlots(false);
-                getGeePlots().then(function() {
-                    drawPlots();
-                })
-            } else {
-                drawPlots();
-            }
+            drawPlots();
+            // if (tab == otherTabId && tabs[tab].plotData["gldas-precip-soil"] == null) {
+            //     initPrecipitationPlots();
+            // } else {
+            //     drawPlots();
+            // }
         })
     }
     $('.nav-link').click(function() {
@@ -90,13 +88,12 @@ let initTabs = function() {
     drawPlots();
 }
 
-// let initPrecipitationPlots = function() {
-//     console.log("cal initPrecipitationPlots ...");
-//     showPlots(false);
-//     getGeePlots().then(function() {
-//         drawPlots();
-//     })
-// }
+let initPrecipitationPlots = function() {
+    showPlots(false);
+    getGeePlots().then(function() {
+        drawPlots();
+    })
+}
 
 let initPlotSelects = function() {
     // add options to the select
@@ -340,7 +337,7 @@ function showStreamSelectionMessage() {
     showPlots(true);
 }
 
-let drawnFeatures;
+let drawnFeatures, drawnType, drawnCoordinates;
 
 // Plot Methods
 function initDrawControl() {
@@ -353,8 +350,8 @@ function initDrawControl() {
         draw: {
             polyline: false,
             // polygon: false,
-            // circle: false,
-            // rectangle: false,
+            circle: false,
+            rectangle: false,
         }
     });
 
@@ -370,8 +367,43 @@ function initDrawControl() {
         drawnFeatures.addLayer(e.layer);
         isDrawing = false;
         readAreaOfDrawnFeature();
+        initPrecipitationPlots();
+        // TODO switch to Other tab automatically after the user finished drawing
     });
 };
+
+
+// Read the area of the drawn feature
+let readAreaOfDrawnFeature = function() {
+    if (drawnFeatures.getLayers().length === 0) {
+        console.log("No features drawn.");
+        return;
+    }
+
+    const drawnFeature = drawnFeatures.getLayers()[0]; // Assuming there's only one drawn feature
+
+    // if (drawnFeature instanceof L.Circle) {
+    //     const center = drawnFeature.getLatLng();
+    //     const radius = drawnFeature.getRadius();
+    //     console.log("Circle center:", center);
+    //     console.log("Circle radius:", radius);
+    // } 
+    // else if (drawnFeature instanceof L.Rectangle) {
+    //     const bounds = drawnFeature.getBounds();
+    //     console.log("Rectangle bounds:", bounds);
+    // } 
+    // else 
+    if (drawnFeature instanceof L.Polygon) {
+        drawnType = "polygone";
+        drawnCoordinates = drawnFeature.getLatLngs();
+        console.log("Polygon coordinates:", drawnCoordinates);
+    } 
+    else if (drawnFeature instanceof L.Marker) {
+        drawnType = "point";
+        drawnCoordinates = drawnFeature.getLatLng();
+        console.log("Marker coordinates:", drawnCoordinates);
+    }
+}
 
 
 /////////////////// Draw Plots ///////////////////
@@ -569,7 +601,8 @@ let updateFlowRegime = function(year) {
 let getGeePlots = function() {
     console.log("Get GEE plots...");
     let areaData = {
-        area:[33.4720, -13.0357],
+        type: drawnType,
+        coordinates: drawnCoordinates,
         startDate: `${selectedYear}-01-01`,
         endDate: `${selectedYear + 1}-01-01`
     }
