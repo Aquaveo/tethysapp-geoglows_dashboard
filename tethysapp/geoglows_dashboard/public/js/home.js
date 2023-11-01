@@ -303,7 +303,6 @@ function clearPlots() {
 
 
 function drawPlots() {
-    console.log("calling drawPlots()!");
     showPlots(true);
     clearPlots();
     $(".plot-card").each(function(index, card) {
@@ -332,7 +331,12 @@ function showSpinners(show) {
 
 function showStreamSelectionMessage() {
     $(".plot-card").each(function(index, card) {
-        $(card).find(".plot-container").html("Please select a stream");
+        if (selectedTab == streamTabId) {
+            $(card).find(".plot-container").html("Please select a stream");
+        } else {
+            $(card).find(".plot-container").html("Please draw an area on the map");
+        }
+        
     })
     showPlots(true);
 }
