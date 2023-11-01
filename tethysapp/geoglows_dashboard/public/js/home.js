@@ -8,7 +8,7 @@ let esriLayer;
 let countries = {};
 
 const currentYear = new Date().getFullYear();
-let selectedYear;
+let selectedYear = $("#yearpicker").val();
 
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must be 4 0s?
 const endDateTime = new Date(startDateTime);
@@ -52,7 +52,6 @@ let tabs = {
     }
 }
 
-let drawnFeatures;
 
 
 $(function() {
@@ -70,8 +69,15 @@ let initTabs = function() {
         $(tab).on('click', function(event) {
             event.preventDefault();
             selectedTab = tab;
-            initPlots();
-            drawPlots();
+            initPlotSelects();
+            if (tab == otherTabId && tabs[tab].plotData["gldas-precip-soil"] == null) {
+                showPlots(false);
+                getGeePlots().then(function() {
+                    drawPlots();
+                })
+            } else {
+                drawPlots();
+            }
         })
     }
     $('.nav-link').click(function() {
@@ -80,19 +86,19 @@ let initTabs = function() {
         // Add 'active' class to the clicked tab
         $(this).addClass('active');
     });
-    initPlots();
+    initPlotSelects();
     drawPlots();
 }
 
-let initPrecipitationPlots = function() {
-    if (!isYearPickerEmpty()) {
-        getGeePlots().then(function() {
-            drawPlots();
-        })
-    }
-}
+// let initPrecipitationPlots = function() {
+//     console.log("cal initPrecipitationPlots ...");
+//     showPlots(false);
+//     getGeePlots().then(function() {
+//         drawPlots();
+//     })
+// }
 
-let initPlots = function() {
+let initPlotSelects = function() {
     // add options to the select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
@@ -144,23 +150,21 @@ let initSearchBox = function() {
     $('#search-addon').click(findReachIDByID);
     $('#reach-id-input').keydown(event => {
         if (event.keyCode === 13) {
-            if (!isYearPickerEmpty()) {
-                findReachIDByID()
-                .then(function(reachID) {
-                    showPlots(false);
-                    return setupDatePicker(reachID);
-                })
-                .then(function(data) {
-                    return Promise.all([getForecastData(data), getHistoricalData(data)])
-                })
-                .then(function() {
-                    drawPlots();
-                })
-                .catch(error => {
-                    alert(error);
-                    showStreamSelectionMessage();
-                })
-            }
+            findReachIDByID()
+            .then(function(reachID) {
+                showPlots(false);
+                return setupDatePicker(reachID);
+            })
+            .then(function(data) {
+                return Promise.all([getForecastData(data), getHistoricalData(data), getAnnualDischarge(data)])
+            })
+            .then(function() {
+                drawPlots();
+            })
+            .catch(error => {
+                alert(error);
+                showStreamSelectionMessage();
+            })
         }
     })
 }
@@ -224,7 +228,7 @@ let initMap = function() {
     $('.timecontrol-play').on('click', refreshMapLayer);
 
     mapObj.on('click', function(event) {
-        if (!isDrawing && !isYearPickerEmpty()) {
+        if (!isDrawing) {
             if (mapMarker) {
                 mapObj.removeLayer(mapMarker);
             }
@@ -302,6 +306,7 @@ function clearPlots() {
 
 
 function drawPlots() {
+    console.log("calling drawPlots()!");
     showPlots(true);
     clearPlots();
     $(".plot-card").each(function(index, card) {
@@ -335,15 +340,7 @@ function showStreamSelectionMessage() {
     showPlots(true);
 }
 
-
-function isYearPickerEmpty() {
-    let isEmpty = $("#yearpicker").val() == "";
-    if (isEmpty) {
-        alert("Please pick a year!");
-    }
-    return isEmpty;
-}
-
+let drawnFeatures;
 
 // Plot Methods
 function initDrawControl() {
@@ -372,6 +369,7 @@ function initDrawControl() {
         drawnFeatures.clearLayers();
         drawnFeatures.addLayer(e.layer);
         isDrawing = false;
+        readAreaOfDrawnFeature();
     });
 };
 
@@ -588,11 +586,12 @@ let getGeePlots = function() {
                 tabs[otherTabId].plotData["imerg-precip"] = response["imerg_precip"];
                 tabs[otherTabId].plotData["era5-precip"] = response["era5_precip"];
                 tabs[otherTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
-                drawPlots();
-                console.log("success in drawing GEE plots");
+                console.log("success in getting GEE plots");
+                resolve("success in getting GEE plots");
             },
             error: function() {
                 console.error("fail to draw GEE plots");
+                reject("fail to draw GEE plots");
             }
         })
     })
