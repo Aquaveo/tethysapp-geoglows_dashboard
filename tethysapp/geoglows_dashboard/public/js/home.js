@@ -1,4 +1,4 @@
-const isTest = true;
+const isTest = false;
 let isDrawing = false;
 
 let mapObj;
@@ -14,7 +14,7 @@ const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 
-let streamTabId = "#stream-tab", precipTabId = "#precip-tab";
+let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
 let tabs = {
     [streamTabId]: {
@@ -22,7 +22,8 @@ let tabs = {
             "forecast": "Forecast",
             "historical": "Historical",
             "flow-duration": "Flow Duration",
-            "flow-regime": "Flow Regime"
+            "flow-regime": "Flow Regime",
+            "annual-discharge": "Annual Discharge"
         }, 
         "plotData": {
             "forecast": null,
@@ -31,7 +32,7 @@ let tabs = {
             "flow-regime": null
         }
     }, 
-    [precipTabId]: {
+    [otherTabId]: {
         "plotName": {
             "gldas-precip-soil": "Average Precipitation and Soil Moisture", 
             "gldas-soil": "GLDAS Soil Moisture", 
@@ -236,7 +237,7 @@ let initMap = function() {
                     return setupDatePicker(reachID);
                 })
                 .then(function(data) {
-                    return Promise.all([getForecastData(data), getHistoricalData(data)])
+                    return Promise.all([getForecastData(data), getHistoricalData(data), getAnnualDischarge(data)])
                 })
                 .then(function() {
                     drawPlots();
@@ -524,6 +525,29 @@ let getHistoricalData = function(data) {
     })
 }
 
+let getAnnualDischarge = function(data) {
+    return new Promise(function(resolve, reject) {
+        let reachID = data.reachID;
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getAnnualDischarge + L.Util.getParamString({
+                reach_id: reachID
+            }),
+            success: function(response) {
+                plot = response["plot"]
+                tabs[streamTabId].plotData["annual-discharge"] = response["plot"];
+                console.log("success in getting annual discharge!");
+                resolve("success in getting annual discharge!");
+            },
+            error: function() {
+                console.error("fail to get annual discharge!");
+                reject("fail to get annual discharge!")
+            }
+        })
+    })
+}
+
 
 let updateFlowRegime = function(year) {
     $.ajax({
@@ -558,12 +582,12 @@ let getGeePlots = function() {
             data: JSON.stringify(areaData),
             dataType: "json",
             success: function(response) {
-                tabs[precipTabId].plotData["gldas-precip-soil"] = response["gldas_precip_soil"];
-                tabs[precipTabId].plotData["gldas-soil"] = response["gldas_soil"];
-                tabs[precipTabId].plotData["gldas-precip"] = response["gldas_precip"];
-                tabs[precipTabId].plotData["imerg-precip"] = response["imerg_precip"];
-                tabs[precipTabId].plotData["era5-precip"] = response["era5_precip"];
-                tabs[precipTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
+                tabs[otherTabId].plotData["gldas-precip-soil"] = response["gldas_precip_soil"];
+                tabs[otherTabId].plotData["gldas-soil"] = response["gldas_soil"];
+                tabs[otherTabId].plotData["gldas-precip"] = response["gldas_precip"];
+                tabs[otherTabId].plotData["imerg-precip"] = response["imerg_precip"];
+                tabs[otherTabId].plotData["era5-precip"] = response["era5_precip"];
+                tabs[otherTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
                 drawPlots();
                 console.log("success in drawing GEE plots");
             },

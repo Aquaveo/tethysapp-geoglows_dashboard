@@ -9,8 +9,9 @@ import requests
 import pandas as pd
 import json
 
-from .analysis.flow_regime import flow_regime
-from .analysis.gee.precip_and_soil_moisture_plots import PrecipitationAndSoilMoisturePlots
+from .analysis.flow_regime import plot_flow_regime
+from .analysis.annual_discharge import plot_annual_discharge_volumes
+from .analysis.gee.gee_plots import PrecipitationAndSoilMoisturePlots
 
 
 test_folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
@@ -200,7 +201,7 @@ def get_historical_data(request):
             include_plotlyjs=False
         ),
         fdp=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
-        flow_regime=flow_regime(files["hist"], int(selected_year)) 
+        flow_regime=plot_flow_regime(files["hist"], int(selected_year)) 
     ))
     
 
@@ -208,8 +209,15 @@ def get_historical_data(request):
 def update_flow_regime(request):
     selected_year = request.GET['selected_year']
     hist = pd.read_csv(cache_folder_path + "hist.csv", parse_dates=['datetime'], index_col=[0])
-    return JsonResponse(dict(flow_regime=flow_regime(hist, int(selected_year))))
+    return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
 
+
+@controller(name='get_annual_discharge', url='get_annual_discharge')
+def get_annual_discharge(request):
+    reach_id = request.GET['reach_id']
+    plot = plot_annual_discharge_volumes(110229254) # TODO use reach_id after switching to Geoglows-v2
+    return JsonResponse(dict(plot=plot))
+    
 
 @controller(name='get_gee_plots', url='get_gee_plots')
 def get_gee_plots(request):
