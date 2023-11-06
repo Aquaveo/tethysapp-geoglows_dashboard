@@ -112,8 +112,8 @@ def get_available_dates(request):
         s.close()
         
     # cache the data
-    with open(cache_folder_path + "dates.json", "w") as file: 
-        json.dump(dates, file)
+    # with open(cache_folder_path + "dates.json", "w") as file: 
+    #     json.dump(dates, file)
         
     return JsonResponse(dict(
         dates=list(map(lambda x: x.split(".")[0], dates["available_dates"])),
@@ -142,8 +142,8 @@ def get_forecast_data(request):
         files["rperiods"] = gsf.return_periods(reach_id, s=s)
     
     # cache the data
-    for file in files.keys():
-        files[file].to_csv(cache_folder_path + file + ".csv")
+    # for file in files.keys():
+    #     files[file].to_csv(cache_folder_path + file + ".csv")
         
             
     s.close()
@@ -183,8 +183,8 @@ def get_historical_data(request):
         files["rperiods"] = gsf.return_periods(reach_id, s=s)  # TODO read rperiods from cache folder if it exists
     
     # cache the data
-    for file in files.keys():
-        files[file].to_csv(cache_folder_path + file + ".csv")
+    # for file in files.keys():
+    #     files[file].to_csv(cache_folder_path + file + ".csv")
             
     s.close()
     # process data
