@@ -248,22 +248,18 @@ def parse_coordinates_string(type, coordinate_string):
         for point in coordinates[0]:
             result[0].append([point['lng'], point['lat']])
         return ee.Geometry.Polygon(result)    
+    
 
-
-@controller(name='get_gee_plots', url='get_gee_plots')
-def get_gee_plots(request):
+@controller(name='get_gee_plot', url='get_gee_plot')
+def get_gee_plot(request):
     data = json.loads(request.body.decode('utf-8'))
     type = data['type']
     coordinates = str(data['coordinates'])
     area = parse_coordinates_string(type, coordinates)
     start_date = data['startDate']
     end_date = data['endDate']
-    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast = PrecipitationAndSoilMoisturePlots(start_date, end_date, area).run()
-    return JsonResponse(dict(
-        gldas_precip_soil=gldas_precip_soil, 
-        gldas_precip=gldas_precip, 
-        gldas_soil=gldas_soil, 
-        imerg_precip=imerg_precip, 
-        era5_precip=era5_precip,
-        gfs_forecast=gfs_forecast
-    ))
+    plot_name = data['plotName']
+    # TODO some plots share GLDAS data, don't resend the data request
+    plot = PrecipitationAndSoilMoisturePlots(start_date, end_date, area).get_plot(plot_name)  
+    return JsonResponse(dict(plot=plot))
+    

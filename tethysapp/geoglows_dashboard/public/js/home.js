@@ -151,6 +151,9 @@ let initMap = function() {
             if (mapMarker) {
                 mapObj.removeLayer(mapMarker);
             }
+            if (selectedStream) {
+                selectedStream.clearLayers();
+            }
             mapMarker = L.marker(event.latlng).addTo(mapObj);
             mapObj.flyTo(event.latlng, 10);
             showSpinners();
@@ -159,11 +162,11 @@ let initMap = function() {
                     return setupDatePicker();
                 })
                 .then(function() {
-                    return initSelectedPlots();
+                    return initSelectedPlots(true);
                 })
                 .catch(error => {
                     alert(error);
-                    showPlotContainerMessage();
+                    showPlotContainerMessages();
                 })
         }        
     })
@@ -196,28 +199,26 @@ let initSearchBox = function() {
                 return setupDatePicker();
             })
             .then(function() {
-                initSelectedPlots();
+                initSelectedPlots(true);
             })
             .catch(error => {
                 alert(error);
-                showPlotContainerMessage();
+                showPlotContainerMessages();
             })
         }
     })
 }
 
+let hasReachId = function() {
+    return selectedTab == streamTabId && selectedReachId != null;
+}
 
-let initPrecipitationPlots = function() {
-    showPlots(false);
-    getGeePlots().then(function() {
-        drawPlots();
-    })
+let hasDrawnArea = function() {
+    return selectedTab == otherTabId && drawnFeatures.getLayers().length !== 0;
 }
 
 
 let initPlotCards = function() {
-    showPlotContainerMessage();
-
     // add options to the select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
@@ -236,17 +237,19 @@ let initPlotCards = function() {
         $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
     })
 
+    // init the plot div
+    if (!hasReachId() && !hasDrawnArea()) {
+        showPlotContainerMessages();
+    } else {
+        initSelectedPlots(false);
+    }
+
     // load the plot or send a request when the selected value changes
     $(".plot-card").each(function(index, card) {
         let plotSelect = $(card).find(".plot-select");
         plotSelect.on("change", function() {
             let plotName = $(this).val();
-            let plotData = tabs[selectedTab].plotData[plotName];
-            if (selectedReachId != null && plotData == null) {
-                getSelectedPlot(card); 
-            } else {
-                drawPlot(card);
-            }
+            getSelectedPlot(card);
             // disable the option in the other select
             $(".plot-select").not(this).find('option').prop('disabled', false);
             $(".plot-select").not(this).find('option[value="' + plotName + '"]').prop('disabled', true);
@@ -255,21 +258,34 @@ let initPlotCards = function() {
 }
 
 
-let initSelectedPlots = function() {
+let initSelectedPlots = function(update=false) {
     $(".plot-card").each(function(index, card) {
-        getSelectedPlot(card);
+        getSelectedPlot(card, update);
     })
 }
 
-let getSelectedPlot = function(plotCard) {
+let getSelectedPlot = function(plotCard, update=false) {
+    console.log("get selected plot");
     let plotSelect = $(plotCard).find(".plot-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner =  $(plotCard).find(".spinner");
     let plotName = plotSelect.val();
-    showSpinner(plotContainer, spinner);
-    requestPlotData(plotName).then(function() {
-        drawPlot(plotCard);
-    })
+    if (update) {
+        showSpinner(plotContainer, spinner);
+        requestPlotData(plotName).then(function() {
+            drawPlot(plotCard);
+        })
+    } else {
+        let plotData = tabs[selectedTab].plotData[plotName];
+        if (plotData != null) {
+            drawPlot(plotCard);
+        } else if (hasReachId() || hasDrawnArea()) {
+            showSpinner(plotContainer, spinner);
+            requestPlotData(plotName).then(function() {
+                drawPlot(plotCard);
+            })
+        }
+    }
 }
 
 
@@ -286,6 +302,8 @@ let requestPlotData = function(plotName) {
             return updateFlowRegime();
         case "annual-discharge":
             return getAnnualDischarge();
+        default:
+            return getGeePlot(plotName);
     }
 }
 
@@ -365,8 +383,8 @@ function showSpinner(plotContainer, spinner) {
     $(spinner).css("display", "flex");
 }
 
-
-function showPlotContainerMessage() {
+function showPlotContainerMessages() {
+    showPlots();
     $(".plot-card").each(function(index, card) {
         if (selectedTab == streamTabId) {
             $(card).find(".plot-div").html("Please select a stream");
@@ -374,13 +392,13 @@ function showPlotContainerMessage() {
             $(card).find(".plot-div").html("Please draw an area on the map");
         }
     })
-    showPlots();
 }
+
 
 let drawnFeatures, drawnType, drawnCoordinates;
 
 // Plot Methods
-function initDrawControl() {
+let initDrawControl = function() {
     // Initialize layer for drawn features
     drawnFeatures = new L.FeatureGroup();
     mapObj.addLayer(drawnFeatures);
@@ -407,7 +425,7 @@ function initDrawControl() {
         drawnFeatures.addLayer(e.layer);
         isDrawing = false;
         readAreaOfDrawnFeature();
-        initPrecipitationPlots();
+        initSelectedPlots(true);
         // TODO switch to Other tab automatically after the user finished drawing
     });
 };
@@ -637,8 +655,37 @@ let updateFlowRegime = function(year) {
 }
 
 
+let getGeePlot = function(plotName) {
+    console.log("Get GEE plot: " + plotName);
+    let data = {
+        type: drawnType,
+        coordinates: drawnCoordinates,
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear + 1}-01-01`,
+        plotName: plotName
+    }
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "POST",
+            url: URL_getGEEPlot,
+            data: JSON.stringify(data),
+            dataType: "json",
+            success: function(response) {
+                tabs[otherTabId].plotData[plotName] = response["plot"];
+                console.log("success in getting GEE plot: " + plotName);
+                resolve("success in getting GEE plot: " + plotName);
+            },
+            error: function() {
+                console.error("fail to draw GEE plot: " + plotName);
+                reject("fail to draw GEE plot: " + plotName);
+            }
+        })
+    })
+}
+
+
 let getGeePlots = function() {
-    console.log("Get GEE plots...");
+    
     let areaData = {
         type: drawnType,
         coordinates: drawnCoordinates,
