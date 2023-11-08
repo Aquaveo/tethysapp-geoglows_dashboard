@@ -120,6 +120,24 @@ def get_available_dates(request):
     ))
     
     
+### Streamflow Plots ###
+
+# @controller(name="get_streamflow_plot", url="get_streamflow_plot")
+# def get_streamflow_plot(request):
+#     plot_name = request["plot_name"]
+#     match plot_name:
+#         case "forecast":
+#             return get_forecast_data(request)
+#         case "historical":
+#             return get_historical_data(request)  # TODO split historical and flow-duration request?
+#         case "flow-duration":
+#             return get_historical_data(request)
+#         case "flow-regime":
+#             return update_flow_regime(request)  # TODO differentiate get the first flow regime plot and update the flow regime plot
+#         case "annual-discharge":
+#             return get_annual_discharge(request)
+        
+    
 @controller(name='getForecastData', url='getForecastData')
 def get_forecast_data(request):
     s = requests.Session()
@@ -154,7 +172,7 @@ def get_forecast_data(request):
         margin={"t": 0},
     )
     return JsonResponse(dict(
-        plot = offline_plot(
+        forecast=offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
             output_type='div',
@@ -196,13 +214,13 @@ def get_historical_data(request):
         margin={"t": 0},
     )
     return JsonResponse(dict(
-        plot = offline_plot(
+        historical=offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
             output_type='div',
             include_plotlyjs=False
         ),
-        fdp=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
+        flow_duration=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
         flow_regime=plot_flow_regime(files["hist"], int(selected_year)) 
     ))
     
