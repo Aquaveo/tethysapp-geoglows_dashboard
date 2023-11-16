@@ -14,6 +14,7 @@ class PrecipitationAndSoilMoisturePlots:
         self.start = start
         self.end = end
         self.area = area
+        self.has_gldas_data = False
         
     
     def clip_to_bounds(self, img):
@@ -70,10 +71,12 @@ class PrecipitationAndSoilMoisturePlots:
         self.gldas_ytd_df = gldas_ytd_df
         self.gldas_avg_df = gldas_avg_df
         self.cum_df_gldas = cum_df_gldas
+        self.has_gldas_data = True
         
     
     def plot_gldas_precip_and_soil_moisture(self):
-        self.get_gldas_data()
+        if not self.has_gldas_data:
+            self.get_gldas_data()
         self.gldas_avg_df['date'] = pd.to_datetime(self.gldas_avg_df['date'])
         self.cum_df_gldas['date'] = pd.to_datetime(self.cum_df_gldas['date'])
         
@@ -115,6 +118,9 @@ class PrecipitationAndSoilMoisturePlots:
         
     
     def plot_gldas_precipitation(self):
+        if not self.has_gldas_data:
+            self.get_gldas_data()
+            
         scatter_plots = []
         scatter_plots.append(go.Scatter(x=self.gldas_ytd_df.index, y=self.gldas_ytd_df['Rainf_tavg'], name='Values from the last 12 months'))
         scatter_plots.append(go.Scatter(x=self.gldas_avg_df.index, y=self.gldas_avg_df['Rainf_tavg'], name='Average Values since 2000'))
@@ -134,6 +140,9 @@ class PrecipitationAndSoilMoisturePlots:
         
         
     def plot_gldas_soil_moisture(self):
+        if not self.has_gldas_data:
+            self.get_gldas_data()
+            
         scatter_plots = []
         scatter_plots.append(go.Scatter(x=self.gldas_ytd_df.index, y=self.gldas_ytd_df['RootMoist_inst'], name='Values from the last 12 months'))
         scatter_plots.append(go.Scatter(x=self.gldas_avg_df.index, y=self.gldas_avg_df['RootMoist_inst'], name='Average Values since 2000'))
@@ -317,14 +326,20 @@ class PrecipitationAndSoilMoisturePlots:
             output_type='div',
             include_plotlyjs=False
         )
-
         
-    def run(self):
-        self.get_gldas_data()
-        gldas_precip_soil = self.plot_gldas_precip_and_soil_moisture()
-        gldas_precip = self.plot_gldas_precipitation()
-        gldas_soil = self.plot_gldas_soil_moisture()
-        imerg_precip = self.plot_imerg_precipitation()
-        era5_precip = self.plot_era5_precipitation()
-        gfs_forecast = self.plot_gfs_forecast_data()
-        return [gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast]
+        
+    def get_plot(self, plot_name):
+        match plot_name:
+            case "gldas-precip-soil":
+                return self.plot_gldas_precip_and_soil_moisture()
+            case "gldas-soil":
+                return self.plot_gldas_soil_moisture()
+            case "gldas-precip":
+                return self.plot_gldas_precipitation()
+            case "imerg-precip":
+                return self.plot_imerg_precipitation()
+            case "era5-precip":
+                return self.plot_era5_precipitation()
+            case "gfs-forecast":
+                return self.plot_gfs_forecast_data()
+            

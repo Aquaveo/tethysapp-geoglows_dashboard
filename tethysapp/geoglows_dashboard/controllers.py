@@ -120,6 +120,24 @@ def get_available_dates(request):
     ))
     
     
+### Streamflow Plots ###
+
+# @controller(name="get_streamflow_plot", url="get_streamflow_plot")
+# def get_streamflow_plot(request):
+#     plot_name = request["plot_name"]
+#     match plot_name:
+#         case "forecast":
+#             return get_forecast_data(request)
+#         case "historical":
+#             return get_historical_data(request)  # TODO split historical and flow-duration request?
+#         case "flow-duration":
+#             return get_historical_data(request)
+#         case "flow-regime":
+#             return update_flow_regime(request)  # TODO differentiate get the first flow regime plot and update the flow regime plot
+#         case "annual-discharge":
+#             return get_annual_discharge(request)
+        
+    
 @controller(name='getForecastData', url='getForecastData')
 def get_forecast_data(request):
     s = requests.Session()
@@ -154,7 +172,7 @@ def get_forecast_data(request):
         margin={"t": 0},
     )
     return JsonResponse(dict(
-        plot = offline_plot(
+        forecast=offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
             output_type='div',
@@ -196,13 +214,13 @@ def get_historical_data(request):
         margin={"t": 0},
     )
     return JsonResponse(dict(
-        plot = offline_plot(
+        historical=offline_plot(
             plot,
             config={'autosizable': True, 'responsive': True},
             output_type='div',
             include_plotlyjs=False
         ),
-        fdp=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
+        flow_duration=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
         flow_regime=plot_flow_regime(files["hist"], int(selected_year)) 
     ))
     
@@ -230,22 +248,18 @@ def parse_coordinates_string(type, coordinate_string):
         for point in coordinates[0]:
             result[0].append([point['lng'], point['lat']])
         return ee.Geometry.Polygon(result)    
+    
 
-
-@controller(name='get_gee_plots', url='get_gee_plots')
-def get_gee_plots(request):
+@controller(name='get_gee_plot', url='get_gee_plot')
+def get_gee_plot(request):
     data = json.loads(request.body.decode('utf-8'))
     type = data['type']
     coordinates = str(data['coordinates'])
     area = parse_coordinates_string(type, coordinates)
     start_date = data['startDate']
     end_date = data['endDate']
-    gldas_precip_soil, gldas_precip, gldas_soil, imerg_precip, era5_precip, gfs_forecast = PrecipitationAndSoilMoisturePlots(start_date, end_date, area).run()
-    return JsonResponse(dict(
-        gldas_precip_soil=gldas_precip_soil, 
-        gldas_precip=gldas_precip, 
-        gldas_soil=gldas_soil, 
-        imerg_precip=imerg_precip, 
-        era5_precip=era5_precip,
-        gfs_forecast=gfs_forecast
-    ))
+    plot_name = data['plotName']
+    # TODO some plots share GLDAS data, don't resend the data request
+    plot = PrecipitationAndSoilMoisturePlots(start_date, end_date, area).get_plot(plot_name)  
+    return JsonResponse(dict(plot=plot))
+    

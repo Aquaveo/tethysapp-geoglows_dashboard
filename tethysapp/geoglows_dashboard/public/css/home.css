@@ -59,7 +59,7 @@ select {
     height: 100%;
 }
 
-.plot-container {
+.plot-div {
     color: black;
     display: flex;
     justify-content: center;

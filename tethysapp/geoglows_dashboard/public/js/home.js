@@ -10,9 +10,11 @@ let countries = {};
 const currentYear = new Date().getFullYear();
 let selectedYear = $("#yearpicker").val();
 
-const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0)); // TODO must be 4 0s?
+const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
+
+let selectedReachId;
 
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
@@ -53,7 +55,6 @@ let tabs = {
 }
 
 
-
 $(function() {
     initTabs();
     initMap();
@@ -69,13 +70,7 @@ let initTabs = function() {
         $(tab).on('click', function(event) {
             event.preventDefault();
             selectedTab = tab;
-            initPlotSelects();
-            drawPlots();
-            // if (tab == otherTabId && tabs[tab].plotData["gldas-precip-soil"] == null) {
-            //     initPrecipitationPlots();
-            // } else {
-            //     drawPlots();
-            // }
+            initPlotCards();
         })
     }
     $('.nav-link').click(function() {
@@ -84,86 +79,8 @@ let initTabs = function() {
         // Add 'active' class to the clicked tab
         $(this).addClass('active');
     });
-    initPlotSelects();
-    drawPlots();
-}
-
-let initPrecipitationPlots = function() {
-    showPlots(false);
-    getGeePlots().then(function() {
-        drawPlots();
-    })
-}
-
-let initPlotSelects = function() {
-    // add options to the select
-    $(".plot-select").each(function(tabIndex) {
-        $(this).empty();
-        let plots = tabs[selectedTab].plotName;
-        let plotIndex = 0;
-        for (let key in plots) {
-            $(this).append(new Option(plots[key], key, false, tabIndex == plotIndex));
-            plotIndex++;
-        }
-    })
-
-    // two selects can't choose the same option
-    $(".plot-select").each(function() {
-        let value = $(this).val();
-        $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
-    })
-
-    // load plot when the select value changes
-    $(".plot-card").each(function(index, card) {
-        let plotSelect = $(card).find(".plot-select");
-        let plotContainer = $(card).find(".plot-container");
-        plotSelect.on("change", function() {
-            let value = $(this).val();
-            plotContainer.html(tabs[selectedTab].plotData[value]);
-            $(".plot-select").not(this).find('option').prop('disabled', false);
-            $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
-        })        
-    })
-}
-
-
-let initYearPeaker = function() {
-    $('#yearpicker').datepicker({
-        minViewMode: 2,
-        format: 'yyyy',
-        endDate: currentYear.toString()
-    });
-    $('#yearpicker').on('changeDate', function(e) {
-        selectedYear = e.date.getFullYear();
-        if (selectedTab == streamTabId && tabs[streamTabId].plotData["flow-regime"] != null) {
-            updateFlowRegime(selectedYear)
-        }
-        $('#yearpicker').datepicker('hide');
-    });
-}
-
-
-let initSearchBox = function() {
-    $('#search-addon').click(findReachIDByID);
-    $('#reach-id-input').keydown(event => {
-        if (event.keyCode === 13) {
-            findReachIDByID()
-            .then(function(reachID) {
-                showPlots(false);
-                return setupDatePicker(reachID);
-            })
-            .then(function(data) {
-                return Promise.all([getForecastData(data), getHistoricalData(data), getAnnualDischarge(data)])
-            })
-            .then(function() {
-                drawPlots();
-            })
-            .catch(error => {
-                alert(error);
-                showStreamSelectionMessage();
-            })
-        }
-    })
+    initPlotCards();
+    // drawPlots();
 }
 
 
@@ -192,6 +109,11 @@ let initMap = function() {
             }
         },
     });
+
+    let refreshMapLayer = function() {
+        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
+        esriLayer.setTimeRange(sliderTime, endDateTime);
+    }
 
     mapObj.timeDimension.on('timeload', refreshMapLayer);
     selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
@@ -229,27 +151,161 @@ let initMap = function() {
             if (mapMarker) {
                 mapObj.removeLayer(mapMarker);
             }
+            if (selectedStream) {
+                selectedStream.clearLayers();
+            }
             mapMarker = L.marker(event.latlng).addTo(mapObj);
             mapObj.flyTo(event.latlng, 10);
-            showPlots(false);
+            showSpinners();
             findReachIDByLatLon(event)
-                .then(function(reachID) {
-                    $('#reach-id-input').val(reachID);
-                    return setupDatePicker(reachID);
-                })
-                .then(function(data) {
-                    return Promise.all([getForecastData(data), getHistoricalData(data), getAnnualDischarge(data)])
+                .then(function() {
+                    return setupDatePicker();
                 })
                 .then(function() {
-                    drawPlots();
+                    return initSelectedPlots(true);
                 })
                 .catch(error => {
                     alert(error);
-                    showStreamSelectionMessage();
+                    showPlotContainerMessages();
                 })
         }        
     })
 };
+
+
+let initYearPeaker = function() {
+    $('#yearpicker').datepicker({
+        minViewMode: 2,
+        format: 'yyyy',
+        endDate: currentYear.toString()
+    });
+    $('#yearpicker').on('changeDate', function(e) {
+        selectedYear = e.date.getFullYear();
+        if (selectedTab == streamTabId && tabs[streamTabId].plotData["flow-regime"] != null) {
+            updateFlowRegime(selectedYear)
+        }
+        $('#yearpicker').datepicker('hide');
+    });
+}
+
+
+let initSearchBox = function() {
+    $('#search-addon').click(findReachIDByID);
+    $('#reach-id-input').keydown(event => {
+        if (event.keyCode === 13) {
+            showSpinners();
+            findReachIDByID()
+            .then(function() {
+                return setupDatePicker();
+            })
+            .then(function() {
+                initSelectedPlots(true);
+            })
+            .catch(error => {
+                alert(error);
+                showPlotContainerMessages();
+            })
+        }
+    })
+}
+
+let hasReachId = function() {
+    return selectedTab == streamTabId && selectedReachId != null;
+}
+
+let hasDrawnArea = function() {
+    return selectedTab == otherTabId && drawnFeatures.getLayers().length !== 0;
+}
+
+
+let initPlotCards = function() {
+    // add options to the select
+    $(".plot-select").each(function(tabIndex) {
+        $(this).empty();
+        let plots = tabs[selectedTab].plotName;
+        let plotIndex = 0;
+        for (let key in plots) {
+            // when tabIndex == plotIndex, set the option as selected
+            $(this).append(new Option(plots[key], key, false, tabIndex == plotIndex));
+            plotIndex++;
+        }
+    })
+
+    // two selects can't choose the same option
+    $(".plot-select").each(function() {
+        let value = $(this).val();
+        $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
+    })
+
+    // init the plot div
+    if (!hasReachId() && !hasDrawnArea()) {
+        showPlotContainerMessages();
+    } else {
+        initSelectedPlots(false);
+    }
+
+    // load the plot or send a request when the selected value changes
+    $(".plot-card").each(function(index, card) {
+        let plotSelect = $(card).find(".plot-select");
+        plotSelect.on("change", function() {
+            let plotName = $(this).val();
+            getSelectedPlot(card);
+            // disable the option in the other select
+            $(".plot-select").not(this).find('option').prop('disabled', false);
+            $(".plot-select").not(this).find('option[value="' + plotName + '"]').prop('disabled', true);
+        })        
+    })
+}
+
+
+let initSelectedPlots = function(update=false) {
+    $(".plot-card").each(function(index, card) {
+        getSelectedPlot(card, update);
+    })
+}
+
+let getSelectedPlot = function(plotCard, update=false) {
+    console.log("get selected plot");
+    let plotSelect = $(plotCard).find(".plot-select");
+    let plotContainer = $(plotCard).find(".plot-div");
+    let spinner =  $(plotCard).find(".spinner");
+    let plotName = plotSelect.val();
+    if (update) {
+        showSpinner(plotContainer, spinner);
+        requestPlotData(plotName).then(function() {
+            drawPlot(plotCard);
+        })
+    } else {
+        let plotData = tabs[selectedTab].plotData[plotName];
+        if (plotData != null) {
+            drawPlot(plotCard);
+        } else if (hasReachId() || hasDrawnArea()) {
+            showSpinner(plotContainer, spinner);
+            requestPlotData(plotName).then(function() {
+                drawPlot(plotCard);
+            })
+        }
+    }
+}
+
+
+let requestPlotData = function(plotName) {
+    console.log("sending a request for " + plotName + "plot");
+    switch (plotName) {
+        case "forecast":
+            return getForecastData();
+        case "historical":
+            return getHistoricalData();
+        case "flow-duration":
+            return getHistoricalData();
+        case "flow-regime":
+            return updateFlowRegime();
+        case "annual-discharge":
+            return getAnnualDischarge();
+        default:
+            return getGeePlot(plotName);
+    }
+}
 
 
 let loadCountries = function() {
@@ -262,7 +318,6 @@ let loadCountries = function() {
         })
         .then((data) => {
             data = JSON.parse(JSON.stringify(data));
-            console.log(data);
             for (let country of data.features) {
                 let name = country.properties.ADMIN;
                 let geometry = country.geometry;
@@ -291,60 +346,59 @@ let initCountrySelector = function() {
 }
 
 
-let refreshMapLayer = function() {
-    let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-    esriLayer.setTimeRange(sliderTime, endDateTime);
+function drawPlot(plotCard) {
+    let plotSelect = $(plotCard).find(".plot-select");
+    let plotContainer = $(plotCard).find(".plot-div");
+    let spinner = $(plotCard).find(".spinner");
+    let plotData = tabs[selectedTab].plotData[plotSelect.val()];
+    showPlot(plotContainer, spinner);
+    plotContainer.html(plotData);
 }
 
 
-function clearPlots() {
-    $(".plot-container").empty();
-}
-
-
-function drawPlots() {
-    showPlots(true);
-    clearPlots();
+function showPlots() {
     $(".plot-card").each(function(index, card) {
-        let plotSelect = $(card).find(".plot-select");
-        let plotContainer = $(card).find(".plot-container");
-        let plotContent = tabs[selectedTab].plotData[plotSelect.val()]; // Assuming plotData is an object with values based on select options
-        plotContainer.html(plotContent);
-    });
+        let plotContainer = $(card).find(".plot-div");
+        let spinner = $(card).find(".spinner");
+        showPlot(plotContainer, spinner);
+    })
 }
 
 
-function showPlots(show) {
-    $(".plot-container").css("display", show ? "flex" : "none");
-    showSpinners(!show);
+function showSpinners() {
+    $(".plot-card").each(function(index, card) {
+        let plotContainer = $(card).find(".plot-div");
+        let spinner = $(card).find(".spinner");
+        showSpinner(plotContainer, spinner);
+    })
 }
 
-
-function showSpinners(show) {
-    if (show) {
-        $(".spinner").css("display", "flex");
-    } else {
-        $(".spinner").css("display", "none");
-    }
+function showPlot(plotContainer, spinner) {
+    $(plotContainer).css("display", "flex");
+    $(spinner).css("display", "none");
 }
 
+function showSpinner(plotContainer, spinner) {
+    $(plotContainer).css("display", "none");
+    $(spinner).css("display", "flex");
+}
 
-function showStreamSelectionMessage() {
+function showPlotContainerMessages() {
+    showPlots();
     $(".plot-card").each(function(index, card) {
         if (selectedTab == streamTabId) {
-            $(card).find(".plot-container").html("Please select a stream");
+            $(card).find(".plot-div").html("Please select a stream");
         } else {
-            $(card).find(".plot-container").html("Please draw an area on the map");
+            $(card).find(".plot-div").html("Please draw an area on the map");
         }
-        
     })
-    showPlots(true);
 }
+
 
 let drawnFeatures, drawnType, drawnCoordinates;
 
 // Plot Methods
-function initDrawControl() {
+let initDrawControl = function() {
     // Initialize layer for drawn features
     drawnFeatures = new L.FeatureGroup();
     mapObj.addLayer(drawnFeatures);
@@ -371,7 +425,7 @@ function initDrawControl() {
         drawnFeatures.addLayer(e.layer);
         isDrawing = false;
         readAreaOfDrawnFeature();
-        initPrecipitationPlots();
+        initSelectedPlots(true);
         // TODO switch to Other tab automatically after the user finished drawing
     });
 };
@@ -415,7 +469,6 @@ let readAreaOfDrawnFeature = function() {
 
 let findReachIDByID = function() {
     return new Promise(function (resolve, reject) {
-        console.log("Searching stream id...");
         $.ajax({
             type: "GET",
             async: true,
@@ -426,11 +479,12 @@ let findReachIDByID = function() {
                 }),
             success: function(response) {
                 if (mapMarker) {
-                    mapObj.removeLayer(mapMarker)
+                    mapObj.removeLayer(mapMarker);
                 }
-                mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj)
-                mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9)
-                resolve($('#reach-id-input').val())
+                mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj);
+                mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9);
+                selectedReachId = $('#reach-id-input').val();
+                resolve("success in getting the reach id!");
             },
             error: function() {
                 alert("Unable to find the reach_id specified")
@@ -458,21 +512,23 @@ let findReachIDByLatLon = function(event) {
                 // draw the stream on the map
                 selectedStream.clearLayers();
                 selectedStream.addData(featureCollection.features[0].geometry);
-                let reachID = featureCollection.features[0].properties["COMID (Stream Identifier)"];
-                resolve(reachID);
+                selectedReachId = featureCollection.features[0].properties["COMID (Stream Identifier)"];
+                $('#reach-id-input').val(selectedReachId);
+                resolve("success in getting the reach id!");
             }
         })
     })
 }
 
+let forecastPlotDate;
 
-let setupDatePicker = function(reachID) {
+let setupDatePicker = function() {
     return new Promise(function(resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getAvailableDates + L.Util.getParamString({
-                reach_id: reachID,
+                reach_id: selectedReachId,
                 is_test: isTest.toString()
             }),
             success: function(response) {
@@ -480,13 +536,13 @@ let setupDatePicker = function(reachID) {
                 let latestAvailableDate = dates.sort(
                     (a, b) => parseFloat(b) - parseFloat(a)
                 )[0]
-                let selectedDate = new Date(
+                forecastPlotDate = new Date(
                     latestAvailableDate.slice(0, 4),
                     parseInt(latestAvailableDate.slice(4, 6)) - 1,
                     latestAvailableDate.slice(6, 8)
                 )
                 // TODO add feature: the user can change the forecast_date
-                resolve({'reachID': reachID, 'selectedDate': selectedDate});
+                resolve("success in getting forecast date!");
             },
             error: function() {
                 reject("fail to get available dates");
@@ -503,9 +559,9 @@ let getFormattedDate = function(date) {
 }
 
 
-let getForecastData = function(data) {
-    return new Promise(function(resolve, reject) {
-        let reachID = data.reachID, selectedDate = data.selectedDate;
+let getForecastData = function() {
+    return new Promise(function(resolve, reject) {  // get forecast date first TODO
+        let selectedDate = forecastPlotDate;
         let startDate = new Date();
         let dateOffset = 24 * 60 * 60 * 1000 * 7;
         startDate.setTime(selectedDate.getTime() - dateOffset);
@@ -513,14 +569,14 @@ let getForecastData = function(data) {
             type: "GET",
             async: true,
             url: URL_getForecastData + L.Util.getParamString({
-                reach_id: reachID,
-                end_date: getFormattedDate(selectedDate),
+                reach_id: selectedReachId,
+                end_date: getFormattedDate(forecastPlotDate),
                 start_date: getFormattedDate(startDate),
                 is_test: isTest.toString()
             }),
             success: function(response) {
+                tabs[streamTabId].plotData["forecast"] = response["forecast"];
                 console.log("success in getting forecast data!");
-                tabs[streamTabId].plotData["forecast"] = response["plot"];
                 resolve("success in getting forecast data!")
             },
             error: function() {
@@ -532,21 +588,19 @@ let getForecastData = function(data) {
 }
 
 
-let getHistoricalData = function(data) {
+let getHistoricalData = function() {
     return new Promise(function (resolve, reject) {
-        let reachID = data.reachID;
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getHistoricalData + L.Util.getParamString({
-                reach_id: reachID,
+                reach_id: selectedReachId,
                 selected_year: selectedYear,
                 is_test: isTest.toString()
             }),
             success: function(response) {
-                historicalData = response["hist"]
-                tabs[streamTabId].plotData["historical"] = response["plot"];
-                tabs[streamTabId].plotData["flow-duration"] = response["fdp"];
+                tabs[streamTabId].plotData["historical"] = response["historical"];
+                tabs[streamTabId].plotData["flow-duration"] = response["flow_duration"];
                 tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
                 console.log("success in getting historical data!");
                 resolve("success in getting historical data!");
@@ -559,14 +613,14 @@ let getHistoricalData = function(data) {
     })
 }
 
-let getAnnualDischarge = function(data) {
+
+let getAnnualDischarge = function() {
     return new Promise(function(resolve, reject) {
-        let reachID = data.reachID;
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getAnnualDischarge + L.Util.getParamString({
-                reach_id: reachID
+                reach_id: selectedReachId
             }),
             success: function(response) {
                 plot = response["plot"]
@@ -592,7 +646,6 @@ let updateFlowRegime = function(year) {
         }),
         success: function(response) {
             tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
-            drawPlots();
             console.log("success in drawing new flow regime plot");
         },
         error: function() {
@@ -602,8 +655,37 @@ let updateFlowRegime = function(year) {
 }
 
 
+let getGeePlot = function(plotName) {
+    console.log("Get GEE plot: " + plotName);
+    let data = {
+        type: drawnType,
+        coordinates: drawnCoordinates,
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear + 1}-01-01`,
+        plotName: plotName
+    }
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "POST",
+            url: URL_getGEEPlot,
+            data: JSON.stringify(data),
+            dataType: "json",
+            success: function(response) {
+                tabs[otherTabId].plotData[plotName] = response["plot"];
+                console.log("success in getting GEE plot: " + plotName);
+                resolve("success in getting GEE plot: " + plotName);
+            },
+            error: function() {
+                console.error("fail to draw GEE plot: " + plotName);
+                reject("fail to draw GEE plot: " + plotName);
+            }
+        })
+    })
+}
+
+
 let getGeePlots = function() {
-    console.log("Get GEE plots...");
+    
     let areaData = {
         type: drawnType,
         coordinates: drawnCoordinates,
