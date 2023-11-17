@@ -3,7 +3,7 @@ let isDrawing = false;
 
 let mapObj;
 let mapMarker, selectedStream, selectedCountry;
-let esriLayer;
+let esriLayer, hydroSOSLayer, dryLevelLegend;
 
 let countries = {};
 
@@ -71,51 +71,23 @@ let initTabs = function() {
             event.preventDefault();
             selectedTab = tab;
             initPlotCards();
+            $('.nav-link').removeClass('active');
+            $(this).addClass('active');
+            initMapLayer();
         })
     }
-    $('.nav-link').click(function() {
-        // Remove 'active' class from all tabs
-        $('.nav-link').removeClass('active');
-        // Add 'active' class to the clicked tab
-        $(this).addClass('active');
-    });
     initPlotCards();
-    // drawPlots();
 }
 
 
-// TODO change map layer when the tab changes
 let initMap = function() {
     mapObj = L.map('leaflet-map', {
         zoom: 3,
         center: [0, 0],
         fullscreenControl: true,
-       // Add Time Dimension
-        timeDimension: true,
-        timeDimensionOptions: {
-            timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
-            period: "PT3H",
-            currentTime: startDateTime
-        },
-        timeDimensionControl: true,
-        timeDimensionControlOptions: {
-            autoPlay: false,
-            loopButton: true,
-            timeSteps: 1,
-            limitSliders: true,
-            playerOptions: {
-                buffer: 0,
-                transitionTime: 500,
-            }
-        },
+        timeDimension: true
     });
 
-    let refreshMapLayer = function() {
-        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-        esriLayer.setTimeRange(sliderTime, endDateTime);
-    }
-
-    mapObj.timeDimension.on('timeload', refreshMapLayer);
     selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
 
     const basemaps = {
@@ -134,17 +106,7 @@ let initMap = function() {
         collapsed: false
     }).addTo(mapObj);
 
-    // Add Esri layer
-    esriLayer = L.esri.dynamicMapLayer({
-        url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
-        layers: [0],
-        from: startDateTime,
-        to: endDateTime,
-        opacity: 0.7
-    })
-    .addTo(mapObj);
-
-    $('.timecontrol-play').on('click', refreshMapLayer);
+    initMapLayer();
 
     mapObj.on('click', function(event) {
         if (!isDrawing) {
@@ -171,6 +133,121 @@ let initMap = function() {
         }        
     })
 };
+
+
+let initMapLayer = function() {
+    if (selectedTab == streamTabId) {
+        if (hydroSOSLayer != null) {
+            mapObj.removeLayer(hydroSOSLayer)
+        }
+        if (dryLevelLegend != null) {
+            dryLevelLegend.remove();
+        }
+        addGeoGlowsLayer();
+    } else {
+        mapObj.removeControl(mapObj.timeDimension);
+        mapObj.removeControl(mapObj.timeDimensionControl);
+        mapObj.removeLayer(esriLayer);
+        addHydroSOSLayer();
+    }
+}
+
+
+let addGeoGlowsLayer = function() {
+    esriLayer = L.esri.dynamicMapLayer({
+        url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
+        layers: [0],
+        from: startDateTime,
+        to: endDateTime,
+        opacity: 0.7
+    }).addTo(mapObj);
+
+    mapObj.timeDimension = L.timeDimension({
+        timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
+        period: "PT3H",
+        currentTime: startDateTime
+    });
+
+    mapObj.timeDimensionControl = L.control.timeDimension({
+        autoPlay: false,
+            loopButton: true,
+            timeSteps: 1,
+            limitSliders: true,
+            playerOptions: {
+                buffer: 0,
+                transitionTime: 500,
+            }
+    }).addTo(mapObj);
+    
+
+    let refreshMapLayer = function() {
+        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
+        esriLayer.setTimeRange(sliderTime, endDateTime);
+    }
+    mapObj.timeDimension.on('timeload', refreshMapLayer);
+    $('.timecontrol-play').on('click', refreshMapLayer);
+}
+
+
+let addHydroSOSLayer = function() {
+    function getColor(dry_level) {
+        switch(dry_level) {
+            case "extremely dry":
+                return "#CD233F";
+            case "dry":
+                return "#FFA885";
+            case "Normal range":
+                return "#E7E2BC";
+            case "wet":
+                return "#8ECEEE";
+            case "extremely wet":
+                return "#2C7DCD";
+        }
+    }
+
+    function getStyle(feature) {
+        return {
+            fillColor: getColor(feature.properties.classification),
+            weight: 1.5,
+            opacity: 1,
+            color: "#808080",
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+    fetch("/static/geoglows_dashboard/data/geojson/ecuador.json")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("ecaudor.json was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            console.log(data);
+            data = JSON.parse(JSON.stringify(data));
+            hydroSOSLayer = L.geoJSON(data, {style: getStyle}).addTo(mapObj);
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+
+    dryLevelLegend = L.control({position: 'bottomright'});
+    dryLevelLegend.onAdd = function(map) {
+        let div = L.DomUtil.create('div', 'legend');
+        let dryLevels = ["extremely dry", "dry", "Normal range", "wet", "extremely wet"];
+
+        // loop through our dryLevels intervals and generate a label with a colored square for each interval
+        for (let i = 0; i < dryLevels.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
+                dryLevels[i] + '<br>';
+        }
+
+        return div;
+    }
+    dryLevelLegend.addTo(mapObj);
+}
 
 
 let initYearPeaker = function() {
