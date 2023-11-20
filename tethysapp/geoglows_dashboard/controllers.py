@@ -10,14 +10,15 @@ import pandas as pd
 import json
 import ast
 import ee
+import os
 
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import PrecipitationAndSoilMoisturePlots
 
 
-test_folder_path = "tethysapp/geoglows_dashboard/public/data/test/"
-cache_folder_path = "tethysapp/geoglows_dashboard/public/data/cache/"
+test_dir = "test/"
+cache_dir = "cache/"
 
 
 @controller
@@ -100,20 +101,20 @@ def find_reach_id(request):
     return JsonResponse({'lat': lat, 'lon': lon})
 
 
-@controller(name='getAvailableDates', url='getAvailableDates')
-def get_available_dates(request):
+@controller(name='get_available_dates', url='get_available_dates', user_workspace=True)
+def get_available_dates(request, user_workspace):
     reach_id = request.GET['reach_id']
     is_test = request.GET['is_test'] == 'true'
     if is_test:
-        dates = json.load(open(test_folder_path + "dates.json"))
+        dates = json.load(open(os.path.join(user_workspace.path, test_dir, "dates.json")))
     else:
         s = requests.Session()
         dates = gsf.available_dates(reach_id, s=s)
         s.close()
         
     # cache the data
-    # with open(cache_folder_path + "dates.json", "w") as file: 
-    #     json.dump(dates, file)
+    with open(os.path.join(user_workspace.path, cache_dir, "dates.json"), "w") as file: 
+        json.dump(dates, file)
         
     return JsonResponse(dict(
         dates=list(map(lambda x: x.split(".")[0], dates["available_dates"])),
@@ -121,25 +122,9 @@ def get_available_dates(request):
     
     
 ### Streamflow Plots ###
-
-# @controller(name="get_streamflow_plot", url="get_streamflow_plot")
-# def get_streamflow_plot(request):
-#     plot_name = request["plot_name"]
-#     match plot_name:
-#         case "forecast":
-#             return get_forecast_data(request)
-#         case "historical":
-#             return get_historical_data(request)  # TODO split historical and flow-duration request?
-#         case "flow-duration":
-#             return get_historical_data(request)
-#         case "flow-regime":
-#             return update_flow_regime(request)  # TODO differentiate get the first flow regime plot and update the flow regime plot
-#         case "annual-discharge":
-#             return get_annual_discharge(request)
         
-    
-@controller(name='getForecastData', url='getForecastData')
-def get_forecast_data(request):
+@controller(name='get_forecast_data', url='get_forecast_data', user_workspace=True)
+def get_forecast_data(request, user_workspace):
     s = requests.Session()
     reach_id = request.GET['reach_id']
     start_date = request.GET['start_date']
@@ -147,12 +132,14 @@ def get_forecast_data(request):
     is_test = (request.GET['is_test'] == 'true')
     
     files = {"records": None, "stats": None, "ensembles": None, "rperiods": None}
+    cache_folder_path = os.path.join(user_workspace.path, cache_dir)
+    test_folder_path = os.path.join(user_workspace.path, test_dir)
     if is_test:
         for file in files.keys():
             if file == "rperiods":
-                files[file] = pd.read_csv(test_folder_path + file + ".csv", index_col=[0])
+                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), index_col=[0])
             else:
-                files[file] = pd.read_csv(test_folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
+                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), parse_dates=['datetime'], index_col=[0])
     else:
         files["records"] = gsf.forecast_records(reach_id, start_date=start_date.split('.')[0], end_date=end_date.split('.')[0], s=s)
         files["stats"] = gsf.forecast_stats(reach_id, forecast_date=end_date, s=s)
@@ -160,11 +147,11 @@ def get_forecast_data(request):
         files["rperiods"] = gsf.return_periods(reach_id, s=s)
     
     # cache the data
-    # for file in files.keys():
-    #     files[file].to_csv(cache_folder_path + file + ".csv")
-        
+    for file in files.keys():
+        files[file].to_csv(os.path.join(cache_folder_path, file + ".csv"))
             
     s.close()
+    
     # return json of plot html
     plot = gpp.hydroviewer(files["records"], files["stats"], files["ensembles"], files["rperiods"], outformat='plotly')
     plot.update_layout(
@@ -181,8 +168,8 @@ def get_forecast_data(request):
     ))
     
 
-@controller(name='getHistoricalData', url='getHistoricalData')
-def get_historical_data(request):
+@controller(name='get_historical_data', url='get_historical_data', user_workspace=True)
+def get_historical_data(request, user_workspace):
     # get data
     s = requests.Session()
     reach_id = request.GET['reach_id']
@@ -190,24 +177,27 @@ def get_historical_data(request):
     is_test = (request.GET['is_test'] == 'true')
     
     files = {"hist": None, "rperiods": None}
+    cache_folder_path = os.path.join(user_workspace.path, cache_dir)
+    test_folder_path = os.path.join(user_workspace.path, test_dir)
     if is_test:
         for file in files.keys():
             if file == "rperiods":
-                files[file] = pd.read_csv(test_folder_path + file + ".csv", index_col=[0])
+                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), index_col=[0])
             else:
-                files[file] = pd.read_csv(test_folder_path + file + ".csv", parse_dates=['datetime'], index_col=[0])
+                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), parse_dates=['datetime'], index_col=[0])
     else:
         files["hist"] = gsf.historic_simulation(reach_id, s=s)
         files["rperiods"] = gsf.return_periods(reach_id, s=s)  # TODO read rperiods from cache folder if it exists
     
     # cache the data
-    # for file in files.keys():
-    #     files[file].to_csv(cache_folder_path + file + ".csv")
+    for file in files.keys():
+        path = os.path.join(cache_folder_path, file + ".csv")
+        files[file].to_csv(path)
             
     s.close()
+    
     # process data
     title_headers = {'Reach ID': reach_id}
-    # return json of plot html
     plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
     plot.update_layout(
         title=None,
@@ -225,10 +215,10 @@ def get_historical_data(request):
     ))
     
 
-@controller(name='updateFlowRegime', url='updateFlowRegime')
-def update_flow_regime(request):
+@controller(name='update_flow_regime', url='update_flow_regime', user_workspace=True)
+def update_flow_regime(request, user_workspace):
     selected_year = request.GET['selected_year']
-    hist = pd.read_csv(cache_folder_path + "hist.csv", parse_dates=['datetime'], index_col=[0])
+    hist = pd.read_csv(os.path.join(user_workspace.path, cache_dir, "hist.csv"), parse_dates=['datetime'], index_col=[0])
     return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
 
 
