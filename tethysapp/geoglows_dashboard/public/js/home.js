@@ -1,4 +1,4 @@
-const isTest = false;
+const isTest = true;
 let isDrawing = false;
 
 let mapObj;
