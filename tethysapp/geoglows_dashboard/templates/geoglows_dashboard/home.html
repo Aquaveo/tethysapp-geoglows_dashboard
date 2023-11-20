@@ -100,11 +100,11 @@
   {{ block.super }}
   <script>
     let URL_find_reach_id = "{% url 'geoglows_dashboard:find_reach_id' %}"
-    let URL_getAvailableDates = "{% url 'geoglows_dashboard:getAvailableDates' %}";
-    let URL_getForecastData = "{% url 'geoglows_dashboard:getForecastData' %}";
-    let URL_getHistoricalData = "{% url 'geoglows_dashboard:getHistoricalData' %}";
+    let URL_getAvailableDates = "{% url 'geoglows_dashboard:get_available_dates' %}";
+    let URL_getForecastData = "{% url 'geoglows_dashboard:get_forecast_data' %}";
+    let URL_getHistoricalData = "{% url 'geoglows_dashboard:get_historical_data' %}";
     let URL_getAnnualDischarge =  "{% url 'geoglows_dashboard:get_annual_discharge' %}";
-    let URL_updateFlowRegime = "{% url 'geoglows_dashboard:updateFlowRegime' %}";
+    let URL_updateFlowRegime = "{% url 'geoglows_dashboard:update_flow_regime' %}";
     let URL_getGEEPlot = "{% url 'geoglows_dashboard:get_gee_plot' %}";
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
