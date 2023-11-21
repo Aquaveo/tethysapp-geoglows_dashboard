@@ -67,7 +67,7 @@ select {
     height: 100%;
 }
 
-#yearpicker {
+.yearpicker {
     width: 70%;
     display: inline-block;
 }
@@ -90,3 +90,9 @@ select {
     margin-right: 8px;
     opacity: 0.7;
 }
+
+.disabled-select {
+    color: #808080;  /* Gray text color */
+    background-color: #f2f2f2;  /* Light gray background color */
+    cursor: not-allowed;  /* Set the cursor to not-allowed */
+  }

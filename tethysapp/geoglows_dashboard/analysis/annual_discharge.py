@@ -22,7 +22,7 @@ def plot_annual_discharge_volumes(reach_id):
     # use a linear trendline to look for long term changes in volume
     linear_fits = np.polyfit(annual_volumes.index, annual_volumes.values, 1)
     annual_volumes['trendline'] = (annual_volumes.index * linear_fits[0]) + linear_fits[1]
-
+    # TODO cache the data annual_volumes
     scatter_plots = []
     scatter_plots.append(go.Scatter(x=annual_volumes.index, y=annual_volumes[reach_id], name=reach_id))
     scatter_plots.append(go.Scatter(x=annual_volumes.index, y=annual_volumes["trendline"], name="trendline"))
