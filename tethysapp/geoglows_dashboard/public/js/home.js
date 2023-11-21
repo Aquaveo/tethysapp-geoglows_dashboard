@@ -8,8 +8,6 @@ let esriLayer, hydroSOSLayer, dryLevelLegend;
 let countries = {};
 
 const currentYear = new Date().getFullYear();
-let selectedYear = $("#yearpicker").val();
-
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
@@ -31,8 +29,12 @@ let tabs = {
             "forecast": null,
             "historical": null,
             "flow-duration": null,
-            "flow-regime": null
-        }
+            "flow-regime": null,
+            "annual-discharge": null
+        },
+        "selectedYear": { // only flow-regime need year
+            "flow-regime": null,
+        }, 
     }, 
     [otherTabId]: {
         "plotName": {
@@ -50,6 +52,14 @@ let tabs = {
             "imerg-precip": null, 
             "era5-precip": null,
             "gfs-forecast": null
+        },
+        "selectedYear": {
+            "gldas-precip-soil": null, 
+            "gldas-soil": null, 
+            "gldas-precip": null, 
+            "imerg-precip": null, 
+            "era5-precip": null,
+            "gfs-forecast": null
         }
     }
 }
@@ -57,8 +67,8 @@ let tabs = {
 
 $(function() {
     initTabs();
+    initPlotCards();
     initMap();
-    initYearPeaker();
     initSearchBox();
     initCountrySelector();
     initDrawControl();
@@ -76,7 +86,6 @@ let initTabs = function() {
             initMapLayer();
         })
     }
-    initPlotCards();
 }
 
 
@@ -124,7 +133,7 @@ let initMap = function() {
                     return setupDatePicker();
                 })
                 .then(function() {
-                    return initSelectedPlots(true);
+                    return initSelectedPlots(update=true);
                 })
                 .catch(error => {
                     alert(error);
@@ -136,6 +145,102 @@ let initMap = function() {
 
 
 let initMapLayer = function() {
+    let addGeoGlowsLayer = function() {
+        esriLayer = L.esri.dynamicMapLayer({
+            url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
+            layers: [0],
+            from: startDateTime,
+            to: endDateTime,
+            opacity: 0.7
+        }).addTo(mapObj);
+    
+        mapObj.timeDimension = L.timeDimension({
+            timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
+            period: "PT3H",
+            currentTime: startDateTime
+        });
+    
+        mapObj.timeDimensionControl = L.control.timeDimension({
+            autoPlay: false,
+                loopButton: true,
+                timeSteps: 1,
+                limitSliders: true,
+                playerOptions: {
+                    buffer: 0,
+                    transitionTime: 500,
+                }
+        }).addTo(mapObj);
+        
+    
+        let refreshMapLayer = function() {
+            let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
+            esriLayer.setTimeRange(sliderTime, endDateTime);
+        }
+        mapObj.timeDimension.on('timeload', refreshMapLayer);
+        $('.timecontrol-play').on('click', refreshMapLayer);
+    }
+
+
+    let addHydroSOSLayer = function() {
+        function getColor(dry_level) {
+            switch(dry_level) {
+                case "extremely dry":
+                    return "#CD233F";
+                case "dry":
+                    return "#FFA885";
+                case "Normal range":
+                    return "#E7E2BC";
+                case "wet":
+                    return "#8ECEEE";
+                case "extremely wet":
+                    return "#2C7DCD";
+            }
+        }
+    
+        function getStyle(feature) {
+            return {
+                fillColor: getColor(feature.properties.classification),
+                weight: 1.5,
+                opacity: 1,
+                color: "#808080",
+                dashArray: '3',
+                fillOpacity: 0.7
+            };
+        }
+    
+        fetch("/static/geoglows_dashboard/data/geojson/ecuador.json")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("ecaudor.json was not ok");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                data = JSON.parse(JSON.stringify(data));
+                hydroSOSLayer = L.geoJSON(data, {style: getStyle}).addTo(mapObj);
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+    
+        dryLevelLegend = L.control({position: 'bottomright'});
+        dryLevelLegend.onAdd = function(map) {
+            let div = L.DomUtil.create('div', 'legend');
+            let dryLevels = ["extremely dry", "dry", "Normal range", "wet", "extremely wet"];
+    
+            // loop through our dryLevels intervals and generate a label with a colored square for each interval
+            for (let i = 0; i < dryLevels.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
+                    dryLevels[i] + '<br>';
+            }
+    
+            return div;
+        }
+        dryLevelLegend.addTo(mapObj);
+    }
+
+
     if (selectedTab == streamTabId) {
         if (hydroSOSLayer != null) {
             mapObj.removeLayer(hydroSOSLayer)
@@ -153,119 +258,6 @@ let initMapLayer = function() {
 }
 
 
-let addGeoGlowsLayer = function() {
-    esriLayer = L.esri.dynamicMapLayer({
-        url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
-        layers: [0],
-        from: startDateTime,
-        to: endDateTime,
-        opacity: 0.7
-    }).addTo(mapObj);
-
-    mapObj.timeDimension = L.timeDimension({
-        timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
-        period: "PT3H",
-        currentTime: startDateTime
-    });
-
-    mapObj.timeDimensionControl = L.control.timeDimension({
-        autoPlay: false,
-            loopButton: true,
-            timeSteps: 1,
-            limitSliders: true,
-            playerOptions: {
-                buffer: 0,
-                transitionTime: 500,
-            }
-    }).addTo(mapObj);
-    
-
-    let refreshMapLayer = function() {
-        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-        esriLayer.setTimeRange(sliderTime, endDateTime);
-    }
-    mapObj.timeDimension.on('timeload', refreshMapLayer);
-    $('.timecontrol-play').on('click', refreshMapLayer);
-}
-
-
-let addHydroSOSLayer = function() {
-    function getColor(dry_level) {
-        switch(dry_level) {
-            case "extremely dry":
-                return "#CD233F";
-            case "dry":
-                return "#FFA885";
-            case "Normal range":
-                return "#E7E2BC";
-            case "wet":
-                return "#8ECEEE";
-            case "extremely wet":
-                return "#2C7DCD";
-        }
-    }
-
-    function getStyle(feature) {
-        return {
-            fillColor: getColor(feature.properties.classification),
-            weight: 1.5,
-            opacity: 1,
-            color: "#808080",
-            dashArray: '3',
-            fillOpacity: 0.7
-        };
-    }
-
-    fetch("/static/geoglows_dashboard/data/geojson/ecuador.json")
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("ecaudor.json was not ok");
-            }
-            return response.json();
-        })
-        .then((data) => {
-            console.log(data);
-            data = JSON.parse(JSON.stringify(data));
-            hydroSOSLayer = L.geoJSON(data, {style: getStyle}).addTo(mapObj);
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
-
-    dryLevelLegend = L.control({position: 'bottomright'});
-    dryLevelLegend.onAdd = function(map) {
-        let div = L.DomUtil.create('div', 'legend');
-        let dryLevels = ["extremely dry", "dry", "Normal range", "wet", "extremely wet"];
-
-        // loop through our dryLevels intervals and generate a label with a colored square for each interval
-        for (let i = 0; i < dryLevels.length; i++) {
-            div.innerHTML +=
-                '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
-                dryLevels[i] + '<br>';
-        }
-
-        return div;
-    }
-    dryLevelLegend.addTo(mapObj);
-}
-
-
-let initYearPeaker = function() {
-    $('#yearpicker').datepicker({
-        minViewMode: 2,
-        format: 'yyyy',
-        endDate: currentYear.toString()
-    });
-    $('#yearpicker').on('changeDate', function(e) {
-        selectedYear = e.date.getFullYear();
-        if (selectedTab == streamTabId && tabs[streamTabId].plotData["flow-regime"] != null) {
-            updateFlowRegime(selectedYear)
-        }
-        $('#yearpicker').datepicker('hide');
-    });
-}
-
-
 let initSearchBox = function() {
     $('#search-addon').click(findReachIDByID);
     $('#reach-id-input').keydown(event => {
@@ -276,7 +268,7 @@ let initSearchBox = function() {
                 return setupDatePicker();
             })
             .then(function() {
-                initSelectedPlots(true);
+                initSelectedPlots(update=true);
             })
             .catch(error => {
                 alert(error);
@@ -296,7 +288,8 @@ let hasDrawnArea = function() {
 
 
 let initPlotCards = function() {
-    // add options to the select
+    //////////// init plot-select /////////
+    // add options to the plot-select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
         let plots = tabs[selectedTab].plotName;
@@ -308,17 +301,42 @@ let initPlotCards = function() {
         }
     })
 
-    // two selects can't choose the same option
+    // two plot-selects can't choose the same option
     $(".plot-select").each(function() {
         let value = $(this).val();
         $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
     })
 
-    // init the plot div
+    //////////// init year-select ////////////
+    if (selectedTab == streamTabId) {
+        $(".year-select").prop('disabled', true);
+        $(".year-select").addClass("disabled-select")
+    } else {
+        $(".year-select").prop('disabled', false);
+        $(".year-select").removeClass("disabled-select")
+    }
+
+    //////////// init yearpicker ////////////
+    $('.yearpicker').datepicker({
+        minViewMode: 2,
+        format: 'yyyy',
+        endDate: currentYear.toString()
+    });
+    // update the plot once the year changes
+    $(".plot-card").each(function(index, card) {
+        let yearPicker = $(card).find(".yearpicker");
+        // update the plot when selected year changes
+        yearPicker.on('changeDate', function(e) {
+            getSelectedPlot(card, newArea=false, newYear=true);
+            $('.yearpicker').datepicker('hide');
+        })
+    })
+
+    //////////// init the plot div ////////////
     if (!hasReachId() && !hasDrawnArea()) {
         showPlotContainerMessages();
     } else {
-        initSelectedPlots(false);
+        initSelectedPlots(newArea=false, newYear=false);
     }
 
     // load the plot or send a request when the selected value changes
@@ -326,7 +344,7 @@ let initPlotCards = function() {
         let plotSelect = $(card).find(".plot-select");
         plotSelect.on("change", function() {
             let plotName = $(this).val();
-            getSelectedPlot(card);
+            getSelectedPlot(card, newArea=false, newYear=false);
             // disable the option in the other select
             $(".plot-select").not(this).find('option').prop('disabled', false);
             $(".plot-select").not(this).find('option[value="' + plotName + '"]').prop('disabled', true);
@@ -335,30 +353,57 @@ let initPlotCards = function() {
 }
 
 
-let initSelectedPlots = function(update=false) {
+let initSelectedPlots = function(newArea=false, newYear=false) {
     $(".plot-card").each(function(index, card) {
-        getSelectedPlot(card, update);
+        getSelectedPlot(card, newArea, newYear);
     })
 }
 
-let getSelectedPlot = function(plotCard, update=false) {
-    console.log("get selected plot");
+
+let getSelectedPlot = function(plotCard, newArea=false, newYear=false) {
     let plotSelect = $(plotCard).find(".plot-select");
+    let yearSelect = $(plotCard).find(".year-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner =  $(plotCard).find(".spinner");
+
     let plotName = plotSelect.val();
-    if (update) {
+    let yearOption = yearSelect.val();
+    let selectedYear = Number($(plotCard).find(".yearpicker").val());
+
+    let startDate, endDate;
+    if (yearOption == "calendar-year") {
+        startDate = `${selectedYear}-01-01`;
+        endDate = `${selectedYear + 1}-01-01`;
+    } else if (yearOption == "water-year") {
+        startDate = `${selectedYear - 1}-10-01`;
+        endDate = `${selectedYear}-09-30`;
+    } else {
+        let date = new Date();
+        startDate = `${date.getFullYear() - 1}-${date.getMonth() + 1}-${date.getDate()}`;
+        endDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    }
+
+    if (newArea) { // new area
         showSpinner(plotContainer, spinner);
-        requestPlotData(plotName).then(function() {
+        requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
             drawPlot(plotCard);
         })
-    } else {
+    } else if (newYear) { // new year
+        let needYear = plotName in tabs[selectedTab].selectedYear;
+        let oldYear = tabs[selectedTab].selectedYear[plotName];
+        if (needYear && oldYear != selectedYear && (hasReachId() || hasDrawnArea())) {
+            showSpinner(plotContainer, spinner);
+            requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
+                drawPlot(plotCard);
+            })
+        }
+    } else { // new plot selection
         let plotData = tabs[selectedTab].plotData[plotName];
         if (plotData != null) {
             drawPlot(plotCard);
         } else if (hasReachId() || hasDrawnArea()) {
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName).then(function() {
+            requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
@@ -366,26 +411,31 @@ let getSelectedPlot = function(plotCard, update=false) {
 }
 
 
-let requestPlotData = function(plotName) {
-    console.log("sending a request for " + plotName + "plot");
+let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
+    console.log("sending a request for " + plotName + " plot");
     switch (plotName) {
         case "forecast":
             return getForecastData();
         case "historical":
-            return getHistoricalData();
+            return getHistoricalData(selectedYear);
         case "flow-duration":
-            return getHistoricalData();
+            return getHistoricalData(selectedYear);
         case "flow-regime":
-            return updateFlowRegime();
+            if (tabs[selectedTab].plotData[plotName] == null) {
+                return getHistoricalData(selectedYear);
+            }
+            console.log("update flow-regime");
+            return updateFlowRegime(selectedYear);
         case "annual-discharge":
             return getAnnualDischarge();
         default:
-            return getGeePlot(plotName);
+            return getGeePlot(plotName, startDate, endDate);
     }
 }
 
 
-let loadCountries = function() {
+let initCountrySelector = function() {
+    // load countries
     fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
         .then((response) => {
             if (!response.ok) {
@@ -408,11 +458,8 @@ let loadCountries = function() {
         .catch((error) => {
             console.error("Error:", error);
         });
-}
 
 
-let initCountrySelector = function() {
-    loadCountries();
     selectedCountry = L.geoJSON().addTo(mapObj);
 
     $("#country-selector").on("change", function() {
@@ -502,7 +549,7 @@ let initDrawControl = function() {
         drawnFeatures.addLayer(e.layer);
         isDrawing = false;
         readAreaOfDrawnFeature();
-        initSelectedPlots(true);
+        initSelectedPlots(update=true);
         // TODO switch to Other tab automatically after the user finished drawing
     });
 };
@@ -665,7 +712,7 @@ let getForecastData = function() {
 }
 
 
-let getHistoricalData = function() {
+let getHistoricalData = function(selectedYear) {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
@@ -715,30 +762,34 @@ let getAnnualDischarge = function() {
 
 
 let updateFlowRegime = function(year) {
-    $.ajax({
-        type: "GET",
-        async: false,
-        url: URL_updateFlowRegime + L.Util.getParamString({
-            selected_year: year
-        }),
-        success: function(response) {
-            tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
-            console.log("success in drawing new flow regime plot");
-        },
-        error: function() {
-            console.error("fail to draw new flow regime plot");
-        }
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: false,
+            url: URL_updateFlowRegime + L.Util.getParamString({
+                selected_year: year
+            }),
+            success: function(response) {
+                tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
+                console.log("success in drawing new flow regime plot");
+                resolve("success in drawing new flow regime plot")
+            },
+            error: function() {
+                console.error("fail to draw new flow regime plot");
+                reject("fail to draw new flow regime plot");
+            }
+        })
     })
 }
 
 
-let getGeePlot = function(plotName) {
-    console.log("Get GEE plot: " + plotName);
+let getGeePlot = function(plotName, startDate, endDate) {
+    console.log("Get GEE plot: " + plotName + " " + startDate + " " + endDate);
     let data = {
-        type: drawnType,
+        areaType: drawnType,
         coordinates: drawnCoordinates,
-        startDate: `${selectedYear}-01-01`,
-        endDate: `${selectedYear + 1}-01-01`,
+        startDate: startDate,
+        endDate: endDate,
         plotName: plotName
     }
     return new Promise(function (resolve, reject) {
@@ -762,6 +813,7 @@ let getGeePlot = function(plotName) {
 
 
 let getGeePlots = function() {
+    console.log("getGEEPlots is called!");
     
     let areaData = {
         type: drawnType,

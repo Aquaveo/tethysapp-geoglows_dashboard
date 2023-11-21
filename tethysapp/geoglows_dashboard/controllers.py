@@ -14,7 +14,7 @@ import os
 
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
-from .analysis.gee.gee_plots import PrecipitationAndSoilMoisturePlots
+from .analysis.gee.gee_plots import GEEPlots
 
 
 test_dir = "test/"
@@ -229,9 +229,9 @@ def get_annual_discharge(request):
     return JsonResponse(dict(plot=plot))
     
 
-def parse_coordinates_string(type, coordinate_string):
+def parse_coordinates_string(area_type, coordinate_string):
     coordinates = ast.literal_eval(coordinate_string)
-    if (type == "point"):
+    if (area_type == "point"):
         return ee.Geometry.Point([coordinates['lng'], coordinates['lat']])
     else:
         result = [[]]
@@ -243,13 +243,12 @@ def parse_coordinates_string(type, coordinate_string):
 @controller(name='get_gee_plot', url='get_gee_plot')
 def get_gee_plot(request):
     data = json.loads(request.body.decode('utf-8'))
-    type = data['type']
+    area_type = data['areaType']
     coordinates = str(data['coordinates'])
-    area = parse_coordinates_string(type, coordinates)
+    area = parse_coordinates_string(area_type, coordinates)
     start_date = data['startDate']
     end_date = data['endDate']
     plot_name = data['plotName']
-    # TODO some plots share GLDAS data, don't resend the data request
-    plot = PrecipitationAndSoilMoisturePlots(start_date, end_date, area).get_plot(plot_name)  
+    plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)  
     return JsonResponse(dict(plot=plot))
     

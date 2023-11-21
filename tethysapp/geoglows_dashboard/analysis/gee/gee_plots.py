@@ -9,8 +9,9 @@ from plotly.subplots import make_subplots
 from plotly.offline import plot as offline_plot
 
 
-class PrecipitationAndSoilMoisturePlots:
+class GEEPlots:
     def __init__(self, start, end, area):
+        print(f"start date: {start}, end date: {end}")
         self.start = start
         self.end = end
         self.area = area
@@ -37,6 +38,7 @@ class PrecipitationAndSoilMoisturePlots:
         gldas_avg_df = pd.DataFrame(
             gldas_monthly.aggregate_array('avg_value').getInfo(),
         )
+        # TODO start date or only the year?
         gldas_avg_df['datetime'] = [datetime.datetime(year=int(self.start[:4]), month=gldas_avg_df.index[i] + 1, day=15)
                                         for i in gldas_avg_df.index]
         gldas_avg_df['date'] = gldas_avg_df['datetime'].dt.strftime("%Y-%m-%d")
@@ -96,7 +98,7 @@ class PrecipitationAndSoilMoisturePlots:
 
         # Set x-axis date formatting
         fig.update_xaxes(
-            tickformat='%b',
+            tickformat='%Y-%m-%d',
             dtick='M1',
             tickangle=-45
         )
@@ -126,7 +128,9 @@ class PrecipitationAndSoilMoisturePlots:
         scatter_plots.append(go.Scatter(x=self.gldas_avg_df.index, y=self.gldas_avg_df['Rainf_tavg'], name='Average Values since 2000'))
 
         layout = go.Layout(
-            title=f"Precipitation in Kasungu, Malawi using GLDAS",
+            title=None,
+            margin={"t": 0}, # TODO not working, the title space still huge
+            # title=f"Precipitation in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
         )
@@ -148,7 +152,8 @@ class PrecipitationAndSoilMoisturePlots:
         scatter_plots.append(go.Scatter(x=self.gldas_avg_df.index, y=self.gldas_avg_df['RootMoist_inst'], name='Average Values since 2000'))
 
         layout = go.Layout(
-            title=f"Root Zone Soil Moisture in Kasungu, Malawi using GLDAS",
+            title=None,
+            # title=f"Root Zone Soil Moisture in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Soil Moisture (kg/m^2)'},
             xaxis={'title': 'Date'},
         )
@@ -329,6 +334,7 @@ class PrecipitationAndSoilMoisturePlots:
         
         
     def get_plot(self, plot_name):
+        # TODO cache the gldas data so it can be reused
         match plot_name:
             case "gldas-precip-soil":
                 return self.plot_gldas_precip_and_soil_moisture()

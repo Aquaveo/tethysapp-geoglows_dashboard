@@ -20,22 +20,18 @@
         <div class="card h-100">
         <div class="card-header">
             <div class="row">
-            <div class="col-md-4" id="country-select">
-                <label>Country: </label>
-                <select id="country-selector"></select>
-            </div>
-            <div class="col-md-4">
-                <div class="input-group rounded">
-                <input type="search" class="form-control rounded" id="reach-id-input" placeholder="Search Reach ID" aria-label="Search" aria-describedby="search-addon" />
-                <span class="input-group-text border-0" id="search-addon">
-                    <i class="fas fa-search"></i>
-                </span>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <label>Year:  </label>
-                <input class="date-own form-control" id="yearpicker" type="text" placeholder="Select a Year" value="2023">
-            </div>
+              <div class="col-md-4" id="country-select">
+                  <label>Country: </label>
+                  <select id="country-selector"></select>
+              </div>
+              <div class="col-md-4">
+                  <div class="input-group rounded">
+                  <input type="search" class="form-control rounded" id="reach-id-input" placeholder="Search Reach ID" aria-label="Search" aria-describedby="search-addon" />
+                  <span class="input-group-text border-0" id="search-addon">
+                      <i class="fas fa-search"></i>
+                  </span>
+                  </div>
+              </div>
             </div>
         </div>
         <div class="card-body"><div id="leaflet-map"></div></div>
@@ -44,13 +40,26 @@
     <div class="col-md-5">
         <div class="card h-50 plot-card">
           <div class="card-header">
-              <label>Chart1: </label>
-              <select class="plot-select">
-              </select>
-              <select>
-              <option>Daily</option>
-              <option>Culmulative</option>
-              </select>
+            <div class="row">
+              <div class="col-md-4">
+                <label>Chart: </label>
+                <select class="plot-select"></select>
+              </div>
+
+              <div class="col-md-4">
+                <label>Year: </label>
+                <input class="date-own form-control yearpicker" type="text" placeholder="Select a Year" value="2023">
+              </div>
+              
+              <div class="col-md-4">
+                <label>Options: </label>
+                <select class="year-select">
+                  <option value="calendar-year">Calendar Year</option>
+                  <option value="water-year">Water Year</option>
+                  <option value="last-12-months">Last 12 Months</option>
+                </select>
+              </div>
+            </div>
           </div>
           <div class="card-body h-100">
               <div class="spinner">
@@ -63,13 +72,26 @@
         </div>
         <div class="card h-50 plot-card">
           <div class="card-header">
-              <label>Chart2: </label>
-              <select class="plot-select">
-              </select>
-              <select>
-              <option>Daily</option>
-              <option>Culmulative</option>
-              </select>
+            <div class="row">
+              <div class="col-md-4">
+                <label>Chart: </label>
+                <select class="plot-select"></select>
+              </div>
+
+              <div class="col-md-4">
+                <label>Year: </label>
+                <input class="date-own form-control yearpicker" type="text" placeholder="Select a Year" value="2023">
+              </div>
+              
+              <div class="col-md-4">
+                <label>Options: </label>
+                <select class="year-select">
+                  <option value="calendar-year">Calendar Year</option>
+                  <option value="water-year">Water Year</option>
+                  <option value="last-12-months">Last 12 Months</option>
+                </select>
+              </div>
+            </div>
           </div>
           <div class="card-body h-100">
               <div class="spinner">
