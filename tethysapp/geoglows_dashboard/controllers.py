@@ -15,6 +15,7 @@ import os
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
+from .analysis.compute_country_dry_level import compute_country_dry_level
 
 
 test_dir = "test/"
@@ -251,4 +252,12 @@ def get_gee_plot(request):
     plot_name = data['plotName']
     plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)  
     return JsonResponse(dict(plot=plot))
+
+
+@controller(name='get_country_dry_level', url='get_country_dry_level')
+def get_country_dry_level(request):
+    date = request.GET['date']
+    year, month, _ = date.split("-")
+    return JsonResponse(compute_country_dry_level(int(year), int(month)), safe=False)
+    
     

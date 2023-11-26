@@ -32,6 +32,10 @@
                   </span>
                   </div>
               </div>
+              <div class="col-md-4" id="month-picker-div">
+                <label>Month: </label>
+                <input class="date-own form-control" id="month-picker" type="text" value="2023-05-01">
+              </div>
             </div>
         </div>
         <div class="card-body"><div id="leaflet-map"></div></div>
@@ -48,7 +52,7 @@
 
               <div class="col-md-4">
                 <label>Year: </label>
-                <input class="date-own form-control yearpicker" type="text" placeholder="Select a Year" value="2023">
+                <input class="date-own form-control year-picker" type="text" placeholder="Select a Year" value="2023">
               </div>
               
               <div class="col-md-4">
@@ -80,7 +84,7 @@
 
               <div class="col-md-4">
                 <label>Year: </label>
-                <input class="date-own form-control yearpicker" type="text" placeholder="Select a Year" value="2023">
+                <input class="date-own form-control year-picker" type="text" placeholder="Select a Year" value="2023">
               </div>
               
               <div class="col-md-4">
@@ -128,6 +132,7 @@
     let URL_getAnnualDischarge =  "{% url 'geoglows_dashboard:get_annual_discharge' %}";
     let URL_updateFlowRegime = "{% url 'geoglows_dashboard:update_flow_regime' %}";
     let URL_getGEEPlot = "{% url 'geoglows_dashboard:get_gee_plot' %}";
+    let URL_getCountryDryLevel = "{% url 'geoglows_dashboard:get_country_dry_level' %}";
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>

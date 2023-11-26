@@ -67,8 +67,8 @@ select {
     height: 100%;
 }
 
-.yearpicker {
-    width: 70%;
+.year-picker, #month-picker {
+    width: 50%;
     display: inline-block;
 }
 
@@ -95,4 +95,4 @@ select {
     color: #808080;  /* Gray text color */
     background-color: #f2f2f2;  /* Light gray background color */
     cursor: not-allowed;  /* Set the cursor to not-allowed */
-  }
+}
