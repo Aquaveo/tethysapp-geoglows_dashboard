@@ -68,7 +68,8 @@ let tabs = {
 $(function() {
     initTabs();
     initPlotCards();
-    initMap();
+    initBaseMaps();
+    initMonthPicker();
     initSearchBox();
     initCountrySelector();
     initDrawControl();
@@ -80,16 +81,43 @@ let initTabs = function() {
         $(tab).on('click', function(event) {
             event.preventDefault();
             selectedTab = tab;
-            initPlotCards();
             $('.nav-link').removeClass('active');
             $(this).addClass('active');
+            initPlotCards();
             initMapLayer();
+            initMonthPicker();
         })
     }
 }
 
+let lastMonthPickerVal = $('#month-picker').val();
+let initMonthPicker = function() {
+    //////////// init month-picker ////////////
+    $('#month-picker').datepicker({
+        minViewMode: 1,
+        format: 'yyyy-mm-01',
+        startDate: '2001-01',
+        endDate: '2023-05'
+    });
 
-let initMap = function() {
+    $('#month-picker').on('changeDate', function(e) {
+        $(this).datepicker('hide');
+        // TODO why this event always triggered twice?
+        if ($(this).val() != lastMonthPickerVal) {
+            addHydroSOSLayer($(this).val());
+            lastMonthPickerVal = $(this).val();
+        }
+    })
+
+    if (selectedTab == streamTabId) {
+        $('#month-picker-div').hide();
+    } else {
+        $('#month-picker-div').show();
+    }    
+}
+
+
+let initBaseMaps = function() {
     mapObj = L.map('leaflet-map', {
         zoom: 3,
         center: [0, 0],
@@ -146,6 +174,15 @@ let initMap = function() {
 
 let initMapLayer = function() {
     let addGeoGlowsLayer = function() {
+        // remove previous layers
+        if (hydroSOSLayer != null) {
+            mapObj.removeLayer(hydroSOSLayer);
+        }
+        if (dryLevelLegend != null) {
+            dryLevelLegend.remove();
+        }
+
+        // add time controls
         esriLayer = L.esri.dynamicMapLayer({
             url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
             layers: [0],
@@ -180,80 +217,10 @@ let initMapLayer = function() {
         $('.timecontrol-play').on('click', refreshMapLayer);
     }
 
-
-    let addHydroSOSLayer = function() {
-        function getColor(dry_level) {
-            switch(dry_level) {
-                case "extremely dry":
-                    return "#CD233F";
-                case "dry":
-                    return "#FFA885";
-                case "Normal range":
-                    return "#E7E2BC";
-                case "wet":
-                    return "#8ECEEE";
-                case "extremely wet":
-                    return "#2C7DCD";
-            }
-        }
-    
-        function getStyle(feature) {
-            return {
-                fillColor: getColor(feature.properties.classification),
-                weight: 1.5,
-                opacity: 1,
-                color: "#808080",
-                dashArray: '3',
-                fillOpacity: 0.7
-            };
-        }
-    
-        fetch("/static/geoglows_dashboard/data/geojson/ecuador.json")
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("ecaudor.json was not ok");
-                }
-                return response.json();
-            })
-            .then((data) => {
-                data = JSON.parse(JSON.stringify(data));
-                hydroSOSLayer = L.geoJSON(data, {style: getStyle}).addTo(mapObj);
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-            });
-    
-        dryLevelLegend = L.control({position: 'bottomright'});
-        dryLevelLegend.onAdd = function(map) {
-            let div = L.DomUtil.create('div', 'legend');
-            let dryLevels = ["extremely dry", "dry", "Normal range", "wet", "extremely wet"];
-    
-            // loop through our dryLevels intervals and generate a label with a colored square for each interval
-            for (let i = 0; i < dryLevels.length; i++) {
-                div.innerHTML +=
-                    '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
-                    dryLevels[i] + '<br>';
-            }
-    
-            return div;
-        }
-        dryLevelLegend.addTo(mapObj);
-    }
-
-
     if (selectedTab == streamTabId) {
-        if (hydroSOSLayer != null) {
-            mapObj.removeLayer(hydroSOSLayer)
-        }
-        if (dryLevelLegend != null) {
-            dryLevelLegend.remove();
-        }
         addGeoGlowsLayer();
     } else {
-        mapObj.removeControl(mapObj.timeDimension);
-        mapObj.removeControl(mapObj.timeDimensionControl);
-        mapObj.removeLayer(esriLayer);
-        addHydroSOSLayer();
+        addHydroSOSLayer($("#month-picker").val());
     }
 }
 
@@ -317,18 +284,18 @@ let initPlotCards = function() {
     }
 
     //////////// init yearpicker ////////////
-    $('.yearpicker').datepicker({
+    $('.year-picker').datepicker({
         minViewMode: 2,
         format: 'yyyy',
         endDate: currentYear.toString()
     });
     // update the plot once the year changes
     $(".plot-card").each(function(index, card) {
-        let yearPicker = $(card).find(".yearpicker");
+        let yearPicker = $(card).find(".year-picker");
         // update the plot when selected year changes
         yearPicker.on('changeDate', function(e) {
             getSelectedPlot(card, newArea=false, newYear=true);
-            $('.yearpicker').datepicker('hide');
+            $('.year-picker').datepicker('hide');
         })
     })
 
@@ -368,7 +335,7 @@ let getSelectedPlot = function(plotCard, newArea=false, newYear=false) {
 
     let plotName = plotSelect.val();
     let yearOption = yearSelect.val();
-    let selectedYear = Number($(plotCard).find(".yearpicker").val());
+    let selectedYear = Number($(plotCard).find(".year-picker").val());
 
     let startDate, endDate;
     if (yearOption == "calendar-year") {
@@ -812,34 +779,78 @@ let getGeePlot = function(plotName, startDate, endDate) {
 }
 
 
-let getGeePlots = function() {
-    console.log("getGEEPlots is called!");
-    
-    let areaData = {
-        type: drawnType,
-        coordinates: drawnCoordinates,
-        startDate: `${selectedYear}-01-01`,
-        endDate: `${selectedYear + 1}-01-01`
+// TODO connect to the country selector
+let addHydroSOSLayer = function(date) { // yyyy-mm-01
+    function getColor(dryLevel) {
+        switch(dryLevel) {
+            case "extremely dry":
+                return "#CD233F";
+            case "dry":
+                return "#FFA885";
+            case "normal range":
+                return "#E7E2BC";
+            case "wet":
+                return "#8ECEEE";
+            case "extremely wet":
+                return "#2C7DCD";
+        }
     }
+    
+    function getStyle(feature) {
+        return {
+            fillColor: getColor(feature.properties.classification),
+            weight: 1.5,
+            opacity: 1,
+            color: "#808080",
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+    function addDryLevelLegend() {
+        dryLevelLegend = L.control({position: 'bottomright'});
+        dryLevelLegend.onAdd = function() {
+            let div = L.DomUtil.create('div', 'legend');
+            let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
+
+            // loop through our dryLevels intervals and generate a label with a colored square for each interval
+            for (let i = 0; i < dryLevels.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
+                    dryLevels[i] + '<br>';
+            }
+
+            return div;
+        }
+        dryLevelLegend.addTo(mapObj);
+    }
+
+    // remove all previous layers
+    if (hydroSOSLayer != null) {
+        mapObj.removeLayer(hydroSOSLayer);
+    }
+    mapObj.removeControl(mapObj.timeDimension);
+    mapObj.removeControl(mapObj.timeDimensionControl);
+    mapObj.removeLayer(esriLayer);
+    if (dryLevelLegend != null) {
+        dryLevelLegend.remove();
+    }
+
+    addDryLevelLegend();
+
     return new Promise(function (resolve, reject) {
         $.ajax({
-            type: "POST",
-            url: URL_getGEEPlots,
-            data: JSON.stringify(areaData),
-            dataType: "json",
+            type: "GET",
+            async: true,
+            url: URL_getCountryDryLevel + L.Util.getParamString({
+                date: date
+            }),
             success: function(response) {
-                tabs[otherTabId].plotData["gldas-precip-soil"] = response["gldas_precip_soil"];
-                tabs[otherTabId].plotData["gldas-soil"] = response["gldas_soil"];
-                tabs[otherTabId].plotData["gldas-precip"] = response["gldas_precip"];
-                tabs[otherTabId].plotData["imerg-precip"] = response["imerg_precip"];
-                tabs[otherTabId].plotData["era5-precip"] = response["era5_precip"];
-                tabs[otherTabId].plotData["gfs-forecast"] = response["gfs_forecast"];
-                console.log("success in getting GEE plots");
-                resolve("success in getting GEE plots");
+                hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
+                resolve("success in getting the country dry level");
             },
             error: function() {
-                console.error("fail to draw GEE plots");
-                reject("fail to draw GEE plots");
+                reject("fail to get the country dry level");
             }
         })
     })
