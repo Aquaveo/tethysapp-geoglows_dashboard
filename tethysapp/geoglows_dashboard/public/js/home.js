@@ -1,19 +1,9 @@
 const isTest = true;
 let isDrawing = false;
 
-let mapObj;
-let mapMarker, selectedStream, selectedCountry;
-let esriLayer, hydroSOSLayer, dryLevelLegend;
-
-let countries = {};
-
 const currentYear = new Date().getFullYear();
-const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
-const endDateTime = new Date(startDateTime);
-endDateTime.setDate(endDateTime.getDate() + 5);
 
 let selectedReachId;
-
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
 let tabs = {
@@ -68,7 +58,7 @@ let tabs = {
 $(function() {
     initTabs();
     initPlotCards();
-    initBaseMaps();
+    initMaps();
     initMonthPicker();
     initSearchBox();
     initCountrySelector();
@@ -81,10 +71,12 @@ let initTabs = function() {
         $(tab).on('click', function(event) {
             event.preventDefault();
             selectedTab = tab;
+            // highlight the selected tab
             $('.nav-link').removeClass('active');
             $(this).addClass('active');
+
             initPlotCards();
-            initMapLayer();
+            initMaps();
             initMonthPicker();
         })
     }
@@ -102,7 +94,7 @@ let initMonthPicker = function() {
 
     $('#month-picker').on('changeDate', function(e) {
         $(this).datepicker('hide');
-        // TODO why this event always triggered twice?
+        // TODO why is this event always triggered twice?
         if ($(this).val() != lastMonthPickerVal) {
             addHydroSOSLayer($(this).val());
             lastMonthPickerVal = $(this).val();
@@ -117,16 +109,62 @@ let initMonthPicker = function() {
 }
 
 
-let initBaseMaps = function() {
-    mapObj = L.map('leaflet-map', {
-        zoom: 3,
-        center: [0, 0],
-        fullscreenControl: true,
-        timeDimension: true
-    });
+const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
+const endDateTime = new Date(startDateTime);
+endDateTime.setDate(endDateTime.getDate() + 5);
+let mapObj, mapMarker, selectedStream, selectedCountry;
+let streamflowLayer = L.esri.dynamicMapLayer({
+    url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
+    layers: [0],
+    from: startDateTime,
+    to: endDateTime,
+    opacity: 0.7
+});
+let layerControl, hydroSOSLayer, dryLevelLegend;
 
+
+let initMaps = function() {
+    function refreshMapLayer() {
+        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
+        streamflowLayer.setTimeRange(sliderTime, endDateTime);
+    }
+
+    // init map object
+    if (mapObj == null) {
+        mapObj = L.map('leaflet-map', {
+            zoom: 3,
+            center: [0, 0],
+            fullscreenControl: true,
+            timeDimension: true
+        });
+    }
+
+    if (selectedTab == streamTabId) {
+        mapObj.timeDimension = L.timeDimension({
+            timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
+            period: "PT3H",
+            currentTime: startDateTime
+        });
+    
+        mapObj.timeDimensionControl = L.control.timeDimension({
+            autoPlay: false,
+                loopButton: true,
+                timeSteps: 1,
+                limitSliders: true,
+                playerOptions: {
+                    buffer: 0,
+                    transitionTime: 500,
+                }
+        }).addTo(mapObj);
+    
+        mapObj.timeDimension.on('timeload', refreshMapLayer);
+        $('.timecontrol-play').on('click', refreshMapLayer);
+    }
+
+    // init selected stream
     selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
 
+    // init map layers
     const basemaps = {
         "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -138,12 +176,33 @@ let initBaseMaps = function() {
         ),
         "ESRI Grey": L.esri.basemapLayer('Gray'),
     }
-
-    L.control.layers(basemaps, null, {
-        collapsed: false
-    }).addTo(mapObj);
-
-    initMapLayer();
+ 
+    if (layerControl != null) {
+        layerControl.remove();
+    }
+    if (selectedTab == streamTabId) {
+        if (hydroSOSLayer != null) {
+            hydroSOSLayer.remove();
+        }
+        if (dryLevelLegend != null) {
+            dryLevelLegend.remove();
+        }
+        streamflowLayer.addTo(mapObj);
+        layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
+            collapsed: false
+        }).addTo(mapObj);
+    } else {
+        addHydroSOSLayer($("#month-picker").val()).then(function(hydroSOSLayer) {
+            overlayMaps = {
+                "HydroSOS Soil Moisture": hydroSOSLayer,
+                // "HydroSOS Precipitation": null,
+            };
+            layerControl = L.control.layers(basemaps, overlayMaps, {
+                collapsed: false
+            }).addTo(mapObj);
+        })
+        
+    }
 
     mapObj.on('click', function(event) {
         if (!isDrawing) {
@@ -172,56 +231,82 @@ let initBaseMaps = function() {
 };
 
 
-let initMapLayer = function() {
-    let addGeoGlowsLayer = function() {
-        // remove previous layers
-        if (hydroSOSLayer != null) {
-            mapObj.removeLayer(hydroSOSLayer);
+// TODO connect to the country selector
+let addHydroSOSLayer = function(date) { // yyyy-mm-01
+    function getColor(dryLevel) {
+        switch(dryLevel) {
+            case "extremely dry":
+                return "#CD233F";
+            case "dry":
+                return "#FFA885";
+            case "normal range":
+                return "#E7E2BC";
+            case "wet":
+                return "#8ECEEE";
+            case "extremely wet":
+                return "#2C7DCD";
         }
-        if (dryLevelLegend != null) {
-            dryLevelLegend.remove();
-        }
-
-        // add time controls
-        esriLayer = L.esri.dynamicMapLayer({
-            url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
-            layers: [0],
-            from: startDateTime,
-            to: endDateTime,
-            opacity: 0.7
-        }).addTo(mapObj);
+    }
     
-        mapObj.timeDimension = L.timeDimension({
-            timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
-            period: "PT3H",
-            currentTime: startDateTime
-        });
-    
-        mapObj.timeDimensionControl = L.control.timeDimension({
-            autoPlay: false,
-                loopButton: true,
-                timeSteps: 1,
-                limitSliders: true,
-                playerOptions: {
-                    buffer: 0,
-                    transitionTime: 500,
-                }
-        }).addTo(mapObj);
-        
-    
-        let refreshMapLayer = function() {
-            let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-            esriLayer.setTimeRange(sliderTime, endDateTime);
-        }
-        mapObj.timeDimension.on('timeload', refreshMapLayer);
-        $('.timecontrol-play').on('click', refreshMapLayer);
+    function getStyle(feature) {
+        return {
+            fillColor: getColor(feature.properties.classification),
+            weight: 1.5,
+            opacity: 1,
+            color: "#808080",
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
     }
 
-    if (selectedTab == streamTabId) {
-        addGeoGlowsLayer();
-    } else {
-        addHydroSOSLayer($("#month-picker").val());
+    function addDryLevelLegend() {
+        dryLevelLegend = L.control({position: 'bottomright'});
+        dryLevelLegend.onAdd = function() {
+            let div = L.DomUtil.create('div', 'legend');
+            let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
+
+            // loop through our dryLevels intervals and generate a label with a colored square for each interval
+            for (let i = 0; i < dryLevels.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
+                    dryLevels[i] + '<br>';
+            }
+
+            return div;
+        }
+        dryLevelLegend.addTo(mapObj);
     }
+
+    // remove all previous layers
+    if (streamflowLayer != null) {
+        mapObj.removeLayer(streamflowLayer);
+    }
+    if (hydroSOSLayer != null) {
+        mapObj.removeLayer(hydroSOSLayer);
+    }
+    if (dryLevelLegend != null) {
+        dryLevelLegend.remove();
+    }
+    mapObj.removeControl(mapObj.timeDimension);
+    mapObj.removeControl(mapObj.timeDimensionControl);
+
+    return new Promise(function (resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getCountryDryLevel + L.Util.getParamString({
+                date: date
+            }),
+            success: function(response) {
+                hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
+                addDryLevelLegend();
+                resolve(hydroSOSLayer);
+            },
+            error: function() {
+                reject("fail to get the country dry level");
+            }
+        })
+    })
 }
 
 
@@ -400,7 +485,7 @@ let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
     }
 }
 
-
+let countries = {};
 let initCountrySelector = function() {
     // load countries
     fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
@@ -773,84 +858,6 @@ let getGeePlot = function(plotName, startDate, endDate) {
             error: function() {
                 console.error("fail to draw GEE plot: " + plotName);
                 reject("fail to draw GEE plot: " + plotName);
-            }
-        })
-    })
-}
-
-
-// TODO connect to the country selector
-let addHydroSOSLayer = function(date) { // yyyy-mm-01
-    function getColor(dryLevel) {
-        switch(dryLevel) {
-            case "extremely dry":
-                return "#CD233F";
-            case "dry":
-                return "#FFA885";
-            case "normal range":
-                return "#E7E2BC";
-            case "wet":
-                return "#8ECEEE";
-            case "extremely wet":
-                return "#2C7DCD";
-        }
-    }
-    
-    function getStyle(feature) {
-        return {
-            fillColor: getColor(feature.properties.classification),
-            weight: 1.5,
-            opacity: 1,
-            color: "#808080",
-            dashArray: '3',
-            fillOpacity: 0.7
-        };
-    }
-
-    function addDryLevelLegend() {
-        dryLevelLegend = L.control({position: 'bottomright'});
-        dryLevelLegend.onAdd = function() {
-            let div = L.DomUtil.create('div', 'legend');
-            let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
-
-            // loop through our dryLevels intervals and generate a label with a colored square for each interval
-            for (let i = 0; i < dryLevels.length; i++) {
-                div.innerHTML +=
-                    '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
-                    dryLevels[i] + '<br>';
-            }
-
-            return div;
-        }
-        dryLevelLegend.addTo(mapObj);
-    }
-
-    // remove all previous layers
-    if (hydroSOSLayer != null) {
-        mapObj.removeLayer(hydroSOSLayer);
-    }
-    mapObj.removeControl(mapObj.timeDimension);
-    mapObj.removeControl(mapObj.timeDimensionControl);
-    mapObj.removeLayer(esriLayer);
-    if (dryLevelLegend != null) {
-        dryLevelLegend.remove();
-    }
-
-    addDryLevelLegend();
-
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getCountryDryLevel + L.Util.getParamString({
-                date: date
-            }),
-            success: function(response) {
-                hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
-                resolve("success in getting the country dry level");
-            },
-            error: function() {
-                reject("fail to get the country dry level");
             }
         })
     })
