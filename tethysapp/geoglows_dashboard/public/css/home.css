@@ -29,10 +29,6 @@ a.nav-link:hover {
     text-align: center;
 }
 
-.card-body {
-    padding: 0 0;
-}
-
 select {
     width: 150px;
     font-size: 16px;

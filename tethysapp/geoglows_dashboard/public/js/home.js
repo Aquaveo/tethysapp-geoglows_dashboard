@@ -66,6 +66,18 @@ $(function() {
 })
 
 
+let cardBodyInitialHeight = $(".plot-div").height();
+let resize = function() {
+    $(".plotly-graph-div").each(function(index, div) {
+        Plotly.relayout(div, {
+            "height": cardBodyInitialHeight,
+            "width": $(".plot-div").width()
+        });
+    })
+}
+window.addEventListener("resize", resize);
+
+
 let initTabs = function() {
     for (let tab in tabs) {
         $(tab).on('click', function(event) {
@@ -93,6 +105,7 @@ let initMonthPicker = function() {
     });
 
     $('#month-picker').on('changeDate', function(e) {
+        console.log("changeDate is triggered!");
         $(this).datepicker('hide');
         // TODO why is this event always triggered twice?
         if ($(this).val() != lastMonthPickerVal) {
@@ -529,6 +542,7 @@ function drawPlot(plotCard) {
     let plotData = tabs[selectedTab].plotData[plotSelect.val()];
     showPlot(plotContainer, spinner);
     plotContainer.html(plotData);
+    resize();
 }
 
 
