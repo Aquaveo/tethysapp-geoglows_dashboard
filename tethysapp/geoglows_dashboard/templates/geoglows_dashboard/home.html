@@ -1,21 +1,20 @@
 {% extends "tethys_apps/app_header_content.html" %}
 {% load tethys_gizmos static %}
 
+
 {% block app_content %}
+<div id="nav-div">
+  <ul class="nav">
+    <li class="nav-item">
+      <a class="nav-link active" aria-current="page" href="" id="stream-tab">Streamflow</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="" id="other-tab">Other</a>
+    </li>
+  </ul>
+</div>
 <div class="container-fluid" id="outer-container">
-  <div class="row">
-    <div class="col-md-12">
-      <ul class="nav">
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="" id="stream-tab">Streamflow</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="" id="other-tab">Other</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-  <div class="row" style="height:95%">
+  <div class="row" style="height:100%">
     <div class="col-md-7">
         <div class="card h-100">
         <div class="card-header">

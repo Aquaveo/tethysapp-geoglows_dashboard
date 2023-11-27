@@ -1,14 +1,26 @@
 #inner-app-content {
     height: calc(100vh - 50px);
+    padding: 0;
 }
 
+/* 50 header + 40 tab + 10 margin-top + 10 margin-bottom*/
 #outer-container {
-    height: 100%;
+    height: calc(100vh - 110px); 
     color:white;
 }
 
+#nav-div {
+    margin-bottom: 10px; 
+    border-top: white 1px solid;
+}
+
 .nav {
-    background-color: #9EB384;
+    background-color: #435334;
+}
+
+.nav-item {
+    width: 130px;
+    text-align: center;
 }
 
 a.nav-link {
@@ -20,7 +32,7 @@ a.nav-link:hover {
 }
 
 .nav-link.active {
-    background-color: #435334;
+    background-color: #9EB384;
     color: white;
 }
 
