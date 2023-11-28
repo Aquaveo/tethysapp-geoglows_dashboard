@@ -58,12 +58,11 @@ let tabs = {
 $(function() {
     initTabs();
     initPlotCards();
-    initMaps();
-    initMonthPicker();
-    initSearchBox();
-    initCountrySelector();
-    initDrawControl();
+    initMapCard();
 })
+
+
+/////////////////// Initialize the Page ///////////////////
 
 
 let cardBodyInitialHeight = $(".plot-div").height();
@@ -86,39 +85,172 @@ let initTabs = function() {
             // highlight the selected tab
             $('.nav-link').removeClass('active');
             $(this).addClass('active');
+            
+            // month picker for the HydroSOS Map layer
+            if (selectedTab == streamTabId) {
+                $('#month-picker-div').hide();
+            } else {
+                $('#month-picker-div').show();
+            } 
 
             initPlotCards();
-            initMaps();
-            initMonthPicker();
+            initMapCardBody();
         })
     }
 }
 
-let lastMonthPickerVal = $('#month-picker').val();
-let initMonthPicker = function() {
-    //////////// init month-picker ////////////
-    $('#month-picker').datepicker({
-        minViewMode: 1,
-        format: 'yyyy-mm-01',
-        startDate: '2001-01',
-        endDate: '2023-05'
-    });
+let countries = {};
+let selectedMonth = $('#month-picker').val();
+let drawnFeatures, drawnType, drawnCoordinates;
+let initMapCard = function() {
+    // init country selector
+    let initCountrySelector = function() {
+        // load countries
+        fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("countries.geojson was not ok");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                data = JSON.parse(JSON.stringify(data));
+                for (let country of data.features) {
+                    let name = country.properties.ADMIN;
+                    let geometry = country.geometry;
+                    countries[name] = {"name": name, "geometry": geometry};
+                    $("#country-selector").append($("<option>", {
+                        value: name,
+                        text: name
+                    }))
+                }
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+        
+        $("#country-selector").on("change", function() {
+            selectedCountry.clearLayers();
+            selectedCountry.addData(countries[$(this).val()].geometry);
+            mapObj.fitBounds(selectedCountry.getBounds());
+        })
+    }
 
-    $('#month-picker').on('changeDate', function(e) {
-        console.log("changeDate is triggered!");
-        $(this).datepicker('hide');
-        // TODO why is this event always triggered twice?
-        if ($(this).val() != lastMonthPickerVal) {
-            addHydroSOSLayer($(this).val());
-            lastMonthPickerVal = $(this).val();
+    
+    let initStreamSearchBox = function() {
+        $('#search-addon').click(findReachIDByID);
+        $('#reach-id-input').keydown(event => {
+            if (event.keyCode === 13) {
+                showSpinners();
+                findReachIDByID()
+                .then(function() {
+                    return setupDatePicker();
+                })
+                .then(function() {
+                    initSelectedPlots(update=true);
+                })
+                .catch(error => {
+                    alert(error);
+                    showPlotContainerMessages();
+                })
+            }
+        })
+    }
+
+
+    let initMonthPicker = function() {
+        $('#month-picker').datepicker({
+            minViewMode: 1,
+            format: 'yyyy-mm-01',
+            startDate: '2001-01',
+            endDate: '2023-05'
+        });
+
+        if (selectedTab == streamTabId) {
+            $('#month-picker-div').hide();
         }
-    })
+    
+        $('#month-picker').on('changeDate', function(e) {
+            $(this).datepicker('hide');
+            // TODO why is this event always triggered twice?
+            if ($(this).val() != selectedMonth) {
+                addHydroSOSLayer($(this).val());
+                selectedMonth = $(this).val();
+            }
+        }) 
+    }
 
-    if (selectedTab == streamTabId) {
-        $('#month-picker-div').hide();
-    } else {
-        $('#month-picker-div').show();
-    }    
+    let initDrawControl = function() {
+        // Initialize layer for drawn features
+        drawnFeatures = new L.FeatureGroup();
+        mapObj.addLayer(drawnFeatures);
+
+        // Initialize draw controls
+        let drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                // polygon: false,
+                circle: false,
+                rectangle: false,
+            }
+        });
+
+        mapObj.addControl(drawControl);
+
+        mapObj.on("draw:drawstart", function(e) {
+            isDrawing = true;
+        })
+
+        // Bind to draw event
+        mapObj.on("draw:created", function(e) {
+            drawnFeatures.clearLayers();
+            drawnFeatures.addLayer(e.layer);
+            isDrawing = false;
+            readAreaOfDrawnFeature();
+            initSelectedPlots(update=true);
+            // TODO switch to Other tab automatically after the user finished drawing
+        });
+    };
+
+
+    // Read the area of the drawn feature
+    let readAreaOfDrawnFeature = function() {
+        if (drawnFeatures.getLayers().length === 0) {
+            console.log("No features drawn.");
+            return;
+        }
+
+        const drawnFeature = drawnFeatures.getLayers()[0]; // Assuming there's only one drawn feature
+
+        // if (drawnFeature instanceof L.Circle) {
+        //     const center = drawnFeature.getLatLng();
+        //     const radius = drawnFeature.getRadius();
+        //     console.log("Circle center:", center);
+        //     console.log("Circle radius:", radius);
+        // } 
+        // else if (drawnFeature instanceof L.Rectangle) {
+        //     const bounds = drawnFeature.getBounds();
+        //     console.log("Rectangle bounds:", bounds);
+        // } 
+        // else 
+        if (drawnFeature instanceof L.Polygon) {
+            drawnType = "polygone";
+            drawnCoordinates = drawnFeature.getLatLngs();
+            console.log("Polygon coordinates:", drawnCoordinates);
+        } 
+        else if (drawnFeature instanceof L.Marker) {
+            drawnType = "point";
+            drawnCoordinates = drawnFeature.getLatLng();
+            console.log("Marker coordinates:", drawnCoordinates);
+        }
+    }
+
+    
+    initCountrySelector();
+    initStreamSearchBox();
+    initMonthPicker();
+    initMapCardBody();
+    initDrawControl();
 }
 
 
@@ -134,9 +266,7 @@ let streamflowLayer = L.esri.dynamicMapLayer({
     opacity: 0.7
 });
 let layerControl, hydroSOSLayer, dryLevelLegend;
-
-
-let initMaps = function() {
+let initMapCardBody = function() {
     function refreshMapLayer() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
         streamflowLayer.setTimeRange(sliderTime, endDateTime);
@@ -174,8 +304,9 @@ let initMaps = function() {
         $('.timecontrol-play').on('click', refreshMapLayer);
     }
 
-    // init selected stream
+    // init markers on the map
     selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+    selectedCountry = L.geoJSON().addTo(mapObj);
 
     // init map layers
     const basemaps = {
@@ -322,27 +453,6 @@ let addHydroSOSLayer = function(date) { // yyyy-mm-01
     })
 }
 
-
-let initSearchBox = function() {
-    $('#search-addon').click(findReachIDByID);
-    $('#reach-id-input').keydown(event => {
-        if (event.keyCode === 13) {
-            showSpinners();
-            findReachIDByID()
-            .then(function() {
-                return setupDatePicker();
-            })
-            .then(function() {
-                initSelectedPlots(update=true);
-            })
-            .catch(error => {
-                alert(error);
-                showPlotContainerMessages();
-            })
-        }
-    })
-}
-
 let hasReachId = function() {
     return selectedTab == streamTabId && selectedReachId != null;
 }
@@ -350,6 +460,9 @@ let hasReachId = function() {
 let hasDrawnArea = function() {
     return selectedTab == otherTabId && drawnFeatures.getLayers().length !== 0;
 }
+
+
+/////////////////// Utilities for Loading Plots ///////////////////
 
 
 let initPlotCards = function() {
@@ -498,44 +611,8 @@ let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
     }
 }
 
-let countries = {};
-let initCountrySelector = function() {
-    // load countries
-    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("countries.geojson was not ok");
-            }
-            return response.json();
-        })
-        .then((data) => {
-            data = JSON.parse(JSON.stringify(data));
-            for (let country of data.features) {
-                let name = country.properties.ADMIN;
-                let geometry = country.geometry;
-                countries[name] = {"name": name, "geometry": geometry};
-                $("#country-selector").append($("<option>", {
-                    value: name,
-                    text: name
-                }))
-            }
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
 
-
-    selectedCountry = L.geoJSON().addTo(mapObj);
-
-    $("#country-selector").on("change", function() {
-        selectedCountry.clearLayers();
-        selectedCountry.addData(countries[$(this).val()].geometry);
-        mapObj.fitBounds(selectedCountry.getBounds());
-    })
-}
-
-
-function drawPlot(plotCard) {
+let drawPlot = function(plotCard) {
     let plotSelect = $(plotCard).find(".plot-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner = $(plotCard).find(".spinner");
@@ -546,7 +623,7 @@ function drawPlot(plotCard) {
 }
 
 
-function showPlots() {
+let showPlots = function() {
     $(".plot-card").each(function(index, card) {
         let plotContainer = $(card).find(".plot-div");
         let spinner = $(card).find(".spinner");
@@ -555,7 +632,7 @@ function showPlots() {
 }
 
 
-function showSpinners() {
+let showSpinners = function() {
     $(".plot-card").each(function(index, card) {
         let plotContainer = $(card).find(".plot-div");
         let spinner = $(card).find(".spinner");
@@ -563,17 +640,17 @@ function showSpinners() {
     })
 }
 
-function showPlot(plotContainer, spinner) {
+let showPlot = function(plotContainer, spinner) {
     $(plotContainer).css("display", "flex");
     $(spinner).css("display", "none");
 }
 
-function showSpinner(plotContainer, spinner) {
+let showSpinner = function(plotContainer, spinner) {
     $(plotContainer).css("display", "none");
     $(spinner).css("display", "flex");
 }
 
-function showPlotContainerMessages() {
+let showPlotContainerMessages = function() {
     showPlots();
     $(".plot-card").each(function(index, card) {
         if (selectedTab == streamTabId) {
@@ -585,76 +662,7 @@ function showPlotContainerMessages() {
 }
 
 
-let drawnFeatures, drawnType, drawnCoordinates;
-
-// Plot Methods
-let initDrawControl = function() {
-    // Initialize layer for drawn features
-    drawnFeatures = new L.FeatureGroup();
-    mapObj.addLayer(drawnFeatures);
-
-    // Initialize draw controls
-    let drawControl = new L.Control.Draw({
-        draw: {
-            polyline: false,
-            // polygon: false,
-            circle: false,
-            rectangle: false,
-        }
-    });
-
-    mapObj.addControl(drawControl);
-
-    mapObj.on("draw:drawstart", function(e) {
-        isDrawing = true;
-    })
-
-    // Bind to draw event
-    mapObj.on("draw:created", function(e) {
-        drawnFeatures.clearLayers();
-        drawnFeatures.addLayer(e.layer);
-        isDrawing = false;
-        readAreaOfDrawnFeature();
-        initSelectedPlots(update=true);
-        // TODO switch to Other tab automatically after the user finished drawing
-    });
-};
-
-
-// Read the area of the drawn feature
-let readAreaOfDrawnFeature = function() {
-    if (drawnFeatures.getLayers().length === 0) {
-        console.log("No features drawn.");
-        return;
-    }
-
-    const drawnFeature = drawnFeatures.getLayers()[0]; // Assuming there's only one drawn feature
-
-    // if (drawnFeature instanceof L.Circle) {
-    //     const center = drawnFeature.getLatLng();
-    //     const radius = drawnFeature.getRadius();
-    //     console.log("Circle center:", center);
-    //     console.log("Circle radius:", radius);
-    // } 
-    // else if (drawnFeature instanceof L.Rectangle) {
-    //     const bounds = drawnFeature.getBounds();
-    //     console.log("Rectangle bounds:", bounds);
-    // } 
-    // else 
-    if (drawnFeature instanceof L.Polygon) {
-        drawnType = "polygone";
-        drawnCoordinates = drawnFeature.getLatLngs();
-        console.log("Polygon coordinates:", drawnCoordinates);
-    } 
-    else if (drawnFeature instanceof L.Marker) {
-        drawnType = "point";
-        drawnCoordinates = drawnFeature.getLatLng();
-        console.log("Marker coordinates:", drawnCoordinates);
-    }
-}
-
-
-/////////////////// Draw Plots ///////////////////
+/////////////////// Requesting Plot Data ///////////////////
 
 
 let findReachIDByID = function() {
