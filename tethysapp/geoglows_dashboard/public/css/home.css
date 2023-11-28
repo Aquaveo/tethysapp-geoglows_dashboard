@@ -3,9 +3,8 @@
     padding: 0;
 }
 
-/* 50 header + 40 tab + 10 margin-top + 10 margin-bottom*/
 #outer-container {
-    height: calc(100vh - 110px); 
+    height: calc(100vh - 120px); /* 50 header + 40 tab + 10 margin-top + 10 margin-bottom*/
     color:white;
 }
 
@@ -41,8 +40,17 @@ a.nav-link:hover {
     text-align: center;
 }
 
+.option-div {
+    display: flex;
+    align-items: center;
+}
+
+input {
+    margin: 0 0 0 10px;
+}
+
 select {
-    width: 150px;
+    width: 60%;
     font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 5px;
