@@ -172,7 +172,6 @@ let initMapCard = function() {
     
         $('#month-picker').on('changeDate', function(e) {
             $(this).datepicker('hide');
-            // TODO why is this event always triggered twice?
             if ($(this).val() != selectedMonth) {
                 addHydroSOSLayer($(this).val());
                 selectedMonth = $(this).val();
@@ -465,6 +464,7 @@ let hasDrawnArea = function() {
 /////////////////// Utilities for Loading Plots ///////////////////
 
 
+let yearPickerValues = [$(".year-picker:eq(0)").val(), $(".year-picker:eq(1)").val()];
 let initPlotCards = function() {
     //////////// init plot-select /////////
     // add options to the plot-select
@@ -505,8 +505,12 @@ let initPlotCards = function() {
         let yearPicker = $(card).find(".year-picker");
         // update the plot when selected year changes
         yearPicker.on('changeDate', function(e) {
-            getSelectedPlot(card, newArea=false, newYear=true);
-            $('.year-picker').datepicker('hide');
+            let newYearValue = yearPicker.val();
+            if (newYearValue != yearPickerValues[index]) {
+                yearPickerValues[index] = newYearValue;
+                getSelectedPlot(card, newArea=false, newYear=true);
+                $('.year-picker').datepicker('hide');
+            }
         })
     })
 
