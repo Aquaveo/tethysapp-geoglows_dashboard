@@ -157,7 +157,7 @@ def get_forecast_data(request, user_workspace):
     plot = gpp.hydroviewer(files["records"], files["stats"], files["ensembles"], files["rperiods"], outformat='plotly')
     plot.update_layout(
         title=None,
-        margin={"t": 0},
+        margin={"t": 0, "b": 0, "r": 0, "l": 0},
     )
     return JsonResponse(dict(
         forecast=offline_plot(
@@ -199,28 +199,39 @@ def get_historical_data(request, user_workspace):
     
     # process data
     title_headers = {'Reach ID': reach_id}
-    plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
-    plot.update_layout(
+    historical_plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
+    historical_plot.update_layout(
         title=None,
-        margin={"t": 0},
+        margin={"t": 0, "b": 0, "r": 0, "l": 0},
     )
+    
+    flow_duration_plot = gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly')
+    flow_duration_plot.update_layout(
+        title=None,
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
+    )
+    
     return JsonResponse(dict(
-        historical=offline_plot(
-            plot,
-            config={'autosizable': True, 'responsive': True},
-            output_type='div',
-            include_plotlyjs=False
-        ),
-        flow_duration=gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly_html'),
-        flow_regime=plot_flow_regime(files["hist"], int(selected_year)) 
+        historical=format_plot(historical_plot),
+        flow_duration=format_plot(flow_duration_plot),
+        flow_regime=plot_flow_regime(files["hist"], int(selected_year))  # TODO
     ))
+    
+    
+def format_plot(plot):
+    return offline_plot(
+        plot,
+        config={'autosizable': True, 'responsive': True},
+        output_type='div',
+        include_plotlyjs=False
+    )
     
 
 @controller(name='update_flow_regime', url='update_flow_regime', user_workspace=True)
 def update_flow_regime(request, user_workspace):
     selected_year = request.GET['selected_year']
     hist = pd.read_csv(os.path.join(user_workspace.path, cache_dir, "hist.csv"), parse_dates=['datetime'], index_col=[0])
-    return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
+    return JsonResponse(dict(flow_regime=format_plot(plot_flow_regime(hist, int(selected_year)))))
 
 
 @controller(name='get_annual_discharge', url='get_annual_discharge')

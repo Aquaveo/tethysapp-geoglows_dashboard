@@ -29,7 +29,8 @@ def plot_annual_discharge_volumes(reach_id):
     layout = go.Layout(
         title="Annual Discharge Volumes vs Time",
         yaxis={"title": "Annual Water Volumes (MillionMeters<sup>3</sup>)"},
-        xaxis={"title": "Time"}
+        xaxis={"title": "Time"},
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
     )
     # TODO return an error message when there's an exception
     return offline_plot(

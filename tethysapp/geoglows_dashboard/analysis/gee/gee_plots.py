@@ -11,7 +11,6 @@ from plotly.offline import plot as offline_plot
 
 class GEEPlots:
     def __init__(self, start, end, area):
-        print(f"start date: {start}, end date: {end}")
         self.start = start
         self.end = end
         self.area = area
@@ -129,7 +128,7 @@ class GEEPlots:
 
         layout = go.Layout(
             title=None,
-            margin={"t": 0}, # TODO not working, the title space still huge
+            margin={"t": 0, "b": 0, "r": 0, "l": 0}, # TODO not working, the title space still huge
             # title=f"Precipitation in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
@@ -156,6 +155,7 @@ class GEEPlots:
             # title=f"Root Zone Soil Moisture in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Soil Moisture (kg/m^2)'},
             xaxis={'title': 'Date'},
+            margin={"t": 0, "b": 0, "r": 0, "l": 0}
         )
         
         return offline_plot(
@@ -219,9 +219,11 @@ class GEEPlots:
         scatter_plots.append(go.Scatter(x=self.imerg_ytd_df.index, y=self.imerg_ytd_df['data_values'], name='Values from the last 12 months'))
         scatter_plots.append(go.Scatter(x=self.imerg_df.index, y=self.imerg_df['data_values'], name='Average Values since 2000'))
         layout = go.Layout(
-            title=f"Precipitation in Kasungu, Malawi using IMERG",
+            # title=f"Precipitation in Kasungu, Malawi using IMERG",
+            title=None,
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
+            margin={"t": 0, "b": 0, "r": 0, "l": 0}
         )
         return offline_plot(
             go.Figure(scatter_plots, layout),
@@ -295,9 +297,11 @@ class GEEPlots:
         scatter_plots.append(go.Scatter(x=self.era_ytd_df.index, y=self.era_ytd_df['data_values'], name='Values from the last 12 months'))
         scatter_plots.append(go.Scatter(x=self.era5_avg_df.index, y=self.era5_avg_df['data_values'], name='Average Values since 2000'))
         layout = go.Layout(
-            title=f"Precipitation in Kasungu, Malawi using ERA5",
+            title=None,
+            # title=f"Precipitation in Kasungu, Malawi using ERA5",
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
+            margin={"t": 0, "b": 0, "r": 0, "l": 0}
         )
         return offline_plot(
             go.Figure(scatter_plots, layout),
@@ -325,6 +329,10 @@ class GEEPlots:
         )
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y = df["total_precipitation_surface"]))
+        fig.update_layout(
+            xaxis={'title': 'Date'},
+            margin={"t": 0, "b": 0, "r": 0, "l": 0}
+        )
         return offline_plot(
             fig,
             config={'autosizable': True, 'responsive': True},
