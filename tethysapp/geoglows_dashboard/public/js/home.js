@@ -103,7 +103,6 @@ let countries = {};
 let selectedMonth = $('#month-picker').val();
 let drawnFeatures, drawnType, drawnCoordinates;
 let initMapCard = function() {
-    // init country selector
     let initCountrySelector = function() {
         // load countries
         fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
@@ -256,7 +255,7 @@ let initMapCard = function() {
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-let mapObj, mapMarker, selectedStream, selectedCountry;
+let mapObj, resetButton, mapMarker, selectedStream, selectedCountry;
 let streamflowLayer = L.esri.dynamicMapLayer({
     url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
     layers: [0],
@@ -265,6 +264,8 @@ let streamflowLayer = L.esri.dynamicMapLayer({
     opacity: 0.7
 });
 let layerControl, hydroSOSLayer, dryLevelLegend;
+
+
 let initMapCardBody = function() {
     function refreshMapLayer() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
@@ -279,6 +280,14 @@ let initMapCardBody = function() {
             fullscreenControl: true,
             timeDimension: true
         });
+    }
+
+    if (resetButton == null) {
+        resetButton = L.easyButton('fa-home', function(){
+            // Set the map view to its original area
+            mapObj.setView([0, 0], 3);
+        }, 'Reset Map');
+        resetButton.addTo(mapObj);
     }
 
     if (selectedTab == streamTabId) {
