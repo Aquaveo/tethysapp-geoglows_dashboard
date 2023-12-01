@@ -85,9 +85,11 @@ def plot_flow_regime(hist, selected_year):
 
 
     layout = go.Layout(
-        title=f"{selected_year} Monthly Streamflow with HydroSOS",
+        # title=f"{selected_year} Monthly Streamflow with HydroSOS",
+        title=None,
         yaxis={'title': 'Discharge'},
         xaxis={'title': 'Month of Year'},
+        margin={'t': 0}
     )
     
     figure = go.Figure(scatter_plots, layout=layout)    
