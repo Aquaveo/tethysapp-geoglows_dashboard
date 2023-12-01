@@ -157,7 +157,7 @@ def get_forecast_data(request, user_workspace):
     plot = gpp.hydroviewer(files["records"], files["stats"], files["ensembles"], files["rperiods"], outformat='plotly')
     plot.update_layout(
         title=None,
-        margin={"t": 0},
+        margin={"t": 0, "b": 0, "r": 0, "l": 0},
     )
     return JsonResponse(dict(
         forecast=offline_plot(
@@ -202,13 +202,13 @@ def get_historical_data(request, user_workspace):
     historical_plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
     historical_plot.update_layout(
         title=None,
-        margin={"t": 0},
+        margin={"t": 0, "b": 0, "r": 0, "l": 0},
     )
     
     flow_duration_plot = gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly')
     flow_duration_plot.update_layout(
         title=None,
-        margin={'t': 0}
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
     )
     
     return JsonResponse(dict(

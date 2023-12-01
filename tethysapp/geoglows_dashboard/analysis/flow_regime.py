@@ -89,7 +89,7 @@ def plot_flow_regime(hist, selected_year):
         title=None,
         yaxis={'title': 'Discharge'},
         xaxis={'title': 'Month of Year'},
-        margin={'t': 0}
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
     )
     
     figure = go.Figure(scatter_plots, layout=layout)    
