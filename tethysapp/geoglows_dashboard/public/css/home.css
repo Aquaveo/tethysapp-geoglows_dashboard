@@ -84,7 +84,7 @@ select {
 }
 
 .year-picker, #month-picker {
-    width: 50%;
+    width: 60%;
     display: inline-block;
 }
 
