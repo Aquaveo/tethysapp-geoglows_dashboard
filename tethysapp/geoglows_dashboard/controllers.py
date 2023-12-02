@@ -231,7 +231,7 @@ def format_plot(plot):
 def update_flow_regime(request, user_workspace):
     selected_year = request.GET['selected_year']
     hist = pd.read_csv(os.path.join(user_workspace.path, cache_dir, "hist.csv"), parse_dates=['datetime'], index_col=[0])
-    return JsonResponse(dict(flow_regime=format_plot(plot_flow_regime(hist, int(selected_year)))))
+    return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
 
 
 @controller(name='get_annual_discharge', url='get_annual_discharge')
