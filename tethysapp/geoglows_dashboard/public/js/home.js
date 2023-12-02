@@ -86,7 +86,7 @@ let initTabs = function() {
             $('.nav-link').removeClass('active');
             $(this).addClass('active');
             
-            // month picker for the HydroSOS Map layer
+            // init month picker and draw control for Other tab
             if (selectedTab == streamTabId) {
                 $('#month-picker-div').hide();
             } else {
@@ -101,7 +101,7 @@ let initTabs = function() {
 
 let countries = {};
 let selectedMonth = $('#month-picker').val();
-let drawnFeatures, drawnType, drawnCoordinates;
+let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let initMapCard = function() {
     let initCountrySelector = function() {
         // load countries
@@ -178,13 +178,40 @@ let initMapCard = function() {
         }) 
     }
 
+    initCountrySelector();
+    initStreamSearchBox();
+    initMonthPicker();
+    initMapCardBody();
+}
+
+
+const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
+const endDateTime = new Date(startDateTime);
+endDateTime.setDate(endDateTime.getDate() + 5);
+let mapObj, resetButton, mapMarker, selectedStream, selectedCountry;
+let streamflowLayer = L.esri.dynamicMapLayer({
+    url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
+    layers: [0],
+    from: startDateTime,
+    to: endDateTime,
+    opacity: 0.7
+});
+let layerControl, hydroSOSLayer, dryLevelLegend;
+
+
+let initMapCardBody = function() {
+    function refreshMapLayer() {
+        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
+        streamflowLayer.setTimeRange(sliderTime, endDateTime);
+    }
+
     let initDrawControl = function() {
         // Initialize layer for drawn features
         drawnFeatures = new L.FeatureGroup();
         mapObj.addLayer(drawnFeatures);
 
         // Initialize draw controls
-        let drawControl = new L.Control.Draw({
+        drawControl = new L.Control.Draw({
             draw: {
                 polyline: false,
                 // polygon: false,
@@ -206,10 +233,8 @@ let initMapCard = function() {
             isDrawing = false;
             readAreaOfDrawnFeature();
             initSelectedPlots(update=true);
-            // TODO switch to Other tab automatically after the user finished drawing
         });
     };
-
 
     // Read the area of the drawn feature
     let readAreaOfDrawnFeature = function() {
@@ -243,35 +268,6 @@ let initMapCard = function() {
         }
     }
 
-    
-    initCountrySelector();
-    initStreamSearchBox();
-    initMonthPicker();
-    initMapCardBody();
-    initDrawControl();
-}
-
-
-const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
-const endDateTime = new Date(startDateTime);
-endDateTime.setDate(endDateTime.getDate() + 5);
-let mapObj, resetButton, mapMarker, selectedStream, selectedCountry;
-let streamflowLayer = L.esri.dynamicMapLayer({
-    url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
-    layers: [0],
-    from: startDateTime,
-    to: endDateTime,
-    opacity: 0.7
-});
-let layerControl, hydroSOSLayer, dryLevelLegend;
-
-
-let initMapCardBody = function() {
-    function refreshMapLayer() {
-        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-        streamflowLayer.setTimeRange(sliderTime, endDateTime);
-    }
-
     // init map object
     if (mapObj == null) {
         mapObj = L.map('leaflet-map', {
@@ -290,6 +286,7 @@ let initMapCardBody = function() {
         resetButton.addTo(mapObj);
     }
 
+    // init time control and drawing control
     if (selectedTab == streamTabId) {
         mapObj.timeDimension = L.timeDimension({
             timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
@@ -310,6 +307,16 @@ let initMapCardBody = function() {
     
         mapObj.timeDimension.on('timeload', refreshMapLayer);
         $('.timecontrol-play').on('click', refreshMapLayer);
+
+        if (drawControl != null) {
+            mapObj.removeControl(drawControl);
+        }
+    } else {
+        if (drawControl == null) {
+            initDrawControl();
+        } else {
+            mapObj.addControl(drawControl);
+        }
     }
 
     // init markers on the map
@@ -329,6 +336,7 @@ let initMapCardBody = function() {
         "ESRI Grey": L.esri.basemapLayer('Gray'),
     }
  
+    // init map layers for different tabs
     if (layerControl != null) {
         layerControl.remove();
     }
@@ -466,7 +474,7 @@ let hasReachId = function() {
 }
 
 let hasDrawnArea = function() {
-    return selectedTab == otherTabId && drawnFeatures.getLayers().length !== 0;
+    return selectedTab == otherTabId && drawnFeatures != null && drawnFeatures.getLayers().length !== 0;
 }
 
 
