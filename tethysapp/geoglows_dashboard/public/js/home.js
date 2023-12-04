@@ -1,4 +1,4 @@
-const isTest = true;
+const isTest = false;
 let isDrawing = false;
 
 const currentYear = new Date().getFullYear();
