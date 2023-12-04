@@ -105,9 +105,9 @@ class GEEPlots:
         # Add title and legend
         fig.update_layout(
             title=None,
-            margin={"t": 0},
+            margin={"t": 0, "b": 0, "r": 0, "l": 0},
             xaxis={'title': 'Date'},
-            legend=dict(x=0.05, y=0.05)
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
 
         return offline_plot(
