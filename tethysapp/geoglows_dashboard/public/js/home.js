@@ -49,6 +49,7 @@ let tabs = {
             "gldas-precip": null, 
             "imerg-precip": null, 
             "era5-precip": null,
+            "gfs-forecast": null
         }
     }
 }
