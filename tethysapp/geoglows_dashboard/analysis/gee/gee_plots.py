@@ -132,7 +132,7 @@ class GEEPlots:
             # title=f"Precipitation in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         
         return offline_plot(
@@ -157,7 +157,7 @@ class GEEPlots:
             yaxis={'title': 'Soil Moisture (kg/m^2)'},
             xaxis={'title': 'Date'},
             margin={"t": 0, "b": 0, "r": 0, "l": 0},
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         
         return offline_plot(
@@ -226,7 +226,7 @@ class GEEPlots:
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
             margin={"t": 0, "b": 0, "r": 0, "l": 0},
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         return offline_plot(
             go.Figure(scatter_plots, layout),
@@ -305,7 +305,7 @@ class GEEPlots:
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
             margin={"t": 0, "b": 0, "r": 0, "l": 0},
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         return offline_plot(
             go.Figure(scatter_plots, layout),
