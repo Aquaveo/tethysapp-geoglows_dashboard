@@ -107,7 +107,7 @@ class GEEPlots:
             title=None,
             margin={"t": 0},
             xaxis={'title': 'Date'},
-            legend = dict(x=0.05, y=0.05)
+            legend=dict(x=0.05, y=0.05)
         )
 
         return offline_plot(
@@ -128,10 +128,11 @@ class GEEPlots:
 
         layout = go.Layout(
             title=None,
-            margin={"t": 0, "b": 0, "r": 0, "l": 0}, # TODO not working, the title space still huge
+            margin={"t": 0, "b": 0, "r": 0, "l": 0},
             # title=f"Precipitation in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         
         return offline_plot(
@@ -155,7 +156,8 @@ class GEEPlots:
             # title=f"Root Zone Soil Moisture in Kasungu, Malawi using GLDAS",
             yaxis={'title': 'Soil Moisture (kg/m^2)'},
             xaxis={'title': 'Date'},
-            margin={"t": 0, "b": 0, "r": 0, "l": 0}
+            margin={"t": 0, "b": 0, "r": 0, "l": 0},
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         
         return offline_plot(
@@ -223,7 +225,8 @@ class GEEPlots:
             title=None,
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
-            margin={"t": 0, "b": 0, "r": 0, "l": 0}
+            margin={"t": 0, "b": 0, "r": 0, "l": 0},
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         return offline_plot(
             go.Figure(scatter_plots, layout),
@@ -301,7 +304,8 @@ class GEEPlots:
             # title=f"Precipitation in Kasungu, Malawi using ERA5",
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
-            margin={"t": 0, "b": 0, "r": 0, "l": 0}
+            margin={"t": 0, "b": 0, "r": 0, "l": 0},
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.85, bgcolor='rgba(255, 255, 255, 0.6)')
         )
         return offline_plot(
             go.Figure(scatter_plots, layout),
