@@ -195,7 +195,19 @@ let streamflowLayer = L.esri.dynamicMapLayer({
     to: endDateTime,
     opacity: 0.7
 });
+const basemaps = {
+    "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }),    
+    "ESRI Topographic": L.esri.basemapLayer('Topographic'),
+    "ESRI Terrain": L.layerGroup(
+        [L.esri.basemapLayer('Terrain'), 
+        L.esri.basemapLayer('TerrainLabels')]
+    ),
+    "ESRI Grey": L.esri.basemapLayer('Gray'),
+}
 let layerControl, hydroSOSLayer, dryLevelLegend;
+let firstOtherTab = true; // the first time switch to other tab
 
 
 let initMapCardBody = function() {
@@ -318,49 +330,18 @@ let initMapCardBody = function() {
         }
     }
 
+    // init map layers
+    basemaps["Open Street Map"].addTo(mapObj);
+
     // init markers on the map
     selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
     selectedCountry = L.geoJSON().addTo(mapObj);
-
-    // init map layers
-    const basemaps = {
-        "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(mapObj),    
-        "ESRI Topographic": L.esri.basemapLayer('Topographic'),
-        "ESRI Terrain": L.layerGroup(
-            [L.esri.basemapLayer('Terrain'), 
-            L.esri.basemapLayer('TerrainLabels')]
-        ),
-        "ESRI Grey": L.esri.basemapLayer('Gray'),
-    }
- 
+    
     // init map layers for different tabs
-    if (layerControl != null) {
-        layerControl.remove();
-    }
     if (selectedTab == streamTabId) {
-        if (hydroSOSLayer != null) {
-            hydroSOSLayer.remove();
-        }
-        if (dryLevelLegend != null) {
-            dryLevelLegend.remove();
-        }
-        streamflowLayer.addTo(mapObj);
-        layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
-            collapsed: false
-        }).addTo(mapObj);
+        addStreamflowLayer();
     } else {
-        addHydroSOSLayer($("#month-picker").val()).then(function(hydroSOSLayer) {
-            overlayMaps = {
-                "HydroSOS Soil Moisture": hydroSOSLayer,
-                // "HydroSOS Precipitation": null,
-            };
-            layerControl = L.control.layers(basemaps, overlayMaps, {
-                collapsed: false
-            }).addTo(mapObj);
-        })
-        
+        addHydroSOSLayer($("#month-picker").val());
     }
 
     mapObj.on('click', function(event) {
@@ -389,6 +370,22 @@ let initMapCardBody = function() {
     })
 };
 
+
+let addStreamflowLayer = function() {
+    if (layerControl != null) {
+        layerControl.remove();
+    }
+    if (hydroSOSLayer != null) {
+        hydroSOSLayer.remove();
+    }
+    if (dryLevelLegend != null) {
+        dryLevelLegend.remove();
+    }
+    streamflowLayer.addTo(mapObj);
+    layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
+        collapsed: false
+    }).addTo(mapObj);
+}
 
 // TODO connect to the country selector
 let addHydroSOSLayer = function(date) { // yyyy-mm-01
@@ -440,11 +437,11 @@ let addHydroSOSLayer = function(date) { // yyyy-mm-01
     if (streamflowLayer != null) {
         mapObj.removeLayer(streamflowLayer);
     }
-    if (hydroSOSLayer != null) {
-        mapObj.removeLayer(hydroSOSLayer);
-    }
     if (dryLevelLegend != null) {
         dryLevelLegend.remove();
+    }
+    if (layerControl != null) {
+        layerControl.remove();
     }
     mapObj.removeControl(mapObj.timeDimension);
     mapObj.removeControl(mapObj.timeDimensionControl);
@@ -457,7 +454,22 @@ let addHydroSOSLayer = function(date) { // yyyy-mm-01
                 date: date
             }),
             success: function(response) {
-                hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
+                if (firstOtherTab || mapObj.hasLayer(hydroSOSLayer)) {
+                    firstOtherTab = false;
+                    // remove old hydroSOSLayer
+                    if (hydroSOSLayer != null) {
+                        mapObj.removeLayer(hydroSOSLayer);
+                    }
+                    // add new hydroSOSLayer
+                    hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
+                    overlayMaps = {
+                        "HydroSOS Soil Moisture": hydroSOSLayer,
+                        // "HydroSOS Precipitation": null,
+                    };
+                    layerControl = L.control.layers(basemaps, overlayMaps, {
+                        collapsed: false
+                    }).addTo(mapObj);
+                }
                 addDryLevelLegend();
                 resolve(hydroSOSLayer);
             },
