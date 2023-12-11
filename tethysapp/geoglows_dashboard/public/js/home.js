@@ -1,8 +1,5 @@
-const isTest = false;
-let isDrawing = false;
-
+const isTest = true;
 const currentYear = new Date().getFullYear();
-
 let selectedReachId;
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
@@ -100,7 +97,6 @@ let initTabs = function() {
 
 let countries = {};
 let selectedMonth = $('#month-picker').val();
-let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let initMapCard = function() {
     let initCountrySelector = function() {
         // load countries
@@ -171,7 +167,7 @@ let initMapCard = function() {
         $('#month-picker').on('changeDate', function(e) {
             $(this).datepicker('hide');
             if ($(this).val() != selectedMonth) {
-                addHydroSOSLayer($(this).val());
+                addHydroSOSLayer($(this).val(), false);
                 selectedMonth = $(this).val();
             }
         }) 
@@ -208,6 +204,8 @@ const basemaps = {
 }
 let layerControl, hydroSOSLayer, dryLevelLegend;
 let firstOtherTab = true; // the first time switch to other tab
+let isDrawing = false;
+let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 
 
 let initMapCardBody = function() {
@@ -230,7 +228,6 @@ let initMapCardBody = function() {
                 rectangle: false,
             }
         });
-
         mapObj.addControl(drawControl);
 
         mapObj.on("draw:drawstart", function(e) {
@@ -333,15 +330,36 @@ let initMapCardBody = function() {
     // init map layers
     basemaps["Open Street Map"].addTo(mapObj);
 
-    // init markers on the map
-    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
-    selectedCountry = L.geoJSON().addTo(mapObj);
-    
-    // init map layers for different tabs
+    // init map markers & layers for different tabs
     if (selectedTab == streamTabId) {
+        // remove markers for other tab
+        if (drawnFeatures) {
+            mapObj.removeLayer(drawnFeatures);
+        }
+        if (mapMarker != null) {
+            mapMarker.addTo(mapObj);
+        }
+        // add markers for this tab
+        if (selectedStream != null) {
+            selectedStream.addTo(mapObj);
+        }
+        // streamflow layer
         addStreamflowLayer();
     } else {
-        addHydroSOSLayer($("#month-picker").val());
+        // remove markers for other tab
+        if (mapMarker) {
+            mapObj.removeLayer(mapMarker);
+        }
+        if (selectedStream) {
+            mapObj.removeLayer(selectedStream);
+        }
+        // add markers for this tab
+        if (drawnFeatures != null) {
+            drawnFeatures.addTo(mapObj);
+        }
+        selectedCountry = L.geoJSON().addTo(mapObj); // TODO find a better place
+        // soil moisture layer
+        addHydroSOSLayer($("#month-picker").val(), true);
     }
 
     mapObj.on('click', function(event) {
@@ -388,7 +406,7 @@ let addStreamflowLayer = function() {
 }
 
 // TODO connect to the country selector
-let addHydroSOSLayer = function(date) { // yyyy-mm-01
+let addHydroSOSLayer = function(date, tabSwitched) { // yyyy-mm-01
     function getColor(dryLevel) {
         switch(dryLevel) {
             case "extremely dry":
@@ -454,22 +472,22 @@ let addHydroSOSLayer = function(date) { // yyyy-mm-01
                 date: date
             }),
             success: function(response) {
-                if (firstOtherTab || mapObj.hasLayer(hydroSOSLayer)) {
-                    firstOtherTab = false;
+                if (tabSwitched || mapObj.hasLayer(hydroSOSLayer)) {
                     // remove old hydroSOSLayer
-                    if (hydroSOSLayer != null) {
-                        mapObj.removeLayer(hydroSOSLayer);
+                    if (hydroSOSLayer == null) {
+                        hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj).addTo(mapObj);
                     }
-                    // add new hydroSOSLayer
-                    hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
-                    overlayMaps = {
-                        "HydroSOS Soil Moisture": hydroSOSLayer,
-                        // "HydroSOS Precipitation": null,
-                    };
-                    layerControl = L.control.layers(basemaps, overlayMaps, {
-                        collapsed: false
-                    }).addTo(mapObj);
+                    // update hydroSOSLayer data
+                    hydroSOSLayer.clearLayers();
+                    hydroSOSLayer.addData(JSON.parse(response)).addTo(mapObj);
                 }
+                overlayMaps = {
+                    "HydroSOS Soil Moisture": hydroSOSLayer,
+                    // "HydroSOS Precipitation": null,
+                };
+                layerControl = L.control.layers(basemaps, overlayMaps, {
+                    collapsed: false
+                }).addTo(mapObj);
                 addDryLevelLegend();
                 resolve(hydroSOSLayer);
             },
@@ -740,6 +758,9 @@ let findReachIDByLatLon = function(event) {
                 reject(new Error("Fail to find the reach_id"));
             } else {
                 // draw the stream on the map
+                if (selectedStream == null) {
+                    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+                }
                 selectedStream.clearLayers();
                 selectedStream.addData(featureCollection.features[0].geometry);
                 selectedReachId = featureCollection.features[0].properties["COMID (Stream Identifier)"];
