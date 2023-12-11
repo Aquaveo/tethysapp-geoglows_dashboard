@@ -1,4 +1,4 @@
-const isTest = true;
+const isTest = false;
 const currentYear = new Date().getFullYear();
 let selectedReachId;
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
