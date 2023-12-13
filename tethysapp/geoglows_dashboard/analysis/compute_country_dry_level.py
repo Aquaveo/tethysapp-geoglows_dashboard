@@ -5,8 +5,8 @@ import os
 
 def compute_country_dry_level(year, month, type):
     app_workspace_dir = os.path.join(os.path.dirname(__file__), "../workspaces/app_workspace")
-    if type == "soile":
-        hist = pd.read_csv(f"{app_workspace_dir}/Ecuador_soil.csv")
+    if type == "soil":
+        hist = pd.read_excel(f"{app_workspace_dir}/Ecuador_soil.xlsx")
     else:
         hist = pd.read_csv(f"{app_workspace_dir}/Ecuador_precip.csv")
     hist["month"] = pd.to_datetime(hist["month"], format="%Y-%m-%d")
