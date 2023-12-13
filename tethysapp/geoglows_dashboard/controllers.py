@@ -267,8 +267,9 @@ def get_gee_plot(request):
 
 @controller(name='get_country_dry_level', url='get_country_dry_level')
 def get_country_dry_level(request):
-    date = request.GET['date']
+    date = request.GET["date"]
+    type = request.GET["type"]
     year, month, _ = date.split("-")
-    return JsonResponse(compute_country_dry_level(int(year), int(month)), safe=False)
+    return JsonResponse(compute_country_dry_level(int(year), int(month), type), safe=False)
     
     

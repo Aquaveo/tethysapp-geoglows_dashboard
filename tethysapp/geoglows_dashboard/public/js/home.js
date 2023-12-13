@@ -167,7 +167,7 @@ let initMapCard = function() {
         $('#month-picker').on('changeDate', function(e) {
             $(this).datepicker('hide');
             if ($(this).val() != selectedMonth) {
-                addHydroSOSLayer($(this).val(), false);
+                addHydroSOSSoilMoistureLayer($(this).val());
                 selectedMonth = $(this).val();
             }
         }) 
@@ -202,7 +202,7 @@ const basemaps = {
     ),
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
-let layerControl, hydroSOSLayer, dryLevelLegend;
+let layerControl, soilMoistureLayer, dryLevelLegend;
 let firstOtherTab = true; // the first time switch to other tab
 let isDrawing = false;
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
@@ -359,7 +359,7 @@ let initMapCardBody = function() {
         }
         selectedCountry = L.geoJSON().addTo(mapObj); // TODO find a better place
         // soil moisture layer
-        addHydroSOSLayer($("#month-picker").val(), true);
+        addHydroSOSSoilMoistureLayer($("#month-picker").val());
     }
 
     mapObj.on('click', function(event) {
@@ -393,8 +393,8 @@ let addStreamflowLayer = function() {
     if (layerControl != null) {
         layerControl.remove();
     }
-    if (hydroSOSLayer != null) {
-        hydroSOSLayer.remove();
+    if (soilMoistureLayer != null) {
+        soilMoistureLayer.remove();
     }
     if (dryLevelLegend != null) {
         dryLevelLegend.remove();
@@ -406,7 +406,7 @@ let addStreamflowLayer = function() {
 }
 
 // TODO connect to the country selector
-let addHydroSOSLayer = function(date, tabSwitched) { // yyyy-mm-01
+let addHydroSOSSoilMoistureLayer = function(date) { // yyyy-mm-01
     function getColor(dryLevel) {
         switch(dryLevel) {
             case "extremely dry":
@@ -451,6 +451,31 @@ let addHydroSOSLayer = function(date, tabSwitched) { // yyyy-mm-01
         dryLevelLegend.addTo(mapObj);
     }
 
+    function getSoilMoistureLayer(date) {
+        return new Promise(function (resolve, reject) {
+            $.ajax({
+                type: "GET",
+                async: true,
+                url: URL_getCountryDryLevel + L.Util.getParamString({
+                    date: date,
+                    type: "soil"
+                }),
+                success: function(response) {
+                    if (soilMoistureLayer == null) {
+                        soilMoistureLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj);
+                    }
+                    // update hydroSOSLayer data
+                    soilMoistureLayer.clearLayers();
+                    soilMoistureLayer.addData(JSON.parse(response));
+                    resolve("success in getting HydroSOS Soil Moisture layer data");
+                },
+                error: function() {
+                    reject("fail to get the country dry level");
+                }
+            })
+        })
+    }
+
     // remove all previous layers
     if (streamflowLayer != null) {
         mapObj.removeLayer(streamflowLayer);
@@ -464,37 +489,18 @@ let addHydroSOSLayer = function(date, tabSwitched) { // yyyy-mm-01
     mapObj.removeControl(mapObj.timeDimension);
     mapObj.removeControl(mapObj.timeDimensionControl);
 
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getCountryDryLevel + L.Util.getParamString({
-                date: date
-            }),
-            success: function(response) {
-                if (tabSwitched || mapObj.hasLayer(hydroSOSLayer)) {
-                    // remove old hydroSOSLayer
-                    if (hydroSOSLayer == null) {
-                        hydroSOSLayer = L.geoJSON(JSON.parse(response), {style: getStyle}).addTo(mapObj).addTo(mapObj);
-                    }
-                    // update hydroSOSLayer data
-                    hydroSOSLayer.clearLayers();
-                    hydroSOSLayer.addData(JSON.parse(response)).addTo(mapObj);
-                }
-                overlayMaps = {
-                    "HydroSOS Soil Moisture": hydroSOSLayer,
-                    // "HydroSOS Precipitation": null,
-                };
-                layerControl = L.control.layers(basemaps, overlayMaps, {
-                    collapsed: false
-                }).addTo(mapObj);
-                addDryLevelLegend();
-                resolve(hydroSOSLayer);
-            },
-            error: function() {
-                reject("fail to get the country dry level");
-            }
-        })
+    getSoilMoistureLayer(date).then(function() {
+        if (mapObj.hasLayer(soilMoistureLayer)) {
+            soilMoistureLayer.addTo(mapObj);
+        }
+        overlayMaps = {
+            "HydroSOS Soil Moisture": soilMoistureLayer,
+            // "HydroSOS Precipitation": null,
+        };
+        layerControl = L.control.layers(basemaps, overlayMaps, {
+            collapsed: false
+        }).addTo(mapObj);
+        addDryLevelLegend();
     })
 }
 

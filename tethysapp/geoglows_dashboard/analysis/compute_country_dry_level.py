@@ -1,25 +1,22 @@
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 import geopandas as gpd
-import datetime
-from datetime import datetime
 import os
 
-def compute_country_dry_level(year, month):
+def compute_country_dry_level(year, month, type):
     app_workspace_dir = os.path.join(os.path.dirname(__file__), "../workspaces/app_workspace")
-    hist = pd.read_excel(f"{app_workspace_dir}/Ecuador_soil_vals_download.xlsx")
+    if type == "soile":
+        hist = pd.read_csv(f"{app_workspace_dir}/Ecuador_soil.csv")
+    else:
+        hist = pd.read_csv(f"{app_workspace_dir}/Ecuador_precip.csv")
     hist["month"] = pd.to_datetime(hist["month"], format="%Y-%m-%d")
     area = gpd.read_file(f"{app_workspace_dir}/combined.geojson")
 
     cuencas = []
     classification = []
-    for region in hist.columns:
-        if region == "month":
-            continue
+    for region in hist.columns[1:]:
         hist_df = pd.DataFrame(hist.set_index("month")[region])
-        avg_df = hist_df.copy()
-        avg_df = avg_df[avg_df.index.year >= 2001]
-        avg_df = avg_df[avg_df.index.year <= 2020]
+        avg_df = hist_df[(hist_df.index.year >= 2001) & (hist_df.index.year <= 2020)]
         filtered_month = pd.DataFrame(hist_df[hist_df.index.month == month])
         avg = avg_df.groupby(avg_df.index.month).mean()[region][month]
         filtered_month["ratio"] = filtered_month[region] / avg
@@ -56,7 +53,3 @@ def compute_country_dry_level(year, month):
 
     # Convert the GeoDataFrame to GeoJSON
     return gdf.to_json()
-
-    # js_dir = "../public/data/geojson"
-    # with open(f"{js_dir}/ecuador.json", "w") as file:
-    #     file.write(geojson_to_map)
