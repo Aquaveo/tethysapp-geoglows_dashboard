@@ -546,17 +546,24 @@ let initPlotCards = function() {
         format: 'yyyy',
         endDate: currentYear.toString()
     });
+
     // update the plot once the year changes
     $(".plot-card").each(function(index, card) {
         let yearPicker = $(card).find(".year-picker");
         // update the plot when selected year changes
-        yearPicker.on('changeDate', function(e) {
+        yearPicker.on('changeDate', function() {
             let newYearValue = yearPicker.val();
             if (newYearValue != yearPickerValues[index]) {
                 yearPickerValues[index] = newYearValue;
                 getSelectedPlot(card, newArea=false, newYear=true);
                 $('.year-picker').datepicker('hide');
             }
+        })
+
+        let yearSelect = $(card).find(".year-select");
+        // update the plot when year option changes
+        yearSelect.on("change", function() {
+            getSelectedPlot(card, newArea=false, newYear=true);
         })
     })
 
