@@ -11,10 +11,25 @@ from plotly.offline import plot as offline_plot
 
 class GEEPlots:
     def __init__(self, start, end, area):
-        self.start = start
-        self.end = end
+        self.start_date = start
+        self.end_date = end
         self.area = area
         self.has_gldas_data = False
+        start_pieces = start.split("-")
+        self.start_year = int(start_pieces[0])
+        self.start_month = int(start_pieces[1])
+        end_pieces = end.split("-")
+        self.end_year = int(end_pieces[0])
+        self.end_month = int(end_pieces[1])
+
+
+    def set_date_for_avg_data(self, row):
+        month = int(row.name) + 1
+        if month >= self.start_month:
+            year = self.start_year
+        else:
+          year = self.end_year
+        return f"{year}-{month}-15"
         
     
     def clip_to_bounds(self, img):
@@ -30,23 +45,7 @@ class GEEPlots:
     
     def get_gldas_data(self):
         gldas_ic = ee.ImageCollection("NASA/GLDAS/V021/NOAH/G025/T3H")
-        gldas_monthly = ee.ImageCollection(
-            [f'users/rachelshaylahuber55/gldas_monthly/gldas_monthly_avg_{i:02}' for i in range(1, 13)])
-        gldas_monthly = gldas_monthly.map(self.avg_in_bounds)
-
-        gldas_avg_df = pd.DataFrame(
-            gldas_monthly.aggregate_array('avg_value').getInfo(),
-        )
-        # TODO start date or only the year?
-        gldas_avg_df['datetime'] = [datetime.datetime(year=int(self.start[:4]), month=gldas_avg_df.index[i] + 1, day=15)
-                                        for i in gldas_avg_df.index]
-        gldas_avg_df['date'] = gldas_avg_df['datetime'].dt.strftime("%Y-%m-%d")
-        gldas_avg_df.index = pd.to_datetime(gldas_avg_df["date"])
-        gldas_avg_df['Rainf_tavg'] = gldas_avg_df['Rainf_tavg']
-        days_in_month = np.array([calendar.monthrange(int(self.start[:4]), i)[1] for i in range(1, 13)])
-        gldas_avg_df['Rainf_tavg'] = gldas_avg_df['Rainf_tavg'].cumsum() * days_in_month * 86400
-        
-        gldas_ytd = gldas_ic.select(["Rainf_tavg", "RootMoist_inst"]).filterDate(self.start, self.end).map(self.clip_to_bounds).map(self.avg_in_bounds)
+        gldas_ytd = gldas_ic.select(["Rainf_tavg", "RootMoist_inst"]).filterDate(self.start_date, self.end_date).map(self.clip_to_bounds).map(self.avg_in_bounds)
         gldas_ytd_df = pd.DataFrame(
             gldas_ytd.aggregate_array('avg_value').getInfo(),
             index=pd.to_datetime(np.array(gldas_ytd.aggregate_array('system:time_start').getInfo()) * 1e6)
@@ -54,8 +53,20 @@ class GEEPlots:
         gldas_ytd_df['Rainf_tavg'] = (gldas_ytd_df['Rainf_tavg'] * 10800).cumsum()
         gldas_ytd_df.index = pd.to_datetime(gldas_ytd_df.index)
         gldas_ytd_df = gldas_ytd_df.groupby(gldas_ytd_df.index.date).mean()
+
+        gldas_monthly = ee.ImageCollection(
+            [f'users/rachelshaylahuber55/gldas_monthly/gldas_monthly_avg_{i:02}' for i in range(1, 13)])
+        gldas_monthly = gldas_monthly.map(self.avg_in_bounds)
+        gldas_avg_df = pd.DataFrame(
+            gldas_monthly.aggregate_array('avg_value').getInfo(),
+        )
+        gldas_avg_df['date'] = gldas_avg_df.apply(self.set_date_for_avg_data, axis=1)
+        gldas_avg_df.index = pd.to_datetime(gldas_avg_df["date"])
+        gldas_avg_df = gldas_avg_df.sort_index()
+        days_in_month = np.array([calendar.monthrange(date.year, date.month)[1] for date in gldas_avg_df.index])
+        gldas_avg_df['Rainf_tavg'] = gldas_avg_df['Rainf_tavg'].cumsum() * days_in_month * 86400
         
-        date_generated_gldas = pd.date_range(self.start, periods=365)
+        date_generated_gldas = pd.date_range(self.start_date, periods=365)
         cum_df_gldas = pd.DataFrame(date_generated_gldas)
         values_list = []
         for date in cum_df_gldas[0]:
@@ -65,7 +76,7 @@ class GEEPlots:
                     values_list.append(val * 86400)  # it is a rate per second - 86400 seconds in day convert to per day
                 i = i + 1
         cum_df_gldas['val_per_day'] = values_list
-            # code will look for columns names 'date' and 'data_values' so rename to those
+        # code will look for columns names 'date' and 'data_values' so rename to those
         cum_df_gldas['date'] = cum_df_gldas[0].dt.strftime("%Y-%m-%d")
         cum_df_gldas["data_values"] = cum_df_gldas['val_per_day']
         
@@ -91,7 +102,6 @@ class GEEPlots:
                 title='Soil Moisture (kg/m^2)',
                 overlaying='y',
                 side='right',
-                # range=[100, 300] # TODO don't hardcode
             )
         )
 
@@ -134,7 +144,7 @@ class GEEPlots:
             xaxis={'title': 'Date'},
             legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
-        
+
         return offline_plot(
             go.Figure(scatter_plots, layout),
             config={'autosizable': True, 'responsive': True},
@@ -178,35 +188,27 @@ class GEEPlots:
         imerg_df = pd.DataFrame(
             imerg_1m_values_ic.aggregate_array('avg_value').getInfo(),
         ).dropna()
-        days_in_month = np.array([calendar.monthrange(int(self.start[:4]), i)[1] for i in range(1, 13)])
 
-        imerg_df['datetime'] = [datetime.datetime(year=int(self.start[:4]), month=imerg_df.index[i] + 1, day=15) for i in
-                                imerg_df.index]
-
-        imerg_df['data_values'] = imerg_df['HQprecipitation']
-
-        imerg_df['data_values'] = imerg_df['data_values'] * 24
+        imerg_df['date'] = imerg_df.apply(self.set_date_for_avg_data, axis=1)
+        imerg_df.index = pd.to_datetime(imerg_df["date"])
+        imerg_df['data_values'] = imerg_df['HQprecipitation'] * 24
+        imerg_df = imerg_df.sort_index()
+        days_in_month = np.array([calendar.monthrange(date.year, date.month)[1] for date in imerg_df.index])
         imerg_df['data_values'] = imerg_df['data_values'].cumsum() * days_in_month
-
-        #imerg_df['date'] = imerg_df['datetime'].dt.strftime("%Y-%m-%d")
-        imerg_df.index = pd.to_datetime(imerg_df["datetime"])
 
         # get IMERG values - they are grouped in 30 minute intervals
         imerg_30min_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_V06")
-
-        imerg_ytd_values_ic = imerg_30min_ic.select('HQprecipitation').filterDate(self.start, self.end).map(self.avg_in_bounds)
-
+        imerg_ytd_values_ic = imerg_30min_ic.select('HQprecipitation').filterDate(self.start_date, self.end_date).map(self.avg_in_bounds)
         imerg_ytd_df = pd.DataFrame(
             imerg_ytd_values_ic.aggregate_array('avg_value').getInfo(),
             index=pd.to_datetime(np.array(imerg_ytd_values_ic.aggregate_array('system:time_start').getInfo()) * 1e6),
         )
         # group half hourly values by day of the year
         imerg_ytd_df = imerg_ytd_df.groupby(imerg_ytd_df.index.date).mean()
-        test_date = datetime.datetime.strptime(self.start, "%Y-%m-%d")
 
         # initializing K
         K = len(imerg_ytd_df.index)
-        date_generated = pd.date_range(test_date, periods=K)
+        date_generated = pd.date_range(datetime.datetime.strptime(self.start_date, "%Y-%m-%d"), periods=K)
         # convert day-of-year to datetime, add 1 to day so it is plotted at self.end of day it represents
         imerg_ytd_df.index = date_generated
         imerg_ytd_df['data_values'] = imerg_ytd_df['HQprecipitation'].cumsum() * 24
@@ -221,7 +223,6 @@ class GEEPlots:
         scatter_plots.append(go.Scatter(x=self.imerg_ytd_df.index, y=self.imerg_ytd_df['data_values'], name='Values from the last 12 months'))
         scatter_plots.append(go.Scatter(x=self.imerg_df.index, y=self.imerg_df['data_values'], name='Average Values since 2000'))
         layout = go.Layout(
-            # title=f"Precipitation in Kasungu, Malawi using IMERG",
             title=None,
             yaxis={'title': 'Precipitation (mm)'},
             xaxis={'title': 'Date'},
@@ -237,58 +238,51 @@ class GEEPlots:
         
         
     def get_era5_data(self):
-        # read in img col of averages
-        img_col_avg = ee.ImageCollection(
-            [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_updated_{i:02}' for i in range(1, 13)])
-
         # get year-to-date averages
         era_ic = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-        era_ytd_values_ic = era_ic.select(["total_precipitation"]).filterDate(self.start, self.end).map(self.avg_in_bounds)
-
+        era_ytd_values_ic = era_ic.select(["total_precipitation"]).filterDate(self.start_date, self.end_date).map(self.avg_in_bounds)
         # create dataframe from image collection
         era_ytd_df = pd.DataFrame(
             era_ytd_values_ic.aggregate_array('avg_value').getInfo(),
             index=pd.to_datetime(np.array(era_ytd_values_ic.aggregate_array('system:time_start').getInfo()) * 1e6),
         )
-
         # group  hourly values by date
         era_ytd_df = era_ytd_df.groupby(era_ytd_df.index.date).mean()
-        avg_img = img_col_avg.select(["total_precipitation"]).map(self.avg_in_bounds)
-        avg_df = pd.DataFrame(
-            avg_img.aggregate_array('avg_value').getInfo(),
-        )
-
-        # set date and data values columns that the js code will look for
-        avg_df.columns = ["data_values"]
-        avg_df['datetime'] = [datetime.datetime(year=int(self.start[:4]), month=avg_df.index[i] + 1, day=15) for i in avg_df.index]
-        avg_df.reset_index(drop=True, inplace=True)
         # set year to date values
         era_ytd_df.columns = ["data_values"]
         # loop through the dataframe and move necessary dates for averages in new order if doing last 12 months. Current
         # month is assumed 12 (meaning it will not be moved), but is reset to be the current month if the last 12 months
         # were selected.
-        curr_month = 12
+        curr_month = 12 # TODO???
         # change date to be a string value that can be easily graphed.
         era_ytd_df['date'] = era_ytd_df.index
         era_ytd_df['date'] = pd.to_datetime(era_ytd_df["date"])
         era_ytd_df['date'] = era_ytd_df['date'].dt.strftime("%Y-%m-%d")
+        era_ytd_df["data_values"] = (era_ytd_df["data_values"] * 1000).cumsum()
 
-        avg_df.sort_values(by='datetime', inplace=True)
-        avg_df.reset_index(inplace=True)
-        avg_df['date'] = avg_df['datetime'].dt.strftime("%Y-%m-%d")
+
+        # read in img col of averages
+        img_col_avg = ee.ImageCollection(
+            [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_updated_{i:02}' for i in range(1, 13)])
+        avg_img = img_col_avg.select(["total_precipitation"]).map(self.avg_in_bounds)
+        avg_df = pd.DataFrame(
+            avg_img.aggregate_array('avg_value').getInfo(),
+        )
+        # set date and data values columns that the js code will look for
+        avg_df.columns = ["data_values"]
+        avg_df['date'] = pd.to_datetime(avg_df.apply(self.set_date_for_avg_data, axis=1))
+        avg_df.index = avg_df["date"]
+        avg_df.sort_index(inplace=True)
 
         # rearrange dataframe to account for last 12 months if necessary
         # Then sum the values for precipitation
-        days_in_month = np.array([calendar.monthrange(int(self.start[:4]), i)[1] for i in range(1, 13)])
+        days_in_month = np.array([calendar.monthrange(date.year, date.month)[1] for date in avg_df.index])
         for i in range(12 - curr_month):
             extra_val = days_in_month[11]
             days_in_month = np.delete(days_in_month, 11, 0)
             days_in_month = np.insert(days_in_month, 0, extra_val)
-        avg_df['data_values'] = avg_df['data_values'] * days_in_month * 1000
-        avg_df['data_values'] = avg_df['data_values'].cumsum()
-
-        era_ytd_df["data_values"] = (era_ytd_df["data_values"] * 1000).cumsum()
-        avg_df.index = pd.to_datetime(avg_df["date"])
+        avg_df['data_values'] = (avg_df['data_values'] * days_in_month * 1000).cumsum()
+        avg_df.index = avg_df["date"]
 
         self.era_ytd_df = era_ytd_df
         self.era5_avg_df = avg_df
