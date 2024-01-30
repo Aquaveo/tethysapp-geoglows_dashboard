@@ -19,6 +19,8 @@ requirements:
     - xarray
     - geopandas
     - openpyxl
+    - sqlalchemy<2
+    - psycopg2
 
   pip:
 

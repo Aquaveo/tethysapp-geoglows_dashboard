@@ -112,3 +112,43 @@ select {
     background-color: #f2f2f2;  /* Light gray background color */
     cursor: not-allowed;  /* Set the cursor to not-allowed */
 }
+
+.default-btn input[type="radio"] {
+    margin-right: 5px;
+}
+
+.close-btn {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 30px;
+    color: red;
+}
+
+.add-btn {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 30px;
+    color: green;
+}
+
+button {
+    border: none;
+    background: none;
+}
+
+#remove-confirmation-modal div{
+    text-align: center;
+    padding: 10px;
+}
+
+#add-country-form form{
+    padding-left: 0px;
+}
+
+#add-country-form div:not(:first-of-type) {
+    padding-top: 10px;
+}
+
+#add-country-form input {
+    margin-left: 0px;
+}

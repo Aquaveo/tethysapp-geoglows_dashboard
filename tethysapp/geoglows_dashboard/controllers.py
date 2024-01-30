@@ -271,5 +271,20 @@ def get_country_dry_level(request):
     type = request.GET["type"]
     year, month, _ = date.split("-")
     return JsonResponse(compute_country_dry_level(int(year), int(month), type), safe=False)
+
+
+@controller(url="country")
+def add_country(request):
+    pass # TODO
+
+
+@controller(url="") # TODO how to distinguish between POST/DELETE/GET for the same url?
+def remove_country(request):
+    pass # TODO
+
+
+@controller(url="country/default")
+def update_default_country(request):
+    pass # TODO
     
     

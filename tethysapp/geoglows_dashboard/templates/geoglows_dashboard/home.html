@@ -1,6 +1,12 @@
 {% extends "tethys_apps/app_header_content.html" %}
 {% load tethys_gizmos static %}
 
+{% block header_buttons %}
+  <!-- TODO this icon should be only visible for admins -->
+  <div class="header-button admin-button" data-bs-toggle="modal" data-bs-target="#admin-modal">
+    <a href="javascript:void(0);" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Admin Settings"><i class="bi bi-person-gear"></i></a>
+  </div>
+{% endblock %}
 
 {% block app_content %}
 <div id="nav-div">
@@ -111,6 +117,108 @@
 </div>
 {% endblock %}
 
+{% block after_app_content %}
+<div class="modal" id="admin-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Admin Settings</h4>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-2">
+            Countries
+          </div>
+          <div  class="col-md-10">
+            <div class="row" id="country-list">
+              <ul class="list-group"> 
+                <!-- TODO use get_all_countries to list all existing countries -->
+                <li class="list-group-item">
+                  <div class="row option-div">
+                    <div class="col-md-6">Kenya</div>
+                    <div class="col-md-4 default-btn">
+                      <input type="radio" id="kenya" name="default-country" value="kenya">
+                      <label for="kenya">Default</label>
+                    </div>
+                    <div class="col-md-2">
+                      <button class="close-btn" data-bs-toggle="modal" data-bs-target="#remove-confirmation-modal"><span>&times;</span></button>
+                    </div>
+                  </div>
+                </li>
+                <li class="list-group-item">
+                  <div class="row option-div">
+                    <div class="col-md-6">Ethiopia</div>
+                    <div class="col-md-4 default-btn">
+                      <input type="radio" id="ehiopia" name="default-country" value="ehiopia">
+                      <!-- TODO call update_default_country when clicking the radio button -->
+                      <label for="ehiopia">Default</label>
+                    </div>
+                    <div class="col-md-2">
+                      <!-- TODO call remove_country and display a confirmation modal when clicking close button -->
+                      <button class="close-btn"><span>&times;</span></button>
+                    </div>
+                  </div>
+                </li>
+                <li class="list-group-item">
+                  <div class="row option-div">
+                    <div class="col-md-10">Add New Country</div>
+                    <div class="col-md-2">
+                      <!-- TODO call add_new_country when clicking new button -->
+                      <button class="add-btn"><span>+</span></button>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="row" id="add-country-form">
+              <form>
+                <h5 style="padding-top:10px;">Add New Country</h5>
+                <div class="form-group">
+                  <label for="country-input">Country</label>
+                  <input type="search" class="form-control" id="country-input">
+                </div>
+                <div class="form-group">
+                  <label for="hydrosos-precip-input">HydroSOS Precipitation</label>
+                  <input type="file" class="form-control" id="hydrosos-precip-input">
+                </div>
+                <div class="form-group">
+                  <label for="hydrosos-soil-input">HydroSOS Soil Moisture</label>
+                  <input type="file" class="form-control" id="hydrosos-soil-input">
+                </div>
+                <div class="form-group">
+                  <input type="checkbox" class="form-check-input" id="default-check">
+                  <label class="form-check-label" for="default-check">Make the default country</label>
+                </div>
+                <div>
+                  <button type="button" class="btn btn-secondary">Cancel</button>
+                  <button type="button" class="btn btn-success">Add</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="remove-confirmation-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-body">
+        <!-- TODO link the country name to the modal. Might need JavaScript -->
+        <h5>Are you sure you want to remove Kenya?</h5>
+        <div class="row">
+          <div class="col-md-6"><button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button></div>
+          <div class="col-md-6"><button type="button" class="btn btn-success" id="continue-btn">Continue</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
 {% block styles %}
     {{ block.super }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -120,6 +228,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css"/>
     <!-- Leaflet EasyButton -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <link href="{% static 'geoglows_dashboard/css/home.css' %}" rel="stylesheet"/>
 {% endblock %}
 
