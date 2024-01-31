@@ -24,7 +24,7 @@ class Country(Base):
    default = Column(Boolean)
    
 
-def add_country(name, hydrosos_data, is_default):
+def add_new_country(name, hydrosos_data, is_default):
     """
     Persist new country.
     """

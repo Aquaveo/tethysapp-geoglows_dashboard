@@ -18,7 +18,7 @@ from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.compute_country_dry_level import compute_country_dry_level
-from .model import add_country
+from .model import add_new_country, get_all_countries
 
 
 test_dir = "test/"
@@ -278,16 +278,25 @@ def get_country_dry_level(request):
 
 @controller(name="country", url="country")
 def add_country(request):
-    data = json.loads(request.body.decode('utf-8'))
-    country = data["country"]
-    geojson = data["geoJSON"]
-    precip = data["precip"]
-    soil = data["soil"]
-    is_default = data["isDefault"]
+    if request.method == "POST":
+        data = json.loads(request.body.decode('utf-8'))
+        country = data["country"]
+        geojson = data["geoJSON"]
+        precip = data["precip"]
+        soil = data["soil"]
+        is_default = data["isDefault"]
+        hydrosos_data = parse_hydrosos_data(geojson, precip, soil)
+        add_new_country(country, hydrosos_data, is_default)
+        return JsonResponse(dict(res=f"{country} is added!"))
+    elif request.method == "GET":
+        countries = get_all_countries()
+        countries_dict = {}
+        for country in countries:
+            countries_dict[country.name] = {"hydrosos": country.hydrosos, "default": country.default}
+        return JsonResponse(dict(data=json.dumps(countries_dict)))
+    elif request.method == "DELETE":
+        pass
     
-    hydrosos_data = parse_hydrosos_data(geojson, precip, soil)
-    add_country(country, hydrosos_data, is_default)
-    return JsonResponse(res="ok")
 
 
 def parse_hydrosos_data(geojson, precip, soil):

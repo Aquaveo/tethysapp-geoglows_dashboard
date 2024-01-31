@@ -130,44 +130,8 @@
             <div class="modal-tab">Countries</div>
           </div>
           <div class="col-md-10">
-            <div class="row" id="country-list">
-              <ul class="list-group"> 
-                <!-- TODO use get_all_countries to list all existing countries -->
-                <li class="list-group-item">
-                  <div class="row option-div">
-                    <div class="col-md-6">Kenya</div>
-                    <div class="col-md-4 default-btn">
-                      <input type="radio" id="kenya" name="default-country" value="kenya">
-                      <label for="kenya">Default</label>
-                    </div>
-                    <div class="col-md-2">
-                      <button class="close-btn" data-bs-toggle="modal" data-bs-target="#remove-confirmation-modal"><span>&times;</span></button>
-                    </div>
-                  </div>
-                </li>
-                <li class="list-group-item">
-                  <div class="row option-div">
-                    <div class="col-md-6">Ethiopia</div>
-                    <div class="col-md-4 default-btn">
-                      <input type="radio" id="ehiopia" name="default-country" value="ehiopia">
-                      <!-- TODO call update_default_country when clicking the radio button -->
-                      <label for="ehiopia">Default</label>
-                    </div>
-                    <div class="col-md-2">
-                      <!-- TODO call remove_country and display a confirmation modal when clicking close button -->
-                      <button class="close-btn"><span>&times;</span></button>
-                    </div>
-                  </div>
-                </li>
-                <li class="list-group-item">
-                  <div class="row option-div">
-                    <div class="col-md-10">Add New Country</div>
-                    <div class="col-md-2">
-                      <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+            <div class="row" id="country-list-div">
+              <ul class="list-group" id="country-list-ul"></ul>
             </div>
             <div class="row" id="add-country-form" style="display: none">
               <form method="post">
@@ -248,7 +212,7 @@
     let URL_updateFlowRegime = "{% url 'geoglows_dashboard:update_flow_regime' %}";
     let URL_getGEEPlot = "{% url 'geoglows_dashboard:get_gee_plot' %}";
     let URL_getCountryDryLevel = "{% url 'geoglows_dashboard:get_country_dry_level' %}";
-    let URL_addCountry = "{% url 'geoglows_dashboard:country'%}";
+    let URL_country = "{% url 'geoglows_dashboard:country'%}";
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>

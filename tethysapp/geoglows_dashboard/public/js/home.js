@@ -1023,7 +1023,8 @@ let readFile = function(file, type) {
     reader.readAsText(file);
 }
 
-let addCountry = function() {
+
+let addNewCountry = function() {
     let data = {
         country: $("#new-country-select").val(),
         geoJSON: newCountryData["geoJSON"],
@@ -1034,11 +1035,12 @@ let addCountry = function() {
 
     $.ajax({
         type: "POST",
-        url: URL_addCountry,
+        url: URL_country,
         data: JSON.stringify(data),
         dataType: "json",
+        // TODO show a spinner while processing, then show the updated Countries List Group with the new country.
         success: function(response) {
-            console.log(response);
+            console.log(response);  
         },
         error: function(error) {
             console.log(error);
@@ -1046,15 +1048,56 @@ let addCountry = function() {
     })
 }
 
+// Dispaly all existing countries in the country list
+let getCountries = function() {
+    $.ajax({
+        type: "GET",
+        url: URL_country,
+        success: function(response) {
+            const countries = JSON.parse(response["data"]);
+            for (let country in countries) {
+                let newListItem = $(
+                    `<li class="list-group-item">
+                    <div class="row option-div">
+                      <div class="col-md-6">${country}</div>
+                      <div class="col-md-4 default-btn">
+                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${countries[country]["default"] ? "checked": ""}>
+                        <label for="${country}-radio">Default</label>
+                      </div>
+                      <div class="col-md-2">
+                        <button class="close-btn" data-bs-toggle="modal" data-bs-target="#remove-confirmation-modal"><span>&times;</span></button>
+                      </div>
+                    </div>
+                  </li>`
+                )
+                $("#country-list-ul").append(newListItem);
+            }
+            $("#country-list-ul").append($(
+                `<li class="list-group-item">
+                <div class="row option-div">
+                  <div class="col-md-10">Add New Country</div>
+                  <div class="col-md-2">
+                    <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
+                  </div>
+                </div>
+              </li>`
+            ))
+        },
+        error: function(error) {
+            console.log(error);
+        }
+    })
+}();
+
+
 // switch between "country list" row and "add new country" row
 let showCountryList = function() {
-    console.log("showCountryList() is called!");
-    $("#country-list").css("display", "flex");
+    $("#country-list-div").css("display", "flex");
     $("#add-country-form").css("display", "none");
 }
 
 let showAddCountryForm = function() {
-    $("#country-list").css("display", "none");
+    $("#country-list-div").css("display", "none");
     $("#add-country-form").css("display", "flex");
 }
 
