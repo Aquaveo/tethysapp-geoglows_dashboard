@@ -470,7 +470,7 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
                     resolve("success in getting HydroSOS Soil Moisture layer data");
                 },
                 error: function() {
-                    reject("fail to get the country dry level");
+                    reject("fail to get HydroSOS Soil Moisture layer dat");
                 }
             })
         })
