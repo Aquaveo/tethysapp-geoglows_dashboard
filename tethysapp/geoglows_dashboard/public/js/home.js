@@ -113,9 +113,15 @@ let initMapCard = function() {
                     let name = country.properties.ADMIN;
                     let geometry = country.geometry;
                     countries[name] = {"name": name, "geometry": geometry};
+                    // TODO only get the countries in the database
                     $("#country-selector").append($("<option>", {
                         value: name,
                         text: name
+                    }))
+                    // TODO exlude countries already added to the database
+                    $("#new-country-select").append($("<option>", {
+                        value: name,
+                        text:name
                     }))
                 }
             })
@@ -1001,3 +1007,54 @@ let getGeePlot = function(plotName, startDate, endDate) {
         })
     })
 }
+
+
+/////////////////// Admin Settings ///////////////////
+
+const newCountryData = {
+    "geoJSON": null,
+    "precip": null,
+    "soil": null
+};
+
+let readFile = function(file, type) {
+    const reader = new FileReader();
+    reader.onload = (e) => newCountryData[type] = e.target.result;
+    reader.readAsText(file);
+}
+
+let addCountry = function() {
+    let data = {
+        country: $("#new-country-select").val(),
+        geoJSON: newCountryData["geoJSON"],
+        precip: newCountryData["precip"],
+        soil: newCountryData["soil"],
+        isDefault: $("#default-check").is(":checked")
+    }
+
+    $.ajax({
+        type: "POST",
+        url: URL_addCountry,
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            console.log(response);
+        },
+        error: function(error) {
+            console.log(error);
+        }
+    })
+}
+
+// switch between "country list" row and "add new country" row
+let showCountryList = function() {
+    console.log("showCountryList() is called!");
+    $("#country-list").css("display", "flex");
+    $("#add-country-form").css("display", "none");
+}
+
+let showAddCountryForm = function() {
+    $("#country-list").css("display", "none");
+    $("#add-country-form").css("display", "flex");
+}
+

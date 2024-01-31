@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, Boolean, JSON
 from sqlalchemy.orm import sessionmaker
 
 import json
+import os
 
 from .app import GeoglowsDashboard as app
 
@@ -23,15 +24,15 @@ class Country(Base):
    default = Column(Boolean)
    
 
-def add_new_country(name, hydrosos):
+def add_country(name, hydrosos_data, is_default):
     """
     Persist new country.
     """
     
     new_country = Country(
         name=name,
-        hydrosos=hydrosos,
-        default=False # TODO
+        hydrosos=hydrosos_data,
+        default=is_default
     )
     
     # Get connection/session to database
@@ -72,16 +73,16 @@ def init_country_db(engine, first_time):
     # Create all the tables
     Base.metadata.create_all(engine)
     
-    if first_time:
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        path = "workspaces/app_workspace/hydrosos_ecuador.json"
-        data = json.load(open(path, "w"))
-        country = Country(
-            name="Ecuador",
-            hydrosos=data, # TOO
-            default=True,
-        )
-        session.add(country)
-        session.commit()
-        session.close()
+    # if first_time:
+    #     Session = sessionmaker(bind=engine)
+    #     session = Session()
+    #     path = os.path.join(os.path.dirname(__file__), "workspaces/app_workspace/hydrosos_ecuador.json")
+    #     data = json.load(open(path, "w"))
+    #     country = Country(
+    #         name="Ecuador",
+    #         hydrosos=data, # TOO
+    #         default=True,
+    #     )
+    #     session.add(country)
+    #     session.commit()
+    #     session.close()

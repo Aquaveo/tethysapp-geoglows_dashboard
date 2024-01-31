@@ -113,6 +113,19 @@ select {
     cursor: not-allowed;  /* Set the cursor to not-allowed */
 }
 
+/* Admin Settings Modal*/
+
+.modal-tab {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+}
+
+/* Admin Settings - Country List */
+
 .default-btn input[type="radio"] {
     margin-right: 5px;
 }
@@ -124,7 +137,7 @@ select {
     color: red;
 }
 
-.add-btn {
+#add-country-btn {
     font-size: 40px;
     font-weight: 600;
     line-height: 30px;
@@ -141,14 +154,18 @@ button {
     padding: 10px;
 }
 
-#add-country-form form{
-    padding-left: 0px;
+/* Admin Settings - Add Country Form */
+
+#add-country-form {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 5px;
+    padding: 10px;
 }
 
-#add-country-form div:not(:first-of-type) {
+#add-country-form div {
     padding-top: 10px;
 }
 
-#add-country-form input {
+#add-country-form input, select {
     margin-left: 0px;
 }

@@ -5,17 +5,20 @@ from tethys_sdk.gizmos import Button
 import geoglows.streamflow as gsf
 import geoglows.plots as gpp
 from plotly.offline import plot as offline_plot
+
 import requests
 import pandas as pd
 import json
 import ast
 import ee
 import os
+import io
 
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.compute_country_dry_level import compute_country_dry_level
+from .model import add_country
 
 
 test_dir = "test/"
@@ -273,14 +276,46 @@ def get_country_dry_level(request):
     return JsonResponse(compute_country_dry_level(int(year), int(month), type), safe=False)
 
 
-@controller(url="country")
+@controller(name="country", url="country")
 def add_country(request):
-    pass # TODO
+    data = json.loads(request.body.decode('utf-8'))
+    country = data["country"]
+    geojson = data["geoJSON"]
+    precip = data["precip"]
+    soil = data["soil"]
+    is_default = data["isDefault"]
+    
+    hydrosos_data = parse_hydrosos_data(geojson, precip, soil)
+    add_country(country, hydrosos_data, is_default)
+    return JsonResponse(res="ok")
 
 
+def parse_hydrosos_data(geojson, precip, soil):
+    hydrosos_data = json.loads(geojson)
+    features = hydrosos_data["features"]
+    
+    precip_data = pd.read_csv(io.StringIO(precip), sep=",")
+    precip_dict = dict()
+    for column in precip_data.columns[1:]:
+        precip_dict[column] = precip_data[["month", column]].values.tolist()
+        
+    soil_data = pd.read_csv(io.StringIO(soil), sep=",")
+    soil_dict = dict()
+    for column in soil_data.columns[1:]:
+        soil_dict[column] = soil_data[["month", column]].values.tolist()
+        
+    for feature in features:
+        properties = feature["properties"]
+        name = properties["ADM1_ES"]
+        properties["precipitation"] = precip_dict[name]
+        properties["soil moisture"] = soil_dict[name]
+    
+    return hydrosos_data
+    
+    
 @controller(url="") # TODO how to distinguish between POST/DELETE/GET for the same url?
 def remove_country(request):
-    pass # TODO
+    pass
 
 
 @controller(url="country/default")
