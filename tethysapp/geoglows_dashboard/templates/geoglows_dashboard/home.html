@@ -173,11 +173,10 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-body">
-        <!-- TODO link the country name to the modal. Might need JavaScript -->
-        <h5>Are you sure you want to remove Kenya?</h5>
+        <h5 id="remove-confirmation-message">Are you sure you want to remove Kenya?</h5>
         <div class="row">
           <div class="col-md-6"><button type="button" class="btn btn-secondary cancel-btn" data-bs-toggle="modal" data-bs-target="#admin-modal">Cancel</button></div>
-          <div class="col-md-6"><button type="button" class="btn btn-success" id="continue-btn">Continue</button></div>
+          <div class="col-md-6"><button type="button" class="btn btn-success" id="continue-btn" onclick="removeCountry()">Continue</button></div>
         </div>
       </div>
     </div>

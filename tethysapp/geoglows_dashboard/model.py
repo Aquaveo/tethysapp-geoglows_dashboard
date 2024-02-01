@@ -1,9 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Boolean, JSON
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import delete
 
-import json
-import os
 
 from .app import GeoglowsDashboard as app
 
@@ -59,7 +58,11 @@ def get_all_countries():
 
 
 def remove_country(name):
-    pass # TODO
+    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    country_to_remove = session.query(Country).filter_by(name=name).first()
+    session.delete(country_to_remove)
+    session.commit()
+    session.close()
 
 
 def update_default_country(name, hydrosos):

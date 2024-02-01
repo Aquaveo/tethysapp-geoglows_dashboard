@@ -55,6 +55,7 @@ $(function() {
     initTabs();
     initPlotCards();
     initMapCard();
+    initAdminSettings();
 })
 
 
@@ -95,33 +96,8 @@ let initTabs = function() {
     }
 }
 
-let allCountries = {};
 let selectedMonth = $('#month-picker').val();
 let initMapCard = function() {
-    let initCountrySelector = function() {
-        // load countries
-        fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("countries.geojson was not ok");
-                }
-                return response.json();
-            })
-            .then((data) => {
-                data = JSON.parse(JSON.stringify(data));
-                for (let country of data.features) {
-                    let name = country.properties.ADMIN;
-                    let geometry = country.geometry;
-                    allCountries[name] = {"name": name, "geometry": geometry};
-                }
-                getCountries();
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-            });
-    }
-
-    
     let initStreamSearchBox = function() {
         $('#search-addon').click(findReachIDByID);
         $('#reach-id-input').keydown(event => {
@@ -164,7 +140,6 @@ let initMapCard = function() {
         }) 
     }
 
-    initCountrySelector();
     initStreamSearchBox();
     initMonthPicker();
     initMapCardBody();
@@ -352,7 +327,9 @@ let initMapCardBody = function() {
         // soil moisture layer
         addHydroSOSLayers($("#month-picker").val());
         // zoom in to the selected country
-        mapObj.fitBounds(selectedCountry.getBounds());
+        if (selectedCountry) {
+            mapObj.fitBounds(selectedCountry.getBounds());
+        }
     }
 
     mapObj.on('click', function(event) {
@@ -999,11 +976,42 @@ let getGeePlot = function(plotName, startDate, endDate) {
 
 /////////////////// Admin Settings ///////////////////
 
+let initAdminSettings = function() {
+    initAllCountries();
+}
+
+let allCountries = {};
+let initAllCountries = function() {
+    // load countries
+    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("countries.geojson was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            data = JSON.parse(JSON.stringify(data));
+            for (let country of data.features) {
+                let name = country.properties.ADMIN;
+                let geometry = country.geometry;
+                allCountries[name] = {"name": name, "geometry": geometry};
+            }
+            initCountryList();
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+}
+
+// add new country
+
 const newCountryData = {
     "geoJSON": null,
     "precip": null,
     "soil": null
 };
+
 
 let readFile = function(file, type) {
     const reader = new FileReader();
@@ -1012,7 +1020,7 @@ let readFile = function(file, type) {
 }
 
 
-let addNewCountry = function() {
+let addCountry = function() {
     let data = {
         country: $("#new-country-select").val(),
         geoJSON: newCountryData["geoJSON"],
@@ -1028,7 +1036,8 @@ let addNewCountry = function() {
         dataType: "json",
         // TODO show a spinner while processing, then show the updated Countries List Group with the new country.
         success: function(response) {
-            console.log(response);  
+            console.log(response);
+            showCountryList();
         },
         error: function(error) {
             console.log(error);
@@ -1036,18 +1045,38 @@ let addNewCountry = function() {
     })
 }
 
+// remove country
+
+let removeCountry = function() {
+    $.ajax({
+        type: "DELETE",
+        url: URL_country,
+        data: JSON.stringify({country: countryToRemove}),
+        dataType: "json",
+        success: function(success) {
+            console.log(success)
+            showCountryList();
+        },
+        error: function(error) {
+            console.log(error);
+        },
+    })
+}
+
+
 // Dispaly all existing countries in the country list
-let existingCountries;
-let getCountries = function() {
+let existingCountries, countryToRemove;
+let initCountryList = function() {
     $.ajax({
         type: "GET",
         url: URL_country,
         success: function(response) {
             existingCountries = JSON.parse(response["data"]);
             // add existing countries to the country list
+            $("#country-list-ul").empty(); 
             for (let country in existingCountries) {
                 let newListItem = $(
-                    `<li class="list-group-item">
+                    `<li class="list-group-item" id="${country}-li">
                     <div class="row option-div">
                       <div class="col-md-6">${country}</div>
                       <div class="col-md-4 default-btn">
@@ -1055,17 +1084,28 @@ let getCountries = function() {
                         <label for="${country}-radio">Default</label>
                       </div>
                       <div class="col-md-2">
-                        <button class="close-btn" data-bs-toggle="modal" data-bs-target="#remove-confirmation-modal"><span>&times;</span></button>
+                        <button class="remove-btn"><span>&times;</span></button>
                       </div>
                     </div>
                   </li>`
                 )
                 $("#country-list-ul").append(newListItem);
 
+                newListItem.find(".remove-btn").on("click", function() {
+                    countryToRemove = country;
+                    $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
+                    $("#remove-confirmation-modal").modal("show");
+                    $("#admin-modal").modal("hide");
+                })
+
+                // put existing countries in the country selector
                 $("#country-selector").append($("<option>", {
                     value: country,
                     text: country
                 }))
+
+                // zoom in the map to the default country 
+                // TODO may put this code in a different place
                 if (existingCountries[country]["default"]) {
                     if (selectedCountry) {
                         selectedCountry.clearLayers();
@@ -1077,6 +1117,7 @@ let getCountries = function() {
                     selectedCountry.addData(allCountries[country].geometry);
                 }
             }
+
             $("#country-list-ul").append($(
                 `<li class="list-group-item">
                 <div class="row option-div">
@@ -1107,11 +1148,18 @@ let getCountries = function() {
 
 // switch between "country list" row and "add new country" row
 let showCountryList = function() {
+    $("#remove-confirmation-modal").hide();
+    $("#admin-modal").show();    
+    initCountryList(); // refresh the country list
     $("#country-list-div").css("display", "flex");
     $("#add-country-form").css("display", "none");
+    
 }
 
 let showAddCountryForm = function() {
+    $("#remove-confirmation-modal").hide();
+    $("#admin-modal").show();
+    initCountryList();
     $("#country-list-div").css("display", "none");
     $("#add-country-form").css("display", "flex");
 }

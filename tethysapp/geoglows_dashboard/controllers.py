@@ -18,7 +18,7 @@ from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.compute_country_dry_level import compute_country_dry_level
-from .model import add_new_country, get_all_countries
+from .model import add_new_country, get_all_countries, remove_country
 
 
 test_dir = "test/"
@@ -295,7 +295,10 @@ def add_country(request):
             countries_dict[country.name] = {"hydrosos": country.hydrosos, "default": country.default}
         return JsonResponse(dict(data=json.dumps(countries_dict)))
     elif request.method == "DELETE":
-        pass
+        data = json.loads(request.body.decode('utf-8'))
+        country = data["country"]
+        remove_country(country)
+        return JsonResponse(dict(res=f"{country} is removed!"))
     
 
 
@@ -320,11 +323,6 @@ def parse_hydrosos_data(geojson, precip, soil):
         properties["soil moisture"] = soil_dict[name]
     
     return hydrosos_data
-    
-    
-@controller(url="") # TODO how to distinguish between POST/DELETE/GET for the same url?
-def remove_country(request):
-    pass
 
 
 @controller(url="country/default")
