@@ -18,7 +18,7 @@ from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.compute_country_dry_level import compute_country_dry_level
-from .model import add_new_country, get_all_countries, remove_country
+from .model import add_new_country, get_all_countries, remove_country, update_default_country_db
 
 
 test_dir = "test/"
@@ -299,7 +299,6 @@ def add_country(request):
         country = data["country"]
         remove_country(country)
         return JsonResponse(dict(res=f"{country} is removed!"))
-    
 
 
 def parse_hydrosos_data(geojson, precip, soil):
@@ -325,8 +324,11 @@ def parse_hydrosos_data(geojson, precip, soil):
     return hydrosos_data
 
 
-@controller(url="country/default")
+@controller(name="update_default_country", url="country/default")
 def update_default_country(request):
-    pass # TODO
+    data = json.loads(request.body.decode('utf-8'))
+    country = data["country"]
+    update_default_country_db(country)
+    return JsonResponse(dict(res=f"{country} is set as default!"))
     
     

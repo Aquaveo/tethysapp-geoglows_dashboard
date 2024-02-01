@@ -1074,6 +1074,7 @@ let initCountryList = function() {
             existingCountries = JSON.parse(response["data"]);
             // add existing countries to the country list
             $("#country-list-ul").empty(); 
+            $("#country-selector").empty()
             for (let country in existingCountries) {
                 let newListItem = $(
                     `<li class="list-group-item" id="${country}-li">
@@ -1096,6 +1097,21 @@ let initCountryList = function() {
                     $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
                     $("#remove-confirmation-modal").modal("show");
                     $("#admin-modal").modal("hide");
+                })
+
+                // update default country
+                newListItem.find("input[type='radio']").on("click", function() {
+                    $.ajax({
+                        type: "POST",
+                        url: URL_updateDefaultCountry,
+                        data: JSON.stringify({"country": country}),
+                        success: function(success) {
+                            console.log(success);
+                        },
+                        error: function(error) {
+                            console.log(error);
+                        }
+                    })
                 })
 
                 // put existing countries in the country selector

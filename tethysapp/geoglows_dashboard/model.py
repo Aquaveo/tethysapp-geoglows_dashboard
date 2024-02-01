@@ -45,6 +45,9 @@ def add_new_country(name, hydrosos_data, is_default):
     session.commit()
     session.close()
     
+    if is_default:
+        update_default_country_db(name)
+    
     
 def get_all_countries():
     """
@@ -65,8 +68,14 @@ def remove_country(name):
     session.close()
 
 
-def update_default_country(name, hydrosos):
-    pass # TODO
+def update_default_country_db(name):
+    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    old_default_country = session.query(Country).filter_by(default="true").first()
+    old_default_country.default = False
+    new_default_country = session.query(Country).filter_by(name=name).first()
+    new_default_country.default = True
+    session.commit()
+    session.close()
 
 
 def init_country_db(engine, first_time):
@@ -76,16 +85,3 @@ def init_country_db(engine, first_time):
     # Create all the tables
     Base.metadata.create_all(engine)
     
-    # if first_time:
-    #     Session = sessionmaker(bind=engine)
-    #     session = Session()
-    #     path = os.path.join(os.path.dirname(__file__), "workspaces/app_workspace/hydrosos_ecuador.json")
-    #     data = json.load(open(path, "w"))
-    #     country = Country(
-    #         name="Ecuador",
-    #         hydrosos=data, # TOO
-    #         default=True,
-    #     )
-    #     session.add(country)
-    #     session.commit()
-    #     session.close()
