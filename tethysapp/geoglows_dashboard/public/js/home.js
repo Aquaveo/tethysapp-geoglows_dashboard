@@ -95,7 +95,7 @@ let initTabs = function() {
     }
 }
 
-let countries = {};
+let allCountries = {};
 let selectedMonth = $('#month-picker').val();
 let initMapCard = function() {
     let initCountrySelector = function() {
@@ -112,28 +112,13 @@ let initMapCard = function() {
                 for (let country of data.features) {
                     let name = country.properties.ADMIN;
                     let geometry = country.geometry;
-                    countries[name] = {"name": name, "geometry": geometry};
-                    // TODO only get the countries in the database
-                    $("#country-selector").append($("<option>", {
-                        value: name,
-                        text: name
-                    }))
-                    // TODO exlude countries already added to the database
-                    $("#new-country-select").append($("<option>", {
-                        value: name,
-                        text:name
-                    }))
+                    allCountries[name] = {"name": name, "geometry": geometry};
                 }
+                getCountries();
             })
             .catch((error) => {
                 console.error("Error:", error);
             });
-        
-        $("#country-selector").on("change", function() {
-            selectedCountry.clearLayers();
-            selectedCountry.addData(countries[$(this).val()].geometry);
-            mapObj.fitBounds(selectedCountry.getBounds());
-        })
     }
 
     
@@ -350,6 +335,8 @@ let initMapCardBody = function() {
         }
         // streamflow layer
         addStreamflowLayer();
+        // re-zoom mapObj
+        mapObj.setView([0, 0], 3);
     } else {
         // remove markers for other tab
         if (mapMarker) {
@@ -362,9 +349,10 @@ let initMapCardBody = function() {
         if (drawnFeatures != null) {
             drawnFeatures.addTo(mapObj);
         }
-        selectedCountry = L.geoJSON().addTo(mapObj); // TODO find a better place
         // soil moisture layer
         addHydroSOSLayers($("#month-picker").val());
+        // zoom in to the selected country
+        mapObj.fitBounds(selectedCountry.getBounds());
     }
 
     mapObj.on('click', function(event) {
@@ -1049,19 +1037,21 @@ let addNewCountry = function() {
 }
 
 // Dispaly all existing countries in the country list
+let existingCountries;
 let getCountries = function() {
     $.ajax({
         type: "GET",
         url: URL_country,
         success: function(response) {
-            const countries = JSON.parse(response["data"]);
-            for (let country in countries) {
+            existingCountries = JSON.parse(response["data"]);
+            // add existing countries to the country list
+            for (let country in existingCountries) {
                 let newListItem = $(
                     `<li class="list-group-item">
                     <div class="row option-div">
                       <div class="col-md-6">${country}</div>
                       <div class="col-md-4 default-btn">
-                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${countries[country]["default"] ? "checked": ""}>
+                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${existingCountries[country]["default"] ? "checked": ""}>
                         <label for="${country}-radio">Default</label>
                       </div>
                       <div class="col-md-2">
@@ -1071,6 +1061,21 @@ let getCountries = function() {
                   </li>`
                 )
                 $("#country-list-ul").append(newListItem);
+
+                $("#country-selector").append($("<option>", {
+                    value: country,
+                    text: country
+                }))
+                if (existingCountries[country]["default"]) {
+                    if (selectedCountry) {
+                        selectedCountry.clearLayers();
+                    } else {
+                        selectedCountry = L.geoJSON([], {
+                            style: {opacity: 0, fillOpacity: 0}
+                        }).addTo(mapObj);
+                    }
+                    selectedCountry.addData(allCountries[country].geometry);
+                }
             }
             $("#country-list-ul").append($(
                 `<li class="list-group-item">
@@ -1082,12 +1087,22 @@ let getCountries = function() {
                 </div>
               </li>`
             ))
+
+            // add non-existent countries to the country searchable select
+            for (country in allCountries) {
+                if (!(country in existingCountries)) {
+                    $("#new-country-select").append($("<option>", {
+                        value: country,
+                        text: country
+                    }))
+                }
+            }
         },
         error: function(error) {
             console.log(error);
         }
     })
-}();
+};
 
 
 // switch between "country list" row and "add new country" row
