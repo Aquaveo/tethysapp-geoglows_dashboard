@@ -1,6 +1,12 @@
 {% extends "tethys_apps/app_header_content.html" %}
 {% load tethys_gizmos static %}
 
+{% block header_buttons %}
+  <!-- TODO this icon should be only visible for admins -->
+  <div class="header-button" id="admin-btn" data-bs-toggle="modal" data-bs-target="#admin-modal" onclick="showCountryList()">
+    <a href="javascript:void(0);" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Admin Settings"><i class="bi bi-person-gear"></i></a>
+  </div>
+{% endblock %}
 
 {% block app_content %}
 <div id="nav-div">
@@ -111,6 +117,74 @@
 </div>
 {% endblock %}
 
+{% block after_app_content %}
+<div class="modal" id="admin-modal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Admin Settings</h4>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-2">
+            <div class="modal-tab">Countries</div>
+          </div>
+          <div class="col-md-10">
+            <div class="row" id="country-list-div">
+              <ul class="list-group" id="country-list-ul"></ul>
+            </div>
+            <div class="row" id="add-country-form" style="display: none">
+              <form method="post">
+                <h5 style="padding-top:10px;">Add New Country</h5>
+                <div class="form-group">
+                  <label for="new-country-select">Country</label>
+                  <select class="form-control" id="new-country-select"></select>
+                </div>
+                <div class="form-group">
+                  <label for="geojson-input">GeoJSON</label><br>
+                  <input type="file" class="form-control-file" id="geojson-input" onchange="readFile(this.files[0], 'geoJSON')">
+                </div>
+                <div class="form-group">
+                  <label for="hydrosos-precip-input">HydroSOS Precipitation</label><br>
+                  <input type="file" class="form-control-file" id="hydrosos-precip-input" onchange="readFile(this.files[0], 'precip')">
+                </div>
+                <div class="form-group">
+                  <label for="hydrosos-soil-input">HydroSOS Soil Moisture</label><br>
+                  <input type="file" class="form-control-file" id="hydrosos-soil-input" onchange="readFile(this.files[0], 'soil')">
+                </div>
+                <div class="form-group">
+                  <input type="checkbox" class="form-check-input" id="default-check">
+                  <label class="form-check-label" for="default-check">Make the default country</label>
+                </div>
+                <div>
+                  <button type="button" class="btn btn-secondary cancel-btn" onclick="showCountryList()">Cancel</button>
+                  <button type="button" class="btn btn-success" id="submit-btn" onclick="addCountry()">Submit</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="remove-confirmation-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-body">
+        <h5 id="remove-confirmation-message">Are you sure you want to remove Kenya?</h5>
+        <div class="row">
+          <div class="col-md-6"><button type="button" class="btn btn-secondary cancel-btn" data-bs-toggle="modal" data-bs-target="#admin-modal">Cancel</button></div>
+          <div class="col-md-6"><button type="button" class="btn btn-success" id="continue-btn" onclick="removeCountry()">Continue</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
 {% block styles %}
     {{ block.super }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -120,6 +194,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css"/>
     <!-- Leaflet EasyButton -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="{% static 'geoglows_dashboard/css/home.css' %}" rel="stylesheet"/>
 {% endblock %}
 
@@ -135,6 +211,8 @@
     let URL_updateFlowRegime = "{% url 'geoglows_dashboard:update_flow_regime' %}";
     let URL_getGEEPlot = "{% url 'geoglows_dashboard:get_gee_plot' %}";
     let URL_getCountryDryLevel = "{% url 'geoglows_dashboard:get_country_dry_level' %}";
+    let URL_country = "{% url 'geoglows_dashboard:country' %}";
+    let URL_updateDefaultCountry = "{% url 'geoglows_dashboard:update_default_country' %}"
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>

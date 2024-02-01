@@ -112,3 +112,60 @@ select {
     background-color: #f2f2f2;  /* Light gray background color */
     cursor: not-allowed;  /* Set the cursor to not-allowed */
 }
+
+/* Admin Settings Modal*/
+
+.modal-tab {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+}
+
+/* Admin Settings - Country List */
+
+.default-btn input[type="radio"] {
+    margin-right: 5px;
+}
+
+.remove-btn {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 30px;
+    color: red;
+}
+
+#add-country-btn {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 30px;
+    color: green;
+}
+
+button {
+    border: none;
+    background: none;
+}
+
+#remove-confirmation-modal div{
+    text-align: center;
+    padding: 10px;
+}
+
+/* Admin Settings - Add Country Form */
+
+#add-country-form {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 5px;
+    padding: 10px;
+}
+
+#add-country-form div {
+    padding-top: 10px;
+}
+
+#add-country-form input, select {
+    margin-left: 0px;
+}
