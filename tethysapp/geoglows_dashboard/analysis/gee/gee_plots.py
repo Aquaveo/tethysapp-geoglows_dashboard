@@ -253,7 +253,7 @@ class GEEPlots:
         # loop through the dataframe and move necessary dates for averages in new order if doing last 12 months. Current
         # month is assumed 12 (meaning it will not be moved), but is reset to be the current month if the last 12 months
         # were selected.
-        curr_month = 12 # TODO???
+        curr_month = 12
         # change date to be a string value that can be easily graphed.
         era_ytd_df['date'] = era_ytd_df.index
         era_ytd_df['date'] = pd.to_datetime(era_ytd_df["date"])
