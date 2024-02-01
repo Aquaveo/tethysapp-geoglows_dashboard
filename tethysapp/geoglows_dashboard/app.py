@@ -1,5 +1,5 @@
 from tethys_sdk.base import TethysAppBase
-from tethys_sdk.app_settings import CustomSetting
+from tethys_sdk.app_settings import CustomSetting, PersistentStoreDatabaseSetting
 
 
 class GeoglowsDashboard(TethysAppBase):
@@ -39,3 +39,15 @@ class GeoglowsDashboard(TethysAppBase):
             ),
         )
         return custom_settings
+    
+    
+    def persistent_store_settings(self):
+        ps_settings = (
+            PersistentStoreDatabaseSetting(
+                name='country_db',
+                description='Country database for HydroSOS Layers of Geoglows Dashboard',
+                initializer='geoglows_dashboard.model.init_country_db',
+                required=True
+            ),
+        )
+        return ps_settings
