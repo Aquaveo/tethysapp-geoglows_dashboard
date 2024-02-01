@@ -1114,6 +1114,7 @@ let initCountryList = function() {
                     })
                 })
 
+                
                 // put existing countries in the country selector
                 $("#country-selector").append($("<option>", {
                     value: country,
@@ -1132,6 +1133,12 @@ let initCountryList = function() {
                     }
                     selectedCountry.addData(allCountries[country].geometry);
                 }
+
+                $("#country-selector").on("change", function() {
+                    selectedCountry.clearLayers();
+                    selectedCountry.addData(allCountries[$(this).val()].geometry);
+                    mapObj.fitBounds(selectedCountry.getBounds());
+                })
             }
 
             $("#country-list-ul").append($(
