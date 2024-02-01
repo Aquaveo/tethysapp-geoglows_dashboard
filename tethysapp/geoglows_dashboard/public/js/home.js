@@ -376,7 +376,6 @@ let addStreamflowLayer = function() {
 }
 
 // TODO connect to the country selector
-let eventData;
 let addHydroSOSLayers = function(date) { // yyyy-mm-01
     function getColor(dryLevel) {
         switch(dryLevel) {
@@ -473,6 +472,10 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
         })
     }
 
+    function removeWithTimeout(layer) {
+        setTimeout(() => mapObj.removeLayer(layer), 10);
+    }
+
     // remove all previous layers
     if (streamflowLayer != null) {
         mapObj.removeLayer(streamflowLayer);
@@ -496,18 +499,17 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
                 "HydroSOS Precipitation": precipitationLayer,
             };
 
+
             layerControl = L.control.layers(basemaps, overlayMaps, {
-                collapsed: false
+                collapsed: false,
             }).addTo(mapObj);
 
             // make 2 hydroSOS layers mutually exclusive // TODO not working
 
             mapObj.on("overlayadd", function(e) {
-                console.log("overlayadd is fired");
-                eventData = e;
-                if (currentHydroSOSLayer && e.layer != currentHydroSOSLayer) {
-                    console.log("layer changed!");
-                    mapObj.removeLayer(currentHydroSOSLayer);
+                if (currentHydroSOSLayer && e.layer !== currentHydroSOSLayer) {
+                    removeWithTimeout(currentHydroSOSLayer);
+                    // TODO explain: https://gis.stackexchange.com/questions/382017/leaflet-mutually-exclusive-overlay-layers-overlayadd-event-firing-twice
                 }
                 currentHydroSOSLayer = e.layer;
             })
@@ -519,8 +521,6 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
             } else if (mapObj.hasLayer(precipitationLayer)) {
                 precipitationLayer.addTo(mapObj);
             }
-
-            
 
             addDryLevelLegend();
         })
