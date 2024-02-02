@@ -428,7 +428,8 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
                 async: true,
                 url: URL_getCountryDryLevel + L.Util.getParamString({
                     date: date,
-                    type: "soil"
+                    type: "soil",
+                    country: $("#country-selector").val()
                 }),
                 success: function(response) {
                     if (soilMoistureLayer == null) {
@@ -453,7 +454,8 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
                 async: true,
                 url: URL_getCountryDryLevel + L.Util.getParamString({
                     date: date,
-                    type: "precip"
+                    type: "precip",
+                    country:  $("#country-selector").val()
                 }),
                 success: function(response) {
                     if (precipitationLayer == null) {
@@ -1076,12 +1078,13 @@ let initCountryList = function() {
             $("#country-list-ul").empty(); 
             $("#country-selector").empty()
             for (let country in existingCountries) {
+                let isDefault = existingCountries[country]["default"];
                 let newListItem = $(
                     `<li class="list-group-item" id="${country}-li">
                     <div class="row option-div">
                       <div class="col-md-6">${country}</div>
                       <div class="col-md-4 default-btn">
-                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${existingCountries[country]["default"] ? "checked": ""}>
+                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
                         <label for="${country}-radio">Default</label>
                       </div>
                       <div class="col-md-2">
@@ -1118,8 +1121,9 @@ let initCountryList = function() {
                 // put existing countries in the country selector
                 $("#country-selector").append($("<option>", {
                     value: country,
-                    text: country
-                }))
+                    text: country,
+                    selected: isDefault ? true : false
+                }));
 
                 // zoom in the map to the default country 
                 // TODO may put this code in a different place

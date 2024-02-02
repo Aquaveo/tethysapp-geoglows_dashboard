@@ -1,7 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Boolean, JSON
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import delete
 
 
 from .app import GeoglowsDashboard as app
@@ -47,6 +45,17 @@ def add_new_country(name, hydrosos_data, is_default):
     
     if is_default:
         update_default_country_db(name)
+        
+
+def get_country(name):
+    """
+    Get the data of the selected country.
+    """
+    
+    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    country = session.query(Country).filter_by(name=name).first()
+    session.close()
+    return country
     
     
 def get_all_countries():

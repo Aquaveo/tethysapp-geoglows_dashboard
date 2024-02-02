@@ -2,15 +2,35 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 import geopandas as gpd
 import os
+import json
+from functools import reduce
 
-def compute_country_dry_level(year, month, type):
-    app_workspace_dir = os.path.join(os.path.dirname(__file__), "../workspaces/app_workspace")
+from ..model import get_country
+
+def compute_country_dry_level(country, year, month, type):
+    # get data
+    country_data = get_country(country).hydrosos
+    features = country_data["features"]
     if type == "soil":
-        hist = pd.read_excel(f"{app_workspace_dir}/Ecuador_soil.xlsx")
+        property = "soil moisture"
     else:
-        hist = pd.read_csv(f"{app_workspace_dir}/Ecuador_precip.csv")
-    hist["month"] = pd.to_datetime(hist["month"], format="%Y-%m-%d")
-    area = gpd.read_file(f"{app_workspace_dir}/combined.geojson")
+        property = "precipitation"
+    dfs = []
+    for i in range(len(features)):
+        properties = features[i]["properties"]
+        area_name = properties["ADM1_ES"]
+        area_soil_data = properties[property]
+        dfs.append(pd.DataFrame(area_soil_data, columns=["month", area_name]))
+    hist = reduce(lambda left, right: pd.merge(left, right, on="month"), dfs)
+    hist["month"] = pd.to_datetime(hist["month"])
+    
+    # TODO better way? don't cache in the file
+    app_workspace_dir = os.path.join(os.path.dirname(__file__), "../workspaces/app_workspace")
+    file_path = f"{app_workspace_dir}/hydrosos_storage_temp.json"
+    with open(file_path, 'w') as file:
+        json.dump(country_data, file)
+    area = gpd.read_file(file_path).drop(columns=["classification"])
+
 
     cuencas = []
     classification = []
@@ -42,10 +62,7 @@ def compute_country_dry_level(year, month, type):
     dict_cuencas = {"classification": classification, "ADM1_ES": cuencas}
     vals_df = pd.DataFrame(dict_cuencas)
     map_this = area.merge(vals_df, on="ADM1_ES")
-
     gdf = gpd.GeoDataFrame(map_this, geometry='geometry')
-    gdf = gdf.drop(columns=['validOn', 'validTo'])
-    gdf['date'] = gdf['date'].dt.date.astype(str)
 
     dry_level = CategoricalDtype(["extremely dry", "dry", "normal range", "wet", "extremely wet"], ordered=True)
     gdf['classification'] = gdf['classification'].astype(dry_level)
