@@ -1005,7 +1005,7 @@ let initAllCountries = function() {
         });
 }
 
-// add new country
+///// add new country /////
 
 const newCountryData = {
     "geoJSON": null,
@@ -1055,8 +1055,10 @@ $("#submit-btn").on("click", function() {
     addCountry();
 })
 
+// disable "reload site" warning
+window.onbeforeunload = null;
 
-// remove country
+///// remove country /////
 
 let removeCountry = function() {
     $.ajax({
@@ -1074,6 +1076,7 @@ let removeCountry = function() {
     })
 }
 
+///// Get all countries /////
 
 // Dispaly all existing countries in the country list
 let existingCountries, countryToRemove;
