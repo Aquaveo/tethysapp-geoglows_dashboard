@@ -1022,6 +1022,7 @@ let readFile = function(file, type) {
 
 
 let addCountry = function() {
+    // TODO validate the content of each field
     let data = {
         country: $("#new-country-select").val(),
         geoJSON: newCountryData["geoJSON"],
@@ -1035,9 +1036,9 @@ let addCountry = function() {
         url: URL_country,
         data: JSON.stringify(data),
         dataType: "json",
-        // TODO show a spinner while processing, then show the updated Countries List Group with the new country.
         success: function(response) {
-            console.log(response);
+            $("#submit-btn").prop("disabled", false);
+            $("#submit-btn").find(".spinner-border").addClass("d-none");
             showCountryList();
         },
         error: function(error) {
@@ -1045,6 +1046,15 @@ let addCountry = function() {
         }
     })
 }
+
+
+// submit form
+$("#submit-btn").on("click", function() {
+    $(this).prop("disabled", true);
+    $(this).find(".spinner-border").removeClass("d-none");
+    addCountry();
+})
+
 
 // remove country
 
@@ -1173,6 +1183,7 @@ let initCountryList = function() {
 
 
 // switch between "country list" row and "add new country" row
+
 let showCountryList = function() {
     $("#remove-confirmation-modal").hide();
     $("#admin-modal").show();    
@@ -1189,4 +1200,3 @@ let showAddCountryForm = function() {
     $("#country-list-div").css("display", "none");
     $("#add-country-form").css("display", "flex");
 }
-

@@ -135,7 +135,7 @@
               <ul class="list-group" id="country-list-ul"></ul>
             </div>
             <div class="row" id="add-country-form" style="display: none">
-              <form method="post">
+              <form method="get">
                 <h5 style="padding-top:10px;">Add New Country</h5>
                 <div class="form-group">
                   <label for="new-country-select">Country</label>
@@ -159,7 +159,10 @@
                 </div>
                 <div>
                   <button type="button" class="btn btn-secondary cancel-btn" onclick="showCountryList()">Cancel</button>
-                  <button type="button" class="btn btn-success" id="submit-btn" onclick="addCountry()">Submit</button>
+                  <button type="button" class="btn btn-success" id="submit-btn"">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    Submit
+                  </button>
                 </div>
               </form>
             </div>
