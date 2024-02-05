@@ -375,7 +375,6 @@ let addStreamflowLayer = function() {
     }).addTo(mapObj);
 }
 
-// TODO connect to the country selector
 let addHydroSOSLayers = function(date) { // yyyy-mm-01
     function getColor(dryLevel) {
         switch(dryLevel) {
@@ -506,7 +505,7 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
                 collapsed: false,
             }).addTo(mapObj);
 
-            // make 2 hydroSOS layers mutually exclusive // TODO not working
+            // make 2 hydroSOS layers mutually exclusive 
 
             mapObj.on("overlayadd", function(e) {
                 if (currentHydroSOSLayer && e.layer !== currentHydroSOSLayer) {
