@@ -2,10 +2,11 @@
 {% load tethys_gizmos static %}
 
 {% block header_buttons %}
-  <!-- TODO this icon should be only visible for admins -->
+  {% if request.user.is_staff %}
   <div class="header-button" id="admin-btn" data-bs-toggle="modal" data-bs-target="#admin-modal" onclick="showCountryList()">
     <a href="javascript:void(0);" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Admin Settings"><i class="bi bi-person-gear"></i></a>
   </div>
+  {% endif %}
 {% endblock %}
 
 {% block app_content %}
