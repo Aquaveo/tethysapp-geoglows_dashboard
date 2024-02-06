@@ -134,7 +134,7 @@ let initMapCard = function() {
         $('#month-picker').on('changeDate', function(e) {
             $(this).datepicker('hide');
             if ($(this).val() != selectedMonth) {
-                addHydroSOSLayers($(this).val());
+                addOtherHydroSOSLayers($(this).val());
                 selectedMonth = $(this).val();
             }
         }) 
@@ -174,7 +174,7 @@ let isDrawing = false;
 
 
 let initMapCardBody = function() {
-    function refreshMapLayer() {
+    let refreshMapLayer = function() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
         streamflowLayer.setTimeRange(sliderTime, endDateTime);
     }
@@ -249,6 +249,7 @@ let initMapCardBody = function() {
             fullscreenControl: true,
             timeDimension: true
         });
+        addDryLevelLegend();
     }
 
     if (resetButton == null) {
@@ -294,7 +295,6 @@ let initMapCardBody = function() {
 
     // init map layers
     basemaps["Open Street Map"].addTo(mapObj);
-
     // init map markers & layers for different tabs
     if (selectedTab == streamTabId) {
         // remove markers for other tab
@@ -309,6 +309,7 @@ let initMapCardBody = function() {
             selectedStream.addTo(mapObj);
         }
         // streamflow layer
+        addHydroSOSStreamflowLayer();
         addStreamflowLayer();
         // re-zoom mapObj
         mapObj.setView([0, 0], 3);
@@ -325,7 +326,7 @@ let initMapCardBody = function() {
             drawnFeatures.addTo(mapObj);
         }
         // soil moisture layer
-        addHydroSOSLayers($("#month-picker").val());
+        addOtherHydroSOSLayers($("#month-picker").val());
         // zoom in to the selected country
         if (selectedCountry) {
             mapObj.fitBounds(selectedCountry.getBounds());
@@ -366,60 +367,95 @@ let addStreamflowLayer = function() {
     if (soilMoistureLayer != null) {
         soilMoistureLayer.remove();
     }
-    if (dryLevelLegend != null) {
-        dryLevelLegend.remove();
-    }
     streamflowLayer.addTo(mapObj);
     layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
         collapsed: false
     }).addTo(mapObj);
 }
 
-let addHydroSOSLayers = function(date) { // yyyy-mm-01
-    function getColor(dryLevel) {
-        switch(dryLevel) {
-            case "extremely dry":
-                return "#CD233F";
-            case "dry":
-                return "#FFA885";
-            case "normal range":
-                return "#E7E2BC";
-            case "wet":
-                return "#8ECEEE";
-            case "extremely wet":
-                return "#2C7DCD";
+///// HydroSOS Layers /////
+
+// helper methods
+
+let getColor = function(dryLevel) {
+    switch(dryLevel) {
+        case "extremely dry":
+            return "#CD233F";
+        case "dry":
+            return "#FFA885";
+        case "normal range":
+            return "#E7E2BC";
+        case "wet":
+            return "#8ECEEE";
+        case "extremely wet":
+            return "#2C7DCD";
+    }
+}
+
+
+let getStyle = function(feature) {
+    return {
+        fillColor: getColor(feature.properties.classification),
+        weight: 1.5,
+        opacity: 1,
+        color: "#808080",
+        dashArray: '3',
+        fillOpacity: 0.7
+    };
+}
+
+
+let addDryLevelLegend = function() {
+    dryLevelLegend = L.control({position: 'bottomright'});
+    dryLevelLegend.onAdd = function() {
+        let div = L.DomUtil.create('div', 'legend');
+        let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
+
+        // loop through our dryLevels intervals and generate a label with a colored square for each interval
+        for (let i = 0; i < dryLevels.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
+                dryLevels[i] + '<br>';
         }
-    }
-    
-    function getStyle(feature) {
-        return {
-            fillColor: getColor(feature.properties.classification),
-            weight: 1.5,
-            opacity: 1,
-            color: "#808080",
-            dashArray: '3',
-            fillOpacity: 0.7
-        };
-    }
 
-    function addDryLevelLegend() {
-        dryLevelLegend = L.control({position: 'bottomright'});
-        dryLevelLegend.onAdd = function() {
-            let div = L.DomUtil.create('div', 'legend');
-            let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
+        return div;
+    }
+    dryLevelLegend.addTo(mapObj);
+}
 
-            // loop through our dryLevels intervals and generate a label with a colored square for each interval
-            for (let i = 0; i < dryLevels.length; i++) {
-                div.innerHTML +=
-                    '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
-                    dryLevels[i] + '<br>';
+let hydroSOSStreamflowLayer;
+let addHydroSOSStreamflowLayer = function() {
+    fetch("/static/geoglows_dashboard/data/geojson/hydrosos_streamflow_output.geojson")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("hydrosos_streamflow_output.geojson was not ok");
             }
+            return response.json();
+        })
+        .then((data) => {
+            data = JSON.parse(JSON.stringify(data));
+            // TODO only put 1000 points for now
+            let rivers = data.features.slice(0, 1000);
+            layerControl.addOverlay(
+                hydroSOSStreamflowLayer = L.geoJSON(rivers, {
+                    pointToLayer: function (feature) {
+                        return L.circleMarker(feature.geometry.coordinates, {
+                            radius: 8,
+                            fillColor: getColor(feature.properties.classification),
+                            color: "gray",
+                            weight: 0.5,
+                            opacity: 1,
+                            fillOpacity: 0.7
+                        })
+                    }
+                }), 
+                "HydroSOS Streamflow"
+            )
+        })
+}
 
-            return div;
-        }
-        dryLevelLegend.addTo(mapObj);
-    }
 
+let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
     function getSoilMoistureLayer(date) {
         return new Promise(function (resolve, reject) {
             $.ajax({
@@ -481,9 +517,10 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
     if (streamflowLayer != null) {
         mapObj.removeLayer(streamflowLayer);
     }
-    if (dryLevelLegend != null) {
-        dryLevelLegend.remove();
+    if (hydroSOSStreamflowLayer != null) {
+        mapObj.removeLayer(hydroSOSStreamflowLayer);
     }
+
     if (layerControl != null) {
         layerControl.remove();
     }
@@ -499,7 +536,6 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
                 "HydroSOS Soil Moisture": soilMoistureLayer,
                 "HydroSOS Precipitation": precipitationLayer,
             };
-
 
             layerControl = L.control.layers(basemaps, overlayMaps, {
                 collapsed: false,
@@ -522,8 +558,6 @@ let addHydroSOSLayers = function(date) { // yyyy-mm-01
             } else if (mapObj.hasLayer(precipitationLayer)) {
                 precipitationLayer.addTo(mapObj);
             }
-
-            addDryLevelLegend();
         })
 }
 
