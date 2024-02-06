@@ -1081,6 +1081,14 @@ let removeCountry = function() {
 // Dispaly all existing countries in the country list
 let existingCountries, countryToRemove;
 let initCountryList = function() {
+
+    let zoomInTo = function(countryGeoJSON) {
+        selectedCountry.clearLayers();
+        selectedCountry.addData(countryGeoJSON);
+        mapObj.fitBounds(selectedCountry.getBounds());
+    }
+
+
     $.ajax({
         type: "GET",
         url: URL_country,
@@ -1107,6 +1115,7 @@ let initCountryList = function() {
                 )
                 $("#country-list-ul").append(newListItem);
 
+                // show conformation modal once the remove button is clicked
                 newListItem.find(".remove-btn").on("click", function() {
                     countryToRemove = country;
                     $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
@@ -1114,22 +1123,6 @@ let initCountryList = function() {
                     $("#admin-modal").modal("hide");
                 })
 
-                // update default country
-                newListItem.find("input[type='radio']").on("click", function() {
-                    $.ajax({
-                        type: "POST",
-                        url: URL_updateDefaultCountry,
-                        data: JSON.stringify({"country": country}),
-                        success: function(success) {
-                            console.log(success);
-                        },
-                        error: function(error) {
-                            console.log(error);
-                        }
-                    })
-                })
-
-                
                 // put existing countries in the country selector
                 $("#country-selector").append($("<option>", {
                     value: country,
@@ -1137,9 +1130,24 @@ let initCountryList = function() {
                     selected: isDefault ? true : false
                 }));
 
-                // zoom in the map to the default country 
-                // TODO may put this code in a different place
-                if (existingCountries[country]["default"]) {
+                // update default country in the database
+                newListItem.find("input[type='radio']").on("click", function() {
+                    $.ajax({
+                        type: "POST",
+                        url: URL_updateDefaultCountry,
+                        data: JSON.stringify({"country": country}),
+                        success: function(success) {
+                            console.log(success);
+                            zoomInTo(allCountries[country].geometry);
+                        },
+                        error: function(error) {
+                            console.log(error);
+                        }
+                    })
+                })
+
+                // zoom in to the default country when loading the website
+                if (isDefault) {
                     if (selectedCountry) {
                         selectedCountry.clearLayers();
                     } else {
@@ -1151,9 +1159,7 @@ let initCountryList = function() {
                 }
 
                 $("#country-selector").on("change", function() {
-                    selectedCountry.clearLayers();
-                    selectedCountry.addData(allCountries[$(this).val()].geometry);
-                    mapObj.fitBounds(selectedCountry.getBounds());
+                    zoomInTo(allCountries[$(this).val()].geometry);
                 })
             }
 
