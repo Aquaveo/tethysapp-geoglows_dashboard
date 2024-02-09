@@ -95,6 +95,20 @@
 
 8. View the data in [pgAdmin](https://www.pgadmin.org/download/)
 
+   - Right click "Servers" on the top left, then click "Register" -> "Server"
+
+     ![image-20240209133718620](/Users/sonia/tethysdev/tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/public/images/pgAdmin connection.jpg)
+
+   - In the General tab, put any Name that you want
+
+   - In the Connection tab, fill in the Port, Username, and Password the same as step 6
+
+   - Click "Save" to connect
+
+   - Navigate to the table to see the data: 
+
+     ![image-20240209133418402](./tethysapp/geoglows_dashboard/public/images/pgAdmin tables.jpg)
+
 ### Run the app!
 
 1. Run the app in Tethys:
