@@ -107,7 +107,7 @@
 
    - Navigate to the table to see the data: 
 
-     ![image-20240209133418402](./tethysapp/geoglows_dashboard/public/images/pgAdmin tables.jpg)
+     ![pgAdmin tables](/Users/sonia/tethysdev/tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/public/images/pgAdmin tables.jpg)
 
 ### Run the app!
 
