@@ -97,7 +97,7 @@
 
    - Right click "Servers" on the top left, then click "Register" -> "Server"
 
-     ![image-20240209133718620](/Users/sonia/tethysdev/tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/public/images/pgAdmin connection.jpg)
+     <img src="./tethysapp/geoglows_dashboard/public/images/pgAdmin connection.jpg" alt="pgAdmin Connection" />
 
    - In the General tab, put any Name that you want
 
@@ -107,7 +107,7 @@
 
    - Navigate to the table to see the data: 
 
-     ![image-20240209133418402](./tethysapp/geoglows_dashboard/public/images/pgAdmin tables.jpg)
+     <img src="./tethysapp/geoglows_dashboard/public/images/pgAdmin tables.jpg" alt="pgAdmin Tables" />
 
 ### Run the app!
 
