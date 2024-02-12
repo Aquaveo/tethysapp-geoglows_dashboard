@@ -1,4 +1,4 @@
-# SERVIR EA
+# SERVIR EA - Geoglows Dashboard
 
 ## Run it locally
 
@@ -16,7 +16,12 @@
     git clone https://github.com/Aquaveo/tethysapp-geoglows_dashboard.git
     ```
 
-3. Download the data file [combined_all_data_101.nc]() and put it under the path `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace`
+3. Download the databases:
+
+    | Dataset                                                      | Path                                                         |
+    | ------------------------------------------------------------ | ------------------------------------------------------------ |
+    | [combined_all_data_101.nc](https://byu-my.sharepoint.com/:u:/g/personal/rhuber6_byu_edu/EfRiUc3akuBEss42TOGXryUBJ-CIG66y5AR4Uqi3JISRMQ) | `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace` |
+
 
 4. Install this app in Tethys:
 
@@ -26,7 +31,8 @@
     tethys install -d
     ```
 
-### Set up Google Earth Engine
+
+### Set Up Google Earth Engine
 
 1. Create a service account registered with Google Earth Engine
     - [How do I create a service account](https://developers.google.com/earth-engine/guides/service_account#how-do-i-create-a-service-account) 
@@ -37,7 +43,7 @@
 3. Set Service Account Settings for the App
     - see "2. Set Service Account Settings for the App" in this [tutorial](http://docs.tethysplatform.org/en/stable/tutorials/google_earth_engine/part_3/prepare.html)
 
-### Database Settings
+### Set Up the Database
 1. Download the Docker Desktop for your laptop: https://www.docker.com/products/docker-desktop/
 
 2. Download the PostGIS docker:
