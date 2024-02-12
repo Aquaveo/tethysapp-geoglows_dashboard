@@ -65,13 +65,7 @@
    PGPASSWORD=mysecretpassword tethys db configure
    ```
 
-5. Execute the **syncstores** command to create the tables in the Persistent Store database:
-
-   ```shell
-   tethys syncstores geoglows_dashboard
-   ```
-
-6. Add a Persistent Store Service to Tethys Portal: 
+5. Add a Persistent Store Service to Tethys Portal: 
 
    - Go to Tethys Portal Home in a web browser (e.g. http://localhost:8000/apps/)
    - Select **Site Admin** from the drop down next to your username.
@@ -83,7 +77,7 @@
 
    <img src="./tethysapp/geoglows_dashboard/public/images/persistent store service.png" alt="image-20240208095349756" style="zoom:50%;" />
 
-7. Assign the new **Persistent Store Service** to the Geoglows Dashboard App:
+6. Assign the new **Persistent Store Service** to the Geoglows Dashboard App:
 
    - Go to Tethys Portal Home in a web browser (e.g. http://localhost:8000/apps/)
    - Select **Site Admin** from the drop down next to your username.
@@ -92,6 +86,12 @@
    - Scroll down to the **Persistent Store Database Settings** section.
    - Assign the **Persistent Store Service** that you created in the last step to the **country_db** setting.
    - Press **Save** to save the settings.
+
+7. Execute the **syncstores** command to create the tables in the Persistent Store database:
+
+   ```shell
+   tethys syncstores geoglows_dashboard
+   ```
 
 8. View the data in [pgAdmin](https://www.pgadmin.org/download/)
 
