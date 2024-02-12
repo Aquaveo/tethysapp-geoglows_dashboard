@@ -1,4 +1,4 @@
-const isTest = true;
+const isTest = false;
 const currentYear = new Date().getFullYear();
 let selectedReachId;
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
@@ -425,28 +425,25 @@ let addDryLevelLegend = function() {
 
 let hydroSOSStreamflowLayer;
 let addHydroSOSStreamflowLayer = function() {
-    fetch("/static/geoglows_dashboard/data/geojson/hydrosos_streamflow_output.geojson")
+    fetch("/static/geoglows_dashboard/data/geojson/hydrosos_streamflow_data.geojson")
         .then((response) => {
             if (!response.ok) {
-                throw new Error("hydrosos_streamflow_output.geojson was not ok");
+                throw new Error("hydrosos_streamflow_data.geojson was not ok");
             }
             return response.json();
         })
         .then((data) => {
             data = JSON.parse(JSON.stringify(data));
             // TODO only put 1000 points for now
-            let rivers = data.features.slice(0, 1000);
+            let rivers = data.features;
             layerControl.addOverlay(
                 hydroSOSStreamflowLayer = L.geoJSON(rivers, {
-                    pointToLayer: function (feature) {
-                        return L.circleMarker(feature.geometry.coordinates, {
-                            radius: 8,
-                            fillColor: getColor(feature.properties.classification),
-                            color: "gray",
-                            weight: 0.5,
+                    style: function (feature) {
+                        return {
+                            color: getColor(feature.properties.classification),
+                            weight: 3,
                             opacity: 1,
-                            fillOpacity: 0.7
-                        })
+                        }
                     }
                 }), 
                 "HydroSOS Streamflow"

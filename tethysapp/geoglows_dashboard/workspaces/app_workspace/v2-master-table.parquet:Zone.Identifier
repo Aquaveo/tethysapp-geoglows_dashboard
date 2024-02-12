@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=http://geoglows-v2.s3-website-us-west-2.amazonaws.com/
+HostUrl=https://geoglows-v2.s3-us-west-2.amazonaws.com/configs/v2-master-table.parquet
