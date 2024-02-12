@@ -16,7 +16,7 @@
     git clone https://github.com/Aquaveo/tethysapp-geoglows_dashboard.git
     ```
 
-3. Download the databases:
+3. Download the databases and put them under the specified paths:
 
     | Dataset                                                      | Path                                                         |
     | ------------------------------------------------------------ | ------------------------------------------------------------ |
