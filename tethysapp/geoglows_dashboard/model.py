@@ -1,8 +1,12 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Boolean, JSON
-
+from sqlalchemy.orm import sessionmaker
+import os
+import json
 
 from .app import GeoglowsDashboard as app
+
+app_workspace_folder = os.path.join(os.path.dirname(__file__), "/workspaces/app_workspace")
 
 # DB Engine, sessionmaker, and base
 Base = declarative_base()
@@ -94,3 +98,15 @@ def init_country_db(engine, first_time):
     # Create all the tables
     Base.metadata.create_all(engine)
     
+    # if first_time:
+    #     Session = sessionmaker(bind=engine)
+    #     session = Session()
+            
+    #     ecuador = Country(
+    #         name = "Ecuador",
+    #         hydrosos = open(os.path.join(os.path.dirname(__file__), "workspaces/app_workspace/hydrosos_ecuador.json"), "r").read(),
+    #         default = True,
+    #     )
+    #     session.add(ecuador)
+    #     session.commit()
+    #     session.close()
