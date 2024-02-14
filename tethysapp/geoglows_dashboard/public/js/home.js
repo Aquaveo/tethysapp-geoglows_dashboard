@@ -22,6 +22,8 @@ let tabs = {
         "selectedYear": { // only flow-regime need year
             "flow-regime": null,
         }, 
+        "startDate": "1940-01",
+        "endDate": "2022-12",
     }, 
     [otherTabId]: {
         "plotName": {
@@ -46,7 +48,9 @@ let tabs = {
             "gldas-precip": null, 
             "imerg-precip": null, 
             "era5-precip": null,
-        }
+        },
+        "startDate": "2001-01",
+        "endDate": "2023-05"
     }
 }
 
@@ -83,21 +87,23 @@ let initTabs = function() {
             $('.nav-link').removeClass('active');
             $(this).addClass('active');
             
-            // init month picker and draw control for Other tab
-            if (selectedTab == streamTabId) {
-                $('#month-picker-div').hide();
-            } else {
-                $('#month-picker-div').show();
-            } 
-
+            updateMonthPicker();
             initPlotCards();
             initMapCardBody();
         })
     }
 }
 
-let selectedMonth = $('#month-picker').val();
 let initMapCard = function() {
+    initMapCardHeader();
+    initMapCardBody();
+}
+
+
+/////////////////// Initialize the Map Card Header ///////////////////
+
+let selectedMonth = $('#month-picker').val();
+let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
         $('#search-addon').click(findReachIDByID);
         $('#reach-id-input').keydown(event => {
@@ -117,34 +123,55 @@ let initMapCard = function() {
             }
         })
     }
-
-
+    
     let initMonthPicker = function() {
         $('#month-picker').datepicker({
             minViewMode: 1,
             format: 'yyyy-mm-01',
-            startDate: '2001-01',
-            endDate: '2023-05'
+            startDate: '1940-01',
+            endDate: '2022-12'
         });
-
-        if (selectedTab == streamTabId) {
-            $('#month-picker-div').hide();
-        }
     
-        $('#month-picker').on('changeDate', function(e) {
+        $('#month-picker').on('changeDate', function() {
             $(this).datepicker('hide');
-            if ($(this).val() != selectedMonth) {
-                addOtherHydroSOSLayers($(this).val());
-                selectedMonth = $(this).val();
+            let date = $(this).val();
+            if (date != selectedMonth) {
+                if (selectedTab == otherTabId) {
+                    addOtherHydroSOSLayers(date);
+                } else {
+                    addHydroSOSStreamflowLayer(date);
+                }
+                selectedMonth = date;
             }
         }) 
     }
 
     initStreamSearchBox();
     initMonthPicker();
-    initMapCardBody();
 }
 
+
+let updateMonthPicker = function() {
+    console.log("Month Picker is updated, current tab is: " + selectedTab);
+    if (selectedTab == streamTabId) {
+        $('#month-picker').datepicker('setStartDate', tabs[streamTabId].startDate);
+        $('#month-picker').datepicker('setEndDate', tabs[streamTabId].endDate);
+    } else {
+        $('#month-picker').datepicker('setStartDate', tabs[otherTabId].startDate);
+        $('#month-picker').datepicker('setEndDate', tabs[otherTabId].endDate);
+    }
+
+    if (selectedTab == streamTabId && selectedMonth > tabs[streamTabId].endDate) {
+        $('#month-picker').datepicker('update', tabs[streamTabId].endDate);
+    }
+
+    if (selectedTab == otherTabId && selectedMonth < tabs[otherTabId].startDate) {
+        $('#month-picker').datepicker('update', tabs[otherTabId].startDate);
+    }
+}
+
+
+/////////////////// Initialize the Map Card Body ///////////////////
 
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
@@ -174,6 +201,19 @@ let isDrawing = false;
 
 
 let initMapCardBody = function() {
+    let addStreamflowLayer = function() {
+        if (layerControl != null) {
+            layerControl.remove();
+        }
+        if (soilMoistureLayer != null) {
+            soilMoistureLayer.remove();
+        }
+        streamflowLayer.addTo(mapObj);
+        layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
+            collapsed: false
+        }).addTo(mapObj);
+    }
+
     let refreshMapLayer = function() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
         streamflowLayer.setTimeRange(sliderTime, endDateTime);
@@ -309,7 +349,7 @@ let initMapCardBody = function() {
             selectedStream.addTo(mapObj);
         }
         // streamflow layer
-        addHydroSOSStreamflowLayer();
+        addHydroSOSStreamflowLayer($("#month-picker").val());
         addStreamflowLayer();
         // re-zoom mapObj
         mapObj.setView([0, 0], 3);
@@ -359,20 +399,6 @@ let initMapCardBody = function() {
     })
 };
 
-
-let addStreamflowLayer = function() {
-    if (layerControl != null) {
-        layerControl.remove();
-    }
-    if (soilMoistureLayer != null) {
-        soilMoistureLayer.remove();
-    }
-    streamflowLayer.addTo(mapObj);
-    layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
-        collapsed: false
-    }).addTo(mapObj);
-}
-
 ///// HydroSOS Layers /////
 
 // helper methods
@@ -390,6 +416,11 @@ let getColor = function(dryLevel) {
         case "extremely wet":
             return "#2C7DCD";
     }
+}
+
+
+let getStrokeWidth = function(streamOrder) {
+    return streamOrder;
 }
 
 
@@ -424,7 +455,7 @@ let addDryLevelLegend = function() {
 }
 
 let hydroSOSStreamflowLayer;
-let addHydroSOSStreamflowLayer = function() {
+let addHydroSOSStreamflowLayer = function(date) {
     fetch("/static/geoglows_dashboard/data/geojson/hydrosos_streamflow_data.geojson")
         .then((response) => {
             if (!response.ok) {
@@ -433,16 +464,16 @@ let addHydroSOSStreamflowLayer = function() {
             return response.json();
         })
         .then((data) => {
-            data = JSON.parse(JSON.stringify(data));
-            // TODO only put 1000 points for now
+            data = JSON.parse(JSON.stringify(data)); // TODO how to make the loading of this layer more efficient?
             let rivers = data.features;
+            let currentZoom = mapObj.getZoom();
             layerControl.addOverlay(
                 hydroSOSStreamflowLayer = L.geoJSON(rivers, {
                     style: function (feature) {
                         return {
                             color: getColor(feature.properties.classification),
-                            weight: 3,
-                            opacity: 1,
+                            weight: getStrokeWidth(feature.properties.strmOrder),
+                            opacity: Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
                         }
                     }
                 }), 
