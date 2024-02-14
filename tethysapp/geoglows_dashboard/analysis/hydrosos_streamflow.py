@@ -4,6 +4,7 @@ import numpy as np
 import xarray
 import geopandas as gpd
 import os
+import pyogrio
 
 def compute_hydrosos_streamflow_layer(year, month):
     app_workspace_dir = os.path.join(os.path.dirname(__file__), "../workspaces/app_workspace")
@@ -19,7 +20,7 @@ def compute_hydrosos_streamflow_layer(year, month):
     average_df = average_df[(average_df["variable"] == "Qout") & (average_df["month"] == month)]
     std_df = monthly_data["monthly_std_dev"].to_dataframe().reset_index()
     std_df = std_df[(std_df["variable"] == "Qout") & (std_df["month"] == month)]
-    merged_df = month_df.merge(average_df[['rivid', 'monthly_average']], on='rivid', how='left')
+    merged_df = month_df.merge(average_df[['rivid', 'monthly_average']], on='rivid', how='left').drop_duplicates(["rivid"]).reset_index()
     merged_df = merged_df.merge(std_df[['rivid', 'monthly_std_dev']], on='rivid', how='left')
     # Calculate Z-score for ds_grouped_avg using mean and standard deviation
     merged_df['z_score'] = (merged_df['ds_grouped_avg'] - merged_df['monthly_average']) / merged_df['monthly_std_dev']
@@ -38,9 +39,8 @@ def compute_hydrosos_streamflow_layer(year, month):
         merged_df['probability'] < 0.13],
         categories, default="unknown"
     )
-    
-    # Create a GeoDataFrame from the DataFrame with lat, lon
-    gdf = gpd.GeoDataFrame(merged_df, geometry=gpd.points_from_xy(merged_df.lat, merged_df.lon))
-    gdf = gdf.drop_duplicates(["rivid"])
-    gdf["time"] = gdf["time"].astype(str)
-    return gdf[["rivid", "classification"]].to_json()
+
+    df_geometry = pyogrio.read_dataframe(f"{app_workspace_dir}/hydrosos_streamflow_geometry.geojson")
+    merged_df = merged_df[["rivid", "classification"]].merge(df_geometry, how="inner")
+    gdf = gpd.GeoDataFrame(merged_df)
+    return gdf.to_json()

@@ -195,7 +195,7 @@ const basemaps = {
     ),
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
-let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend;
+let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend, hydroSOSStreamflowLayer;
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let isDrawing = false;
 
@@ -401,8 +401,6 @@ let initMapCardBody = function() {
 
 ///// HydroSOS Layers /////
 
-// helper methods
-
 let getColor = function(dryLevel) {
     switch(dryLevel) {
         case "extremely dry":
@@ -454,32 +452,41 @@ let addDryLevelLegend = function() {
     dryLevelLegend.addTo(mapObj);
 }
 
-let hydroSOSStreamflowLayer;
+
 let addHydroSOSStreamflowLayer = function(date) {
-    fetch("/static/geoglows_dashboard/data/geojson/hydrosos_streamflow_data.geojson")
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("hydrosos_streamflow_data.geojson was not ok");
-            }
-            return response.json();
-        })
-        .then((data) => {
-            data = JSON.parse(JSON.stringify(data)); // TODO how to make the loading of this layer more efficient?
-            let rivers = data.features;
-            let currentZoom = mapObj.getZoom();
-            layerControl.addOverlay(
-                hydroSOSStreamflowLayer = L.geoJSON(rivers, {
-                    style: function (feature) {
-                        return {
-                            color: getColor(feature.properties.classification),
-                            weight: getStrokeWidth(feature.properties.strmOrder),
-                            opacity: Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
+    console.log("Send a new request for HydroSOS streamflow layer for "+ date);
+    return new Promise(function(resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getHydroSOSStreamflowLayer + L.Util.getParamString({
+                date: date
+            }),
+            success: function(response) {
+                let rivers = JSON.parse(response).features;
+                console.log("HydroSOS streamflow layer data received!");
+                if (!hydroSOSStreamflowLayer) {
+                    hydroSOSStreamflowLayer = L.geoJSON(rivers, {
+                        style: function (feature) {
+                            return {
+                                color: getColor(feature.properties.classification),
+                                weight: getStrokeWidth(feature.properties.strmOrder),
+                                opacity: 1,
+                                // Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
+                            }
                         }
-                    }
-                }), 
-                "HydroSOS Streamflow"
-            )
+                    });
+                    layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
+                } else {
+                    hydroSOSStreamflowLayer.clearLayers();
+                    hydroSOSStreamflowLayer.addData(rivers);
+                }
+            },
+            error: function() {
+                reject("Fail to get HydroSOS Streamflow Layer!");
+            }
         })
+    })
 }
 
 
