@@ -452,23 +452,20 @@ let addDryLevelLegend = function() {
     dryLevelLegend.addTo(mapObj);
 }
 
-let rivers;
+
 let addHydroSOSStreamflowLayer = function(date) {
-    let getHydroSOSStreamflowLayer = function(date) {
-        console.log("Send a new request for HydroSOS Streamflow layer for "+ date);
-        return new Promise(function(resolve, reject) {
-            $.ajax({
-                type: "GET",
-                async: true,
-                url: URL_getHydroSOSStreamflowLayer + L.Util.getParamString({
-                    date: date
-                }),
-                success: function(response) {
-                    rivers = JSON.parse(response).features;
-                    console.log(rivers);
-                    if (hydroSOSStreamflowLayer != null) {
-                        mapObj.removeLayer(hydroSOSStreamflowLayer);
-                    }
+    console.log("Send a new request for HydroSOS streamflow layer for "+ date);
+    return new Promise(function(resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getHydroSOSStreamflowLayer + L.Util.getParamString({
+                date: date
+            }),
+            success: function(response) {
+                let rivers = JSON.parse(response).features;
+                console.log("HydroSOS streamflow layer data received!");
+                if (!hydroSOSStreamflowLayer) {
                     hydroSOSStreamflowLayer = L.geoJSON(rivers, {
                         style: function (feature) {
                             return {
@@ -480,15 +477,16 @@ let addHydroSOSStreamflowLayer = function(date) {
                         }
                     });
                     layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
-                },
-                error: function() {
-                    reject("Fail to get HydroSOS Streamflow Layer!");
+                } else {
+                    hydroSOSStreamflowLayer.clearLayers();
+                    hydroSOSStreamflowLayer.addData(rivers);
                 }
-            })
+            },
+            error: function() {
+                reject("Fail to get HydroSOS Streamflow Layer!");
+            }
         })
-    }
-
-    getHydroSOSStreamflowLayer(date);
+    })
 }
 
 
