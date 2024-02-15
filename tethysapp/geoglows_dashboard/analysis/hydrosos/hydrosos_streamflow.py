@@ -1,10 +1,4 @@
-import scipy.stats as stats
-import xarray
-import numpy as np
-import xarray
-import geopandas as gpd
 import os
-import pyogrio
 
 
 def compute_hydrosos_streamflow_layer(year, month):
