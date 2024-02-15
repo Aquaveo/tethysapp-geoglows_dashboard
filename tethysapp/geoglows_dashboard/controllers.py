@@ -17,8 +17,8 @@ import io
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
-from .analysis.compute_country_dry_level import compute_country_dry_level
-from .analysis.hydrosos_streamflow import compute_hydrosos_streamflow_layer
+from .analysis.hydrosos.compute_country_dry_level import compute_country_dry_level
+from .analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer
 from .model import add_new_country, get_all_countries, remove_country, update_default_country_db
 
 
