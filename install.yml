@@ -21,6 +21,7 @@ requirements:
     - openpyxl
     - sqlalchemy<2
     - psycopg2
+    - pyogrio
 
   pip:
 
