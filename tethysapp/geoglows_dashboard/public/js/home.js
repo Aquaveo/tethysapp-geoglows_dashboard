@@ -463,10 +463,16 @@ let addHydroSOSStreamflowLayer = function(date) {
                 date: date
             }),
             success: function(response) {
-                let rivers = JSON.parse(response).features;
-                console.log("HydroSOS streamflow layer data received!");
-                if (!hydroSOSStreamflowLayer) {
-                    hydroSOSStreamflowLayer = L.geoJSON(rivers, {
+                let data = JSON.parse(response);
+                let geojsonData = {};
+                for (let streams of data) {
+                    let features = JSON.parse(streams).features;
+                    let strmOrder = features[0].properties.strmOrder;
+                    geojsonData[strmOrder] = JSON.parse(streams);
+                }
+                let geojsonLayerGroup = L.layerGroup();
+                for (let layerName in geojsonData) {
+                    geojsonLayerGroup.addLayer(L.geoJSON(geojsonData[layerName], {
                         style: function (feature) {
                             return {
                                 color: getColor(feature.properties.classification),
@@ -475,12 +481,31 @@ let addHydroSOSStreamflowLayer = function(date) {
                                 // Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
                             }
                         }
-                    });
-                    layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
-                } else {
-                    hydroSOSStreamflowLayer.clearLayers();
-                    hydroSOSStreamflowLayer.addData(rivers);
+                    }));
                 }
+                layerControl.addOverlay(geojsonLayerGroup, "HydroSOS Streamflow");
+
+                // L.control.layers(layers).addTo(mapObj);
+                // layerControl.addOverlay(layers, "HydroSOS Streamflow");
+                // let rivers = hydroSOSStreamflowLayer.features;
+                // console.log("HydroSOS streamflow layer data received!");
+                // console.log(rivers);
+                // if (!hydroSOSStreamflowLayer) {
+                //     hydroSOSStreamflowLayer = L.geoJSON(rivers, {
+                //         style: function (feature) {
+                //             return {
+                //                 color: getColor(feature.properties.classification),
+                //                 weight: getStrokeWidth(feature.properties.strmOrder),
+                //                 opacity: 1,
+                //                 // Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
+                //             }
+                //         }
+                //     });
+                //     layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
+                // } else {
+                //     hydroSOSStreamflowLayer.clearLayers();
+                //     hydroSOSStreamflowLayer.addData(rivers);
+                // }
             },
             error: function() {
                 reject("Fail to get HydroSOS Streamflow Layer!");
