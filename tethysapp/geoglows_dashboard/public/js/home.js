@@ -417,12 +417,7 @@ let getColor = function(dryLevel) {
 }
 
 
-let getStrokeWidth = function(streamOrder) {
-    return streamOrder;
-}
-
-
-let getStyle = function(feature) {
+let getHydroSOSCountryDryLevelStyle = function(feature) {
     return {
         fillColor: getColor(feature.properties.classification),
         weight: 1.5,
@@ -455,6 +450,50 @@ let addDryLevelLegend = function() {
 
 let addHydroSOSStreamflowLayer = function(date) {
     console.log("Send a new request for HydroSOS streamflow layer for "+ date);
+
+    let getStrokeWidth = function(streamOrder) {
+        return streamOrder / 2;
+    }
+
+
+    let getHydroSOSStreamflowLayerStyle = function(feature) {
+        return {
+            color: getColor(feature.properties.classification),
+            weight: getStrokeWidth(feature.properties.strmOrder),
+            opacity: 1,
+        }
+    }
+
+    let zoomInStreamflowLayer = function() {
+        let currentZoom = mapObj.getZoom();
+        hydroSOSStreamflowLayer.eachLayer(function(layer) {
+            let strmOrder = layer.strmOrder;
+            if (currentZoom <= 2 && strmOrder == 8) {
+                mapObj.addLayer(layer);
+            } else if (currentZoom + strmOrder < 10) {
+                mapObj.removeLayer(layer);
+            } else {
+                mapObj.addLayer(layer);
+            }
+        });
+    }
+
+    // set the evetn listener when first time loading hydrosos streamflow layer
+    if (!hydroSOSStreamflowLayer) { 
+        mapObj.on("zoomend", function() {
+            console.log("zoom end:", mapObj.getZoom());
+            if (mapObj.hasLayer(hydroSOSStreamflowLayer)) {
+                zoomInStreamflowLayer();
+            }
+        })
+    
+        mapObj.on("overlayadd", function(eventLayer) {
+            if (eventLayer.layer === hydroSOSStreamflowLayer) {
+                zoomInStreamflowLayer();
+            }
+        })
+    }
+
     return new Promise(function(resolve, reject) {
         $.ajax({
             type: "GET",
@@ -463,49 +502,29 @@ let addHydroSOSStreamflowLayer = function(date) {
                 date: date
             }),
             success: function(response) {
+                console.log("Data Received!");
                 let data = JSON.parse(response);
-                let geojsonData = {};
+                let layerData = {};
                 for (let streams of data) {
                     let features = JSON.parse(streams).features;
                     let strmOrder = features[0].properties.strmOrder;
-                    geojsonData[strmOrder] = JSON.parse(streams);
+                    layerData[strmOrder] = features;
                 }
-                let geojsonLayerGroup = L.layerGroup();
-                for (let layerName in geojsonData) {
-                    geojsonLayerGroup.addLayer(L.geoJSON(geojsonData[layerName], {
-                        style: function (feature) {
-                            return {
-                                color: getColor(feature.properties.classification),
-                                weight: getStrokeWidth(feature.properties.strmOrder),
-                                opacity: 1,
-                                // Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
-                            }
-                        }
-                    }));
+                if (!hydroSOSStreamflowLayer) {
+                    hydroSOSStreamflowLayer = L.layerGroup();
+                    layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
+                } else {
+                    hydroSOSStreamflowLayer.clearLayers();
                 }
-                layerControl.addOverlay(geojsonLayerGroup, "HydroSOS Streamflow");
-
-                // L.control.layers(layers).addTo(mapObj);
-                // layerControl.addOverlay(layers, "HydroSOS Streamflow");
-                // let rivers = hydroSOSStreamflowLayer.features;
-                // console.log("HydroSOS streamflow layer data received!");
-                // console.log(rivers);
-                // if (!hydroSOSStreamflowLayer) {
-                //     hydroSOSStreamflowLayer = L.geoJSON(rivers, {
-                //         style: function (feature) {
-                //             return {
-                //                 color: getColor(feature.properties.classification),
-                //                 weight: getStrokeWidth(feature.properties.strmOrder),
-                //                 opacity: 1,
-                //                 // Number(feature.properties.strmOrder) >= currentZoom ? 1 : 0
-                //             }
-                //         }
-                //     });
-                //     layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
-                // } else {
-                //     hydroSOSStreamflowLayer.clearLayers();
-                //     hydroSOSStreamflowLayer.addData(rivers);
-                // }
+                for (let strmOrder in layerData) {
+                    let layer = L.geoJSON(layerData[strmOrder], {
+                        style: getHydroSOSStreamflowLayerStyle,
+                    });
+                    layer.strmOrder = Number(strmOrder);
+                    hydroSOSStreamflowLayer.addLayer(layer);
+                }
+                hydroSOSStreamflowLayer.addTo(mapObj);
+                zoomInStreamflowLayer();
             },
             error: function() {
                 reject("Fail to get HydroSOS Streamflow Layer!");
@@ -528,7 +547,7 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
                 }),
                 success: function(response) {
                     if (soilMoistureLayer == null) {
-                        soilMoistureLayer = L.geoJSON(JSON.parse(response), {style: getStyle});
+                        soilMoistureLayer = L.geoJSON(JSON.parse(response), {style: getHydroSOSCountryDryLevelStyle});
                     } else {
                         soilMoistureLayer.clearLayers();
                         soilMoistureLayer.addData(JSON.parse(response));
@@ -554,7 +573,7 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
                 }),
                 success: function(response) {
                     if (precipitationLayer == null) {
-                        precipitationLayer = L.geoJSON(JSON.parse(response), {style: getStyle});
+                        precipitationLayer = L.geoJSON(JSON.parse(response), {style: getHydroSOSCountryDryLevelStyle});
                     } else {
                         // update hydroSOSLayer data
                         precipitationLayer.clearLayers();
