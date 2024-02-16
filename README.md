@@ -31,6 +31,14 @@
     tethys install -d
     ```
 
+5. Enter the project `tethysapp-geoglows_dashboard`, then run the following command to set up the data for the HydroSOS Streamflow Layer
+
+   ```
+   cd tethysapp/geoglows_dashboard/analysis/hydrosos
+   python hydrosos_streamflow_data_preprocessing.py
+   ```
+
+   It might take 0.5 ~ 1.5 hours for the program to finish, and the data volume is around 20 GBs.
 
 ### Set Up Google Earth Engine
 
@@ -64,6 +72,8 @@
          HOST: localhost
          PORT:  5435
    ```
+
+   Please note that if you are using an environment other than `tethys`, such as `tethys3` or `tethys4`, you'll need to navigate to the root folder of that environment and make changes to its `portal_config.yml` file.
 
 4. Run the following command to configure the database:
 
