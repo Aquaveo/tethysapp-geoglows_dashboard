@@ -18,7 +18,7 @@ from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.hydrosos.compute_country_dry_level import compute_country_dry_level
-from .analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer
+from .analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer, compute_hydrosos_streamflow_layer_no_geo
 from .model import add_new_country, get_all_countries, remove_country, update_default_country_db
 
 
@@ -281,7 +281,7 @@ def get_country_dry_level(request):
 @controller(name="get_hydrosos_streamflow_layer", url="get_hydrosos_streamflow_layer")
 def get_hydrosos_streamflow_layer(request):
     year, month, _ = request.GET["date"].split("-")
-    return JsonResponse(compute_hydrosos_streamflow_layer(int(year), int(month)), safe=False)
+    return JsonResponse(compute_hydrosos_streamflow_layer_no_geo(int(year), int(month)), safe=False)
 
 
 @controller(name="country", url="country")

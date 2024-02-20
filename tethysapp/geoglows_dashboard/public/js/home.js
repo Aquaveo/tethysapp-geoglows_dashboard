@@ -1312,7 +1312,6 @@ let showCountryList = function() {
     initCountryList(); // refresh the country list
     $("#country-list-div").css("display", "flex");
     $("#add-country-form").css("display", "none");
-    
 }
 
 let showAddCountryForm = function() {
