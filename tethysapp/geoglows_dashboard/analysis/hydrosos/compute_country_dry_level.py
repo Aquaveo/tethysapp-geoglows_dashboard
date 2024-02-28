@@ -25,12 +25,11 @@ def compute_country_dry_level(country, year, month, type):
     hist["month"] = pd.to_datetime(hist["month"])
     
     # TODO better way? don't cache in the file
-    app_workspace_dir = os.path.join(os.path.dirname(__file__), "../workspaces/app_workspace")
+    app_workspace_dir = os.path.join(os.path.dirname(__file__), "../../workspaces/app_workspace")
     file_path = f"{app_workspace_dir}/hydrosos_storage_temp.json"
     with open(file_path, 'w') as file:
         json.dump(country_data, file)
     area = gpd.read_file(file_path).drop(columns=["classification"])
-
 
     cuencas = []
     classification = []

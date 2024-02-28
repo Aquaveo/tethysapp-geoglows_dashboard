@@ -1,5 +1,5 @@
 from tethys_sdk.base import TethysAppBase
-from tethys_sdk.app_settings import CustomSetting, PersistentStoreDatabaseSetting
+from tethys_sdk.app_settings import CustomSetting, PersistentStoreDatabaseSetting, SpatialDatasetServiceSetting
 
 
 class GeoglowsDashboard(TethysAppBase):
@@ -51,3 +51,15 @@ class GeoglowsDashboard(TethysAppBase):
             ),
         )
         return ps_settings
+    
+    
+    def spatial_dataset_service_settings(self):
+        sds_settings = (
+            SpatialDatasetServiceSetting(
+                name='primary_geoserver',
+                description='GeoServer service for app to use.',
+                engine=SpatialDatasetServiceSetting.GEOSERVER,
+                required=True
+            ), # comma is used to indicate this is a tuple!
+        )
+        return sds_settings
