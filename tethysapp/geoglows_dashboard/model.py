@@ -1,8 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, JSON
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, Integer, String, Boolean, JSON, ForeignKey, DATE, insert
 import os
-import json
 
 from .app import GeoglowsDashboard as app
 
@@ -11,6 +9,8 @@ app_workspace_folder = os.path.join(os.path.dirname(__file__), "/workspaces/app_
 # DB Engine, sessionmaker, and base
 Base = declarative_base()
 
+
+db_name = 'country_db'
 
 class Country(Base):
    """
@@ -23,7 +23,7 @@ class Country(Base):
    name = Column(String)
    hydrosos = Column(JSON)
    default = Column(Boolean)
-   
+
 
 def add_new_country(name, hydrosos_data, is_default):
     """
@@ -37,7 +37,7 @@ def add_new_country(name, hydrosos_data, is_default):
     )
     
     # Get connection/session to database
-    Session = app.get_persistent_store_database('country_db', as_sessionmaker=True)
+    Session = app.get_persistent_store_database(db_name, as_sessionmaker=True)
     session = Session()
     
     # Add the new country record to the session
@@ -56,7 +56,7 @@ def get_country(name):
     Get the data of the selected country.
     """
     
-    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     country = session.query(Country).filter_by(name=name).first()
     session.close()
     return country
@@ -67,14 +67,14 @@ def get_all_countries():
     Get all persisted countries.
     """
     
-    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     countries = session.query(Country).all()
     session.close()
     return countries
 
 
 def remove_country(name):
-    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     country_to_remove = session.query(Country).filter_by(name=name).first()
     session.delete(country_to_remove)
     session.commit()
@@ -82,7 +82,7 @@ def remove_country(name):
 
 
 def update_default_country_db(name):
-    session = app.get_persistent_store_database('country_db', as_sessionmaker=True)()
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     old_default_country = session.query(Country).filter_by(default="true").first()
     old_default_country.default = False
     new_default_country = session.query(Country).filter_by(name=name).first()
@@ -110,3 +110,58 @@ def init_country_db(engine, first_time):
     #     session.add(ecuador)
     #     session.commit()
     #     session.close()
+
+
+class River(Base):
+    __tablename__ = 'rivers'
+    
+    id = Column(Integer, primary_key=True)
+    strmOrder = Column(Integer)
+    geometry = Column(String)
+    
+
+def add_new_river(rivid, stream_order, geometry):
+    new_river = River(
+        id=rivid,
+        strmOrder=stream_order,
+        geometry=geometry
+    )
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
+    session.add(new_river)
+    session.commit()
+    session.close()
+    
+
+def add_new_river_bulk(river_dict):
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
+    session.execute(insert(River), river_dict)
+    session.commit()
+    session.close()
+    
+    
+class RiverHydroSOS(Base):
+    __tablename__ = 'river_hydrosos' # TODO new name?
+    
+    id = Column(Integer, primary_key=True)
+    rivid = Column(Integer, ForeignKey('rivers.id'), nullable=False)
+    month = Column(DATE)
+    category = Column(String)
+    
+    
+def add_new_river_hydrosos(rivid, month, category):
+    new_river_hydrosos = RiverHydroSOS(
+        rivid=rivid,
+        month=month,
+        category=category
+    )
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
+    session.add(new_river_hydrosos)
+    session.commit()
+    session.close()
+    
+    
+def add_new_river_hydrosos_bulk(river_hydrosos_dict):
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
+    session.execute(insert(RiverHydroSOS), river_hydrosos_dict)
+    session.commit()
+    session.close()
