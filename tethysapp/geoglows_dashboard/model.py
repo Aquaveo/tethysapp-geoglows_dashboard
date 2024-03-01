@@ -1,5 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Boolean, JSON, ForeignKey, DATE, insert
+from geoalchemy2 import Geometry
 import os
 
 from .app import GeoglowsDashboard as app
@@ -116,8 +117,8 @@ class River(Base):
     __tablename__ = 'rivers'
     
     id = Column(Integer, primary_key=True)
-    strmOrder = Column(Integer)
-    geometry = Column(String)
+    stream_order = Column(Integer)
+    geometry = Column(Geometry())
     
 
 def add_new_river(rivid, stream_order, geometry):
