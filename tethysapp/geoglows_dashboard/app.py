@@ -47,7 +47,8 @@ class GeoglowsDashboard(TethysAppBase):
                 name='country_db',
                 description='Country database for HydroSOS Layers of Geoglows Dashboard',
                 initializer='geoglows_dashboard.model.init_country_db',
-                required=True
+                required=True,
+                spatial=True
             ),
         )
         return ps_settings

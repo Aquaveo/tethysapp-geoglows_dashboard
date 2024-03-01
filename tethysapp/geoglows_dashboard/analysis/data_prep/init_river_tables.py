@@ -1,7 +1,9 @@
-import pyogrio
 import xarray
 import scipy.stats as stats
 import numpy as np
+import json
+import random
+from shapely.geometry import shape
 
 from  tethysapp.geoglows_dashboard.model import add_new_river_bulk, add_new_river_hydrosos_bulk
 
@@ -43,6 +45,7 @@ def get_hydrosos_data_sample(all_data, monthly_data, year, month, rivids):
     return merged_df
             
 
+# app_workspace_dir = os.path.join(os.path.dirname(__file__), "../../workspaces/app_workspace")
 app_workspace_dir = "../../workspaces/app_workspace"
 
 # TODO how to put if __name__ == '__main__': in this file?
@@ -50,18 +53,23 @@ app_workspace_dir = "../../workspaces/app_workspace"
 # randomly select 1000 rivers for year 2012 ~ 2022
 
 # insert river samples
-df_river = pyogrio.read_dataframe(f"{app_workspace_dir}/hydrosos_streamflow_geometry.geojson")
-df_river_sample = df_river.sample(1000)
-df_river_sample['geometry'] = df_river_sample['geometry'].astype(str)
-df_river_sample.rename(columns={'rivid': 'id'}, inplace=True)
-river_sample_dict = df_river_sample.to_dict(orient='records')
-add_new_river_bulk(river_sample_dict)
+rivers_geojson = json.load(open(f"{app_workspace_dir}/hydrosos_streamflow_geometry.geojson"))
+rivers, rivids = [], []
+for river in random.sample(rivers_geojson["features"], 1000):
+    properties = river["properties"]
+    rivid = properties["rivid"]
+    rivers.append({
+        'id': rivid,
+        'stream_order': properties["strmOrder"],
+        'geometry': f"SRID=4326;{shape(river['geometry']).wkt}"
+    })
+    rivids.append(rivid)
+add_new_river_bulk(rivers)
 print("all river geometry is inserted!")
 
 # insert hydrosos data for above river samlples
 all_data = xarray.open_dataset(f"{app_workspace_dir}/combined_all_data_101.nc")
 monthly_data = xarray.open_dataset(f"{app_workspace_dir}/combined_monthly_data.nc")
-rivids = df_river_sample['id'].tolist()
 start_year, end_year = 2012, 2022
 for year in range(start_year, end_year + 1):
     for month in range(1, 13):
