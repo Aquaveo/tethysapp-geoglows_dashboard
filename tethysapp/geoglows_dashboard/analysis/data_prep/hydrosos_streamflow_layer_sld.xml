@@ -1,0 +1,797 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<StyledLayerDescriptor version="1.0.0" 
+    xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd" 
+    xmlns="http://www.opengis.net/sld" 
+    xmlns:ogc="http://www.opengis.net/ogc" 
+    xmlns:xlink="http://www.w3.org/1999/xlink" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>geoglows_dashboard:hydrosos_streamflow_layer</Name>
+    <UserStyle>
+      <Title>Streamflow Reaches</Title>
+      <FeatureTypeStyle>
+        
+            
+                <Rule>
+                    <Name>extremely dry - 2</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>2</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">1.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely dry - 3</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>3</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">1.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely dry - 4</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>4</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">2.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely dry - 5</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>5</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">2.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely dry - 6</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>6</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">3.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely dry - 7</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>7</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">3.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely dry - 8</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>8</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#CD233F</CssParameter>
+                        <CssParameter name="stroke-width">4.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+        
+            
+                <Rule>
+                    <Name>dry - 2</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>2</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">1.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>dry - 3</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>3</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">1.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>dry - 4</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>4</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">2.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>dry - 5</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>5</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">2.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>dry - 6</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>6</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">3.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>dry - 7</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>7</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">3.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>dry - 8</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>dry</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>8</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#FFA885</CssParameter>
+                        <CssParameter name="stroke-width">4.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+        
+            
+                <Rule>
+                    <Name>normal range - 2</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>2</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">1.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>normal range - 3</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>3</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">1.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>normal range - 4</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>4</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">2.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>normal range - 5</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>5</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">2.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>normal range - 6</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>6</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">3.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>normal range - 7</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>7</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">3.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>normal range - 8</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>normal range</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>8</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#E7E2BC</CssParameter>
+                        <CssParameter name="stroke-width">4.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+        
+            
+                <Rule>
+                    <Name>wet - 2</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>2</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">1.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>wet - 3</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>3</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">1.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>wet - 4</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>4</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">2.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>wet - 5</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>5</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">2.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>wet - 6</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>6</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">3.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>wet - 7</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>7</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">3.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>wet - 8</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>8</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#8ECEEE</CssParameter>
+                        <CssParameter name="stroke-width">4.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+        
+            
+                <Rule>
+                    <Name>extremely wet - 2</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>2</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">1.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely wet - 3</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>3</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">1.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely wet - 4</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>4</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">2.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely wet - 5</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>5</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">2.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely wet - 6</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>6</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">3.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely wet - 7</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>7</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">3.5</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+                <Rule>
+                    <Name>extremely wet - 8</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>extremely wet</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>8</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">#2C7DCD</CssParameter>
+                        <CssParameter name="stroke-width">4.0</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            
+        
+      </FeatureTypeStyle>   
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>

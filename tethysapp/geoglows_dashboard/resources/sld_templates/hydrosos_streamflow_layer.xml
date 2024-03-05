@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<StyledLayerDescriptor version="1.0.0" 
+    xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd" 
+    xmlns="http://www.opengis.net/sld" 
+    xmlns:ogc="http://www.opengis.net/ogc" 
+    xmlns:xlink="http://www.w3.org/1999/xlink" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>geoglows_dashboard:hydrosos_streamflow_layer</Name>
+    <UserStyle>
+      <Title>Streamflow Reaches</Title>
+      <FeatureTypeStyle>
+        {% for category in categories%}
+            {% for stream_order in stream_orders%}
+                <Rule>
+                    <Name>{{ category.value}} - {{ stream_order }}</Name>
+                    <ogc:Filter>
+                        <ogc:And>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>category</ogc:PropertyName>
+                            <ogc:Literal>{{ category.value}}</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        <ogc:PropertyIsEqualTo>
+                            <ogc:PropertyName>stream_order</ogc:PropertyName>
+                            <ogc:Literal>{{ stream_order }}</ogc:Literal>
+                        </ogc:PropertyIsEqualTo>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <LineSymbolizer>
+                        <Stroke>
+                        <CssParameter name="stroke">{{ category.color }}</CssParameter>
+                        <CssParameter name="stroke-width">{{ stream_order / 2}}</CssParameter>
+                        </Stroke>
+                    </LineSymbolizer>
+                </Rule>
+            {% endfor %}
+        {% endfor %}
+      </FeatureTypeStyle>   
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>
