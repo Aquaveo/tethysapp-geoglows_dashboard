@@ -348,9 +348,9 @@ let initMapCardBody = function() {
         if (selectedStream != null) {
             selectedStream.addTo(mapObj);
         }
-        // streamflow layer
-        addHydroSOSStreamflowLayer($("#month-picker").val());
+        // streamflow layers
         addStreamflowLayer();
+        addHydroSOSStreamflowLayer($("#month-picker").val());
         // re-zoom mapObj
         mapObj.setView([0, 0], 3);
     } else {
@@ -449,88 +449,17 @@ let addDryLevelLegend = function() {
 
 
 let addHydroSOSStreamflowLayer = function(date) {
-    console.log("Send a new request for HydroSOS streamflow layer for "+ date);
-
-    let getStrokeWidth = function(streamOrder) {
-        return streamOrder / 2;
-    }
-
-
-    let getHydroSOSStreamflowLayerStyle = function(feature) {
-        return {
-            color: getColor(feature.properties.classification),
-            weight: getStrokeWidth(feature.properties.strmOrder),
-            opacity: 1,
-        }
-    }
-
-    let zoomInStreamflowLayer = function() {
-        let currentZoom = mapObj.getZoom();
-        hydroSOSStreamflowLayer.eachLayer(function(layer) {
-            let strmOrder = layer.strmOrder;
-            if (currentZoom <= 2 && strmOrder == 8) {
-                mapObj.addLayer(layer);
-            } else if (currentZoom + strmOrder < 10) {
-                mapObj.removeLayer(layer);
-            } else {
-                mapObj.addLayer(layer);
-            }
+    if (hydroSOSStreamflowLayer) {
+        hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${date}`})
+    } else {
+        hydroSOSStreamflowLayer = L.tileLayer.wms("http://localhost:8181/geoserver/geoglows_dashboard/wms", {
+            layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
+            format: 'image/png',
+            transparent: true,
+            viewparams: `selected_month:${date}`
         });
+        layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
     }
-
-    // set the evetn listener when first time loading hydrosos streamflow layer
-    if (!hydroSOSStreamflowLayer) { 
-        mapObj.on("zoomend", function() {
-            console.log("zoom end:", mapObj.getZoom());
-            if (mapObj.hasLayer(hydroSOSStreamflowLayer)) {
-                zoomInStreamflowLayer();
-            }
-        })
-    
-        mapObj.on("overlayadd", function(eventLayer) {
-            if (eventLayer.layer === hydroSOSStreamflowLayer) {
-                zoomInStreamflowLayer();
-            }
-        })
-    }
-
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getHydroSOSStreamflowLayer + L.Util.getParamString({
-                date: date
-            }),
-            success: function(response) {
-                console.log("Data Received!");
-                let data = JSON.parse(response);
-                let layerData = {};
-                for (let streams of data) {
-                    let features = JSON.parse(streams).features;
-                    let strmOrder = features[0].properties.strmOrder;
-                    layerData[strmOrder] = features;
-                }
-                if (!hydroSOSStreamflowLayer) {
-                    hydroSOSStreamflowLayer = L.layerGroup();
-                    layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
-                } else {
-                    hydroSOSStreamflowLayer.clearLayers();
-                }
-                for (let strmOrder in layerData) {
-                    let layer = L.geoJSON(layerData[strmOrder], {
-                        style: getHydroSOSStreamflowLayerStyle,
-                    });
-                    layer.strmOrder = Number(strmOrder);
-                    hydroSOSStreamflowLayer.addLayer(layer);
-                }
-                hydroSOSStreamflowLayer.addTo(mapObj);
-                zoomInStreamflowLayer();
-            },
-            error: function() {
-                reject("Fail to get HydroSOS Streamflow Layer!");
-            }
-        })
-    })
 }
 
 
