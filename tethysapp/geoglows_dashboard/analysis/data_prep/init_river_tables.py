@@ -2,8 +2,8 @@ import xarray
 import scipy.stats as stats
 import numpy as np
 import json
-import random
 from shapely.geometry import shape
+import pandas as pd
 
 from  tethysapp.geoglows_dashboard.model import add_new_river_bulk, add_new_river_hydrosos_bulk
 
@@ -42,7 +42,7 @@ def get_hydrosos_data_sample(all_data, monthly_data, year, month, rivids):
     merged_df = merged_df[merged_df["rivid"].isin(rivids)].rename(columns={'time': 'month'})
     merged_df['month'] = merged_df['month'].dt.strftime('%Y-%m-01')
     
-    return merged_df
+    return merged_df[["rivid", "month", "category"]]
             
 
 # app_workspace_dir = os.path.join(os.path.dirname(__file__), "../../workspaces/app_workspace")
@@ -55,7 +55,7 @@ app_workspace_dir = "../../workspaces/app_workspace"
 # insert river samples
 rivers_geojson = json.load(open(f"{app_workspace_dir}/hydrosos_streamflow_geometry.geojson"))
 rivers, rivids = [], []
-for river in random.sample(rivers_geojson["features"], 1000):
+for river in rivers_geojson["features"]:
     properties = river["properties"]
     rivid = properties["rivid"]
     rivers.append({
@@ -70,9 +70,14 @@ print("all river geometry is inserted!")
 # insert hydrosos data for above river samlples
 all_data = xarray.open_dataset(f"{app_workspace_dir}/combined_all_data_101.nc")
 monthly_data = xarray.open_dataset(f"{app_workspace_dir}/combined_monthly_data.nc")
-start_year, end_year = 2012, 2022
+start_year, end_year = 1940, 2022
+df_hydrosos_data = pd.DataFrame()
 for year in range(start_year, end_year + 1):
     for month in range(1, 13):
         df_hydrosos_data_sample = get_hydrosos_data_sample(all_data, monthly_data, year, month, rivids)
-        add_new_river_hydrosos_bulk(df_hydrosos_data_sample.to_dict(orient='records'))
-    print(f"{year}-{0 if month < 10 else ''}{month}-01 is done!")
+        df_hydrosos_data = pd.concat([df_hydrosos_data, df_hydrosos_data_sample], ignore_index=True)
+    print(f"{year} is done with processing!")
+    if year % 10 == 0 or year == end_year:
+        add_new_river_hydrosos_bulk(df_hydrosos_data.to_dict(orient='records'))
+        df_hydrosos_data = pd.DataFrame()
+        print(f"{year} is inserted!")
