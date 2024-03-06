@@ -147,6 +147,7 @@ class RiverHydroSOS(Base):
     rivid = Column(Integer, ForeignKey('rivers.id'), nullable=False)
     month = Column(DATE)
     category = Column(String)
+    # TODO add unique constraint
     
     
 def add_new_river_hydrosos(rivid, month, category):

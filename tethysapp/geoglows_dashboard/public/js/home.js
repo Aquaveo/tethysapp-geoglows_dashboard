@@ -447,18 +447,42 @@ let addDryLevelLegend = function() {
     dryLevelLegend.addTo(mapObj);
 }
 
-
+let minStreamOrder;
 let addHydroSOSStreamflowLayer = function(date) {
-    if (hydroSOSStreamflowLayer) {
-        hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${date}`})
-    } else {
+    
+    let getMinStreamOrder = function() {
+        let currentZoom = mapObj.getZoom();
+        // return 2;
+        if (currentZoom <= 2) {
+            return 8;
+        }
+        if (currentZoom >= 15) {
+            return 2;
+        }
+        return 7 - Math.floor((currentZoom - 3) / 2);
+    }
+
+    if (!hydroSOSStreamflowLayer) {
         hydroSOSStreamflowLayer = L.tileLayer.wms("http://localhost:8181/geoserver/geoglows_dashboard/wms", {
             layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
             format: 'image/png',
             transparent: true,
-            viewparams: `selected_month:${date}`
+            viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`
         });
         layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
+
+        // update the layer every time we zoom in/out
+        mapObj.on("zoomend", function() {
+            console.log(`zoom: ${mapObj.getZoom()}`);
+            let newMinStreamOrder = getMinStreamOrder();
+            if (newMinStreamOrder != minStreamOrder) {
+                console.log(`stream_order: >=${newMinStreamOrder}`);
+                minStreamOrder = newMinStreamOrder;
+                hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${$('#month-picker').val()};min_stream_order:${minStreamOrder}`});
+            }
+        })
+    } else {
+        hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`})
     }
 }
 
