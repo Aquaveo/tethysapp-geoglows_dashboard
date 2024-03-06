@@ -1,5 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, JSON, ForeignKey, DATE, insert
+from sqlalchemy import Column, Integer, String, Boolean, JSON, ForeignKey, DATE, insert, Index
+from sqlalchemy.orm import sessionmaker
 from geoalchemy2 import Geometry
 import os
 
@@ -92,32 +93,11 @@ def update_default_country_db(name):
     session.close()
 
 
-def init_country_db(engine, first_time):
-    """
-    Initializer for the country database.
-    """
-    # Create all the tables
-    Base.metadata.create_all(engine)
-    
-    # if first_time:
-    #     Session = sessionmaker(bind=engine)
-    #     session = Session()
-            
-    #     ecuador = Country(
-    #         name = "Ecuador",
-    #         hydrosos = open(os.path.join(os.path.dirname(__file__), "workspaces/app_workspace/hydrosos_ecuador.json"), "r").read(),
-    #         default = True,
-    #     )
-    #     session.add(ecuador)
-    #     session.commit()
-    #     session.close()
-
-
 class River(Base):
     __tablename__ = 'rivers'
     
     id = Column(Integer, primary_key=True)
-    stream_order = Column(Integer)
+    stream_order = Column(Integer, index=True)
     geometry = Column(Geometry())
     
 
@@ -141,7 +121,7 @@ def add_new_river_bulk(river_dict):
     
     
 class RiverHydroSOS(Base):
-    __tablename__ = 'river_hydrosos' # TODO new name?
+    __tablename__ = 'river_hydrosos'
     
     id = Column(Integer, primary_key=True)
     rivid = Column(Integer, ForeignKey('rivers.id'), nullable=False)
@@ -165,5 +145,22 @@ def add_new_river_hydrosos(rivid, month, category):
 def add_new_river_hydrosos_bulk(river_hydrosos_dict):
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     session.execute(insert(RiverHydroSOS), river_hydrosos_dict)
+    session.commit()
+    session.close()
+    
+
+def init_country_db(engine, first_time):
+    """
+    Initializer for the country database.
+    """
+    # Create all the tables
+    Base.metadata.create_all(engine)
+    
+    # add index to the river_hydrosos table
+    session = sessionmaker(bind=engine)()
+    river_hydrosos_table = RiverHydroSOS.__table__
+    
+    month_index = Index('river_hydrosos_month_idx', river_hydrosos_table.c.month, postgresql_using='hash')
+    month_index.create(engine)
     session.commit()
     session.close()

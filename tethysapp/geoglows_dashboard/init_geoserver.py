@@ -4,13 +4,38 @@ from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 
 
 gs_engine = app.get_spatial_dataset_service('primary_geoserver', as_engine=True)
-# sql_engine = app.get_persistent_store_database('country_db')
-# gs_engine.create_workspace(workspace_id='geoglows_dashboard', uri='http:www.example.com/apps/geoglows-dashboard')
-# gs_engine.link_sqlalchemy_db_to_geoserver(
-#     store_id="geoglows_dashboard:hydrosos_streamflow",
-#     sqlalchemy_engine=sql_engine,
-#     docker=True
-# )
+
+# connect the GeoServer to the PostgreSQL database
+
+sql_engine = app.get_persistent_store_database('country_db')
+gs_engine.create_workspace(workspace_id='geoglows_dashboard', uri='http:www.example.com/apps/geoglows-dashboard')
+gs_engine.link_sqlalchemy_db_to_geoserver(
+    store_id="geoglows_dashboard:hydrosos_streamflow",
+    sqlalchemy_engine=sql_engine,
+    docker=True
+)
+
+# create the style layer in GeoServer
+
+categories = [
+    {"value": "extremely dry" , "color": "#CD233F"},
+    {"value": "dry", "color": "#FFA885"},
+    {"value": "normal range", "color": "#E7E2BC"},
+    {"value": "wet", "color": "#8ECEEE"},
+    {"value": "extremely wet", "color": "#2C7DCD"}
+]
+context = {
+    "categories": categories,
+    "stream_orders": [i for i in range(2, 9)]
+}
+gs_engine.create_style(
+    style_id="geoglows_dashboard:hydrosos_streamflow_style",
+    sld_template="resources/sld_templates/hydrosos_streamflow_layer.xml",
+    sld_context=context,
+    overwrite=True
+)
+
+# create the sql view layer
 
 # sql_template_path = os.path.join(os.path.dirname(__file__), 'resources', 'sql_templates', 'hydrosos_streamflow_layer.sql')
 sql_template_path = 'resources/sql_templates/hydrosos_streamflow_layer.sql'
