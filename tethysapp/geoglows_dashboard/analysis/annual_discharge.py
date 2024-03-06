@@ -6,7 +6,7 @@ from plotly.offline import plot as offline_plot
 
 
 def plot_annual_discharge_volumes(reach_id):
-    bucket_uri = 's3://geoglows-v2/retro.zarr'
+    bucket_uri = 's3://geoglows-v2-retrospective/retrospective.zarr'
     region_name = 'us-west-2'
     s3 = s3fs.S3FileSystem(anon=True, client_kwargs=dict(region_name=region_name))
     s3store = s3fs.S3Map(root=bucket_uri, s3=s3, check=False)
