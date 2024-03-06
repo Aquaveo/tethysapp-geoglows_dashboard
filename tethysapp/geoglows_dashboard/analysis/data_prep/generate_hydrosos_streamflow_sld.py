@@ -1,5 +1,6 @@
 from jinja2 import Environment, FileSystemLoader
 
+
 categories = [
     {"value": "extremely dry" , "color": "#CD233F"},
     {"value": "dry", "color": "#FFA885"},
