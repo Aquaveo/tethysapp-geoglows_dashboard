@@ -22,6 +22,7 @@ requirements:
     - sqlalchemy<2
     - psycopg2
     - pyogrio
+    - urllib3<2
 
   pip:
 
