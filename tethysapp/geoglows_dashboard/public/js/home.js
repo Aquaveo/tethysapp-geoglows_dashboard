@@ -82,14 +82,16 @@ let initTabs = function() {
     for (let tab in tabs) {
         $(tab).on('click', function(event) {
             event.preventDefault();
-            selectedTab = tab;
-            // highlight the selected tab
-            $('.nav-link').removeClass('active');
-            $(this).addClass('active');
-            
-            updateMonthPicker();
-            initPlotCards();
-            initMapCardBody();
+            if (selectedTab != tab) {
+                selectedTab = tab;
+                // highlight the selected tab
+                $('.nav-link').removeClass('active');
+                $(this).addClass('active');
+                
+                updateMonthPicker();
+                initPlotCards();
+                initMapCardBody();
+            }
         })
     }
 }
@@ -139,7 +141,7 @@ let initMapCardHeader = function() {
                 if (selectedTab == otherTabId) {
                     addOtherHydroSOSLayers(date);
                 } else {
-                    addHydroSOSStreamflowLayer(date);
+                    updateHydroSOSStreamflowLayer(date);
                 }
                 selectedMonth = date;
             }
@@ -201,7 +203,7 @@ let isDrawing = false;
 
 
 let initMapCardBody = function() {
-    let addStreamflowLayer = function() {
+    let addStreamflowLayers = function() {
         if (layerControl != null) {
             layerControl.remove();
         }
@@ -209,12 +211,13 @@ let initMapCardBody = function() {
             soilMoistureLayer.remove();
         }
         streamflowLayer.addTo(mapObj);
-        layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer} , {
+        updateHydroSOSStreamflowLayer($("#month-picker").val());
+        layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} , {
             collapsed: false
         }).addTo(mapObj);
     }
 
-    let refreshMapLayer = function() {
+    let refreshGeoglowsStreamflowLayer = function() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
         streamflowLayer.setTimeRange(sliderTime, endDateTime);
     }
@@ -319,8 +322,8 @@ let initMapCardBody = function() {
                 }
         }).addTo(mapObj);
     
-        mapObj.timeDimension.on('timeload', refreshMapLayer);
-        $('.timecontrol-play').on('click', refreshMapLayer);
+        mapObj.timeDimension.on('timeload', refreshGeoglowsStreamflowLayer);
+        $('.timecontrol-play').on('click', refreshGeoglowsStreamflowLayer);
 
         if (drawControl != null) {
             mapObj.removeControl(drawControl);
@@ -337,7 +340,7 @@ let initMapCardBody = function() {
     basemaps["Open Street Map"].addTo(mapObj);
     // init map markers & layers for different tabs
     if (selectedTab == streamTabId) {
-        // remove markers for other tab
+        // remove markers from other tab
         if (drawnFeatures) {
             mapObj.removeLayer(drawnFeatures);
         }
@@ -349,12 +352,11 @@ let initMapCardBody = function() {
             selectedStream.addTo(mapObj);
         }
         // streamflow layers
-        addStreamflowLayer();
-        addHydroSOSStreamflowLayer($("#month-picker").val());
+        addStreamflowLayers();
         // re-zoom mapObj
         mapObj.setView([0, 0], 3);
     } else {
-        // remove markers for other tab
+        // remove markers from streamflow tab
         if (mapMarker) {
             mapObj.removeLayer(mapMarker);
         }
@@ -448,11 +450,10 @@ let addDryLevelLegend = function() {
 }
 
 let minStreamOrder;
-let addHydroSOSStreamflowLayer = function(date) {
+let updateHydroSOSStreamflowLayer = function(date) {
     
     let getMinStreamOrder = function() {
         let currentZoom = mapObj.getZoom();
-        // return 2;
         if (currentZoom <= 2) {
             return 8;
         }
@@ -469,7 +470,6 @@ let addHydroSOSStreamflowLayer = function(date) {
             transparent: true,
             viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`
         });
-        layerControl.addOverlay(hydroSOSStreamflowLayer, "HydroSOS Streamflow");
 
         // update the layer every time we zoom in/out
         mapObj.on("zoomend", function() {
