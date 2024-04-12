@@ -14,8 +14,8 @@ requirements:
     packages:
     - earthengine-api
     - oauth2client
-    - geoglows
-    - s3fs=2023.10.0
+    - geoglows=1.0.4
+    - s3fs=2024.3.1
     - xarray
     - geopandas
     - openpyxl

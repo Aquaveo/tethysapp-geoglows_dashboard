@@ -390,13 +390,13 @@ let initMapCardBody = function() {
                 .then(function() {
                     return setupDatePicker();
                 })
-                .then(function() {
-                    return initSelectedPlots(update=true);
-                })
-                .catch(error => {
-                    alert(error);
-                    showPlotContainerMessages();
-                })
+                // .then(function() {
+                //     return initSelectedPlots(update=true);
+                // })
+                // .catch(error => {
+                //     alert(error);
+                //     showPlotContainerMessages();
+                // })
         }        
     })
 };
@@ -847,28 +847,18 @@ let findReachIDByID = function() {
 
 let findReachIDByLatLon = function(event) {
     return new Promise(function(resolve, reject) {
-        L.esri.identifyFeatures({
-            url: 'https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer'
-        })
-        .on(mapObj)
-        // querying point with tolerance
-        .at([event.latlng['lat'], event.latlng['lng']])
-        .tolerance(10)  // map pixels to buffer search point
-        .precision(3)  // decimals in the returned coordinate pairs
-        .run(function (error, featureCollection) {
-            if (error || featureCollection.features.length == 0) {
-                reject(new Error("Fail to find the reach_id"));
-            } else {
-                // draw the stream on the map
-                if (selectedStream == null) {
-                    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
-                }
-                selectedStream.clearLayers();
-                selectedStream.addData(featureCollection.features[0].geometry);
-                selectedReachId = featureCollection.features[0].properties["COMID (Stream Identifier)"];
+        $.get({
+            url: 'http://geoglows.ecmwf.int/api/v2/getReachID',
+            data: {'lat': event.latlng['lat'], 'lon': event.latlng['lng']},
+            success: function(response) {
+                selectedReachId = response.reach_id;
                 $('#reach-id-input').val(selectedReachId);
                 resolve("success in getting the reach id!");
-            }
+            },
+            error: function() {
+                reject(new Error("Fail to find the reach_id"));
+            },
+
         })
     })
 }
@@ -885,6 +875,7 @@ let setupDatePicker = function() {
                 is_test: isTest.toString()
             }),
             success: function(response) {
+                console.log(response);
                 let dates = response["dates"]
                 let latestAvailableDate = dates.sort(
                     (a, b) => parseFloat(b) - parseFloat(a)
