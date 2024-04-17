@@ -1,12 +1,3 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from tethys_sdk.routing import controller
-from tethys_sdk.gizmos import Button
-import geoglows.streamflow as gsf
-import geoglows.plots as gpp
-from plotly.offline import plot as offline_plot
-
-import requests
 import pandas as pd
 import json
 import ast
@@ -14,16 +5,26 @@ import ee
 import os
 import io
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from plotly.offline import plot as offline_plot
+from tethys_sdk.routing import controller
+from tethys_sdk.gizmos import Button
+from tethys_sdk.workspaces import get_app_workspace
+import geoglows
+
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.hydrosos.compute_country_dry_level import compute_country_dry_level
 from .analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer
 from .model import add_new_country, get_all_countries, remove_country, update_default_country_db
+from .app import GeoglowsDashboard as app
 
 
-test_dir = "test/"
-cache_dir = "cache/"
+cache_dir_path = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
+if not os.path.exists(cache_dir_path):
+    os.makedirs(cache_dir_path)
 
 
 @controller
@@ -98,131 +99,80 @@ def home(request):
     return render(request, 'geoglows_dashboard/home.html', context)
 
 
-@controller(url='findReachID')
+@controller(url='find_reach_id')
 def find_reach_id(request):
-    # breakpoint()
-    reach_id = request.GET['reach_id']
-    lat, lon = gsf.reach_to_latlon(int(reach_id))
+    reach_id = int(request.GET['reach_id'])
+    lat, lon = geoglows.streams.river_to_latlon(int(reach_id))
     return JsonResponse({'lat': lat, 'lon': lon})
 
-
-@controller(name='get_available_dates', url='get_available_dates', user_workspace=True)
-def get_available_dates(request, user_workspace):
-    reach_id = request.GET['reach_id']
-    is_test = request.GET['is_test'] == 'true'
-    if is_test:
-        dates = json.load(open(os.path.join(user_workspace.path, test_dir, "dates.json")))
-    else:
-        s = requests.Session()
-        dates = gsf.available_dates(reach_id, s=s)
-        s.close()
-        
-    # cache the data
-    with open(os.path.join(user_workspace.path, cache_dir, "dates.json"), "w") as file: 
-        json.dump(dates, file)
-        
-    return JsonResponse(dict(
-        dates=list(map(lambda x: x.split(".")[0], dates["available_dates"])),
-    ))
-    
     
 ### Streamflow Plots ###
         
-@controller(name='get_forecast_data', url='get_forecast_data', user_workspace=True)
-def get_forecast_data(request, user_workspace):
-    s = requests.Session()
-    reach_id = request.GET['reach_id']
-    start_date = request.GET['start_date']
-    end_date = request.GET['end_date']
-    is_test = (request.GET['is_test'] == 'true')
-    
-    files = {"records": None, "stats": None, "ensembles": None, "rperiods": None}
-    cache_folder_path = os.path.join(user_workspace.path, cache_dir)
-    test_folder_path = os.path.join(user_workspace.path, test_dir)
-    if is_test:
-        for file in files.keys():
-            if file == "rperiods":
-                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), index_col=[0])
-            else:
-                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), parse_dates=['datetime'], index_col=[0])
+@controller(name='get_forecast_data', url='get_forecast_data')
+def get_forecast_data(request):
+    reach_id = int(request.GET['reach_id'])
+        
+    # get forecast data
+    forecast_file_path = os.path.join(cache_dir_path, f'forecast-{reach_id}.csv')
+    if os.path.exists(forecast_file_path):
+        df_forecast = pd.read_csv(forecast_file_path, parse_dates=['time'], index_col=[0])
     else:
-        files["records"] = gsf.forecast_records(reach_id, start_date=start_date.split('.')[0], end_date=end_date.split('.')[0], s=s)
-        files["stats"] = gsf.forecast_stats(reach_id, forecast_date=end_date, s=s)
-        files["ensembles"] = gsf.forecast_ensembles(reach_id, forecast_date=end_date, s=s)
-        files["rperiods"] = gsf.return_periods(reach_id, s=s)
+        df_forecast = geoglows.data.forecast(river_id=reach_id)
+        df_forecast.to_csv(forecast_file_path)
     
-    # cache the data
-    for file in files.keys():
-        files[file].to_csv(os.path.join(cache_folder_path, file + ".csv"))
-            
-    s.close()
+    # get return periods data
+    rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
+    if os.path.exists(rperiods_file_path):
+        df_rperiods = pd.read_csv(rperiods_file_path, index_col=[0])
+        df_rperiods.columns = df_rperiods.columns.astype('int')
+        df_rperiods.columns.name = 'return_period'
+    else:
+        df_rperiods = geoglows.data.return_periods(river_id=reach_id)
+        df_rperiods.to_csv(rperiods_file_path)
     
-    # return json of plot html
-    plot = gpp.hydroviewer(files["records"], files["stats"], files["ensembles"], files["rperiods"], outformat='plotly')
-    plot.update_layout(
-        title=None,
-        margin={"t": 0, "b": 0, "r": 0, "l": 0},
-    )
-    return JsonResponse(dict(
-        forecast=offline_plot(
-            plot,
-            config={'autosizable': True, 'responsive': True},
-            output_type='div',
-            include_plotlyjs=False
-        )
-    ))
+    plot = geoglows.plots.forecast(df=df_forecast, rp_df=df_rperiods)
+    return JsonResponse(dict(forecast=format_plot(plot)))
     
 
-@controller(name='get_historical_data', url='get_historical_data', user_workspace=True)
-def get_historical_data(request, user_workspace):
-    # get data
-    s = requests.Session()
-    reach_id = request.GET['reach_id']
-    selected_year = request.GET['selected_year']
-    is_test = (request.GET['is_test'] == 'true')
-    
-    files = {"hist": None, "rperiods": None}
-    cache_folder_path = os.path.join(user_workspace.path, cache_dir)
-    test_folder_path = os.path.join(user_workspace.path, test_dir)
-    if is_test:
-        for file in files.keys():
-            if file == "rperiods":
-                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), index_col=[0])
-            else:
-                files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), parse_dates=['datetime'], index_col=[0])
+@controller(name='get_historical_data', url='get_historical_data')
+def get_historical_data(request):
+    reach_id = int(request.GET['reach_id'])
+    selected_year = int(request.GET['selected_year'])
+        
+    # get historical data
+    hist_file_path = os.path.join(cache_dir_path, f'hist-{reach_id}.csv')
+    if os.path.exists(hist_file_path):
+        df_hist = pd.read_csv(hist_file_path, parse_dates=['time'], index_col=[0])
+        df_hist.columns.name = 'rivid'
+        df_hist.columns = df_hist.columns.astype('int64')
     else:
-        files["hist"] = gsf.historic_simulation(reach_id, s=s)
-        files["rperiods"] = gsf.return_periods(reach_id, s=s)  # TODO read rperiods from cache folder if it exists
+        df_hist = geoglows.data.retrospective(reach_id)
+        df_hist.to_csv(hist_file_path)
     
-    # cache the data
-    for file in files.keys():
-        path = os.path.join(cache_folder_path, file + ".csv")
-        files[file].to_csv(path)
-            
-    s.close()
+    # get return periods data
+    rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
+    if os.path.exists(rperiods_file_path):
+        df_rperiods = pd.read_csv(rperiods_file_path, index_col=[0])
+        df_rperiods.columns = df_rperiods.columns.astype('int')
+        df_rperiods.columns.name = 'return_period'
+    else:
+        df_rperiods = geoglows.data.return_periods(river_id=reach_id)
+        df_rperiods.to_csv(rperiods_file_path)
     
-    # process data
-    title_headers = {'Reach ID': reach_id}
-    historical_plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
-    historical_plot.update_layout(
-        title=None,
-        margin={"t": 0, "b": 0, "r": 0, "l": 0},
-    )
-    
-    flow_duration_plot = gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly')
-    flow_duration_plot.update_layout(
-        title=None,
-        margin={"t": 0, "b": 0, "r": 0, "l": 0}
-    )
-    
+    historical_plot = geoglows.plots.retrospective(df=df_hist, rp_df=df_rperiods)
+    flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_hist)
     return JsonResponse(dict(
         historical=format_plot(historical_plot),
         flow_duration=format_plot(flow_duration_plot),
-        flow_regime=plot_flow_regime(files["hist"], int(selected_year))  # TODO
+        flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)
     ))
     
     
 def format_plot(plot):
+    plot.update_layout(
+        title=None,
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
+    )
     return offline_plot(
         plot,
         config={'autosizable': True, 'responsive': True},
@@ -231,17 +181,19 @@ def format_plot(plot):
     )
     
 
-@controller(name='update_flow_regime', url='update_flow_regime', user_workspace=True)
-def update_flow_regime(request, user_workspace):
-    selected_year = request.GET['selected_year']
-    hist = pd.read_csv(os.path.join(user_workspace.path, cache_dir, "hist.csv"), parse_dates=['datetime'], index_col=[0])
-    return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
+@controller(name='update_flow_regime', url='update_flow_regime')
+def update_flow_regime(request):
+    selected_year = int(request.GET['selected_year'])
+    reach_id = int(request.GET['reach_id'])
+    df_hist = pd.read_csv(os.path.join(cache_dir_path, f"hist-{reach_id}.csv"), parse_dates=['time'], index_col=[0])
+    df_hist.columns = df_hist.columns.astype('int64')
+    return JsonResponse(dict(flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)))
 
 
 @controller(name='get_annual_discharge', url='get_annual_discharge')
 def get_annual_discharge(request):
-    reach_id = request.GET['reach_id']
-    plot = plot_annual_discharge_volumes(110229254) # TODO use reach_id after switching to Geoglows-v2
+    reach_id = int(request.GET['reach_id'])
+    plot = plot_annual_discharge_volumes(reach_id)
     return JsonResponse(dict(plot=plot))
     
 
