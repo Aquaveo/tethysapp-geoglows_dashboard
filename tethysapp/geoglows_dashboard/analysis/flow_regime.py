@@ -26,7 +26,7 @@ def stream_estimate(df, val):
     return streamflow_estimate
 
 
-def plot_flow_regime(hist, selected_year):
+def plot_flow_regime(hist, selected_year, reach_id):
     """_summary_
 
     Args:
@@ -35,6 +35,7 @@ def plot_flow_regime(hist, selected_year):
         hist (csv):the csv response from historic_simulation
     """
     
+    hist = hist.rename(columns={reach_id: 'streamflow_m^3/s'})
     hdf = hist.copy()
     hdf = hdf[hdf.index.year >= 1991]
     hdf = hdf[hdf.index.year <= 2020]
@@ -66,7 +67,7 @@ def plot_flow_regime(hist, selected_year):
     dataframe["above"] = above_normal
     dataframe["normal"] = normal
     dataframe["below"] = below_normal
-    dataframe["year"] = year_data.groupby(year_data.index.month).mean().reset_index().drop("datetime", axis=1)
+    dataframe["year"] = year_data.groupby(year_data.index.month).mean().reset_index().drop("time", axis=1)
     
     # draw the plots
     scatter_plots = []

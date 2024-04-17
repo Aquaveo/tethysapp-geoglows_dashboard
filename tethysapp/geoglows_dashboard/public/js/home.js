@@ -1,6 +1,5 @@
-const isTest = false;
 const currentYear = new Date().getFullYear();
-let selectedReachId;
+let selectedReachID;
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
 let tabs = {
@@ -112,9 +111,6 @@ let initMapCardHeader = function() {
             if (event.keyCode === 13) {
                 showSpinners();
                 findReachIDByID()
-                .then(function() {
-                    return setupDatePicker();
-                })
                 .then(function() {
                     initSelectedPlots(update=true);
                 })
@@ -261,17 +257,6 @@ let initMapCardBody = function() {
 
         const drawnFeature = drawnFeatures.getLayers()[0]; // Assuming there's only one drawn feature
 
-        // if (drawnFeature instanceof L.Circle) {
-        //     const center = drawnFeature.getLatLng();
-        //     const radius = drawnFeature.getRadius();
-        //     console.log("Circle center:", center);
-        //     console.log("Circle radius:", radius);
-        // } 
-        // else if (drawnFeature instanceof L.Rectangle) {
-        //     const bounds = drawnFeature.getBounds();
-        //     console.log("Rectangle bounds:", bounds);
-        // } 
-        // else 
         if (drawnFeature instanceof L.Polygon) {
             drawnType = "polygone";
             drawnCoordinates = drawnFeature.getLatLngs();
@@ -388,15 +373,12 @@ let initMapCardBody = function() {
             showSpinners();
             findReachIDByLatLon(event)
                 .then(function() {
-                    return setupDatePicker();
+                    return initSelectedPlots(update=true);
                 })
-                // .then(function() {
-                //     return initSelectedPlots(update=true);
-                // })
-                // .catch(error => {
-                //     alert(error);
-                //     showPlotContainerMessages();
-                // })
+                .catch(error => {
+                    alert(error);
+                    showPlotContainerMessages();
+                })
         }        
     })
 };
@@ -594,7 +576,7 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
 }
 
 let hasReachId = function() {
-    return selectedTab == streamTabId && selectedReachId != null;
+    return selectedTab == streamTabId && selectedReachID != null;
 }
 
 let hasDrawnArea = function() {
@@ -745,19 +727,18 @@ let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
     console.log("sending a request for " + plotName + " plot");
     switch (plotName) {
         case "forecast":
-            return getForecastData();
+            return getForecastData(selectedReachID);
         case "historical":
-            return getHistoricalData(selectedYear);
+            return getHistoricalData(selectedYear, selectedReachID);
         case "flow-duration":
-            return getHistoricalData(selectedYear);
+            return getHistoricalData(selectedYear, selectedReachID);
         case "flow-regime":
             if (tabs[selectedTab].plotData[plotName] == null) {
-                return getHistoricalData(selectedYear);
+                return getHistoricalData(selectedYear, selectedReachID);
             }
-            console.log("update flow-regime");
-            return updateFlowRegime(selectedYear);
+            return updateFlowRegime(selectedYear, selectedReachID);
         case "annual-discharge":
-            return getAnnualDischarge();
+            return getAnnualDischarge(selectedReachID);
         default:
             return getGeePlot(plotName, startDate, endDate);
     }
@@ -818,12 +799,13 @@ let showPlotContainerMessages = function() {
 
 
 let findReachIDByID = function() {
+    console.log("find a reach lat lon by id ...");
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
             url:
-                URL_find_reach_id + 
+                URL_findReachID + 
                 L.Util.getParamString({
                     reach_id: $('#reach-id-input').val()
                 }),
@@ -833,7 +815,7 @@ let findReachIDByID = function() {
                 }
                 mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj);
                 mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9);
-                selectedReachId = $('#reach-id-input').val();
+                selectedReachID = $('#reach-id-input').val();
                 resolve("success in getting the reach id!");
             },
             error: function() {
@@ -851,46 +833,14 @@ let findReachIDByLatLon = function(event) {
             url: 'http://geoglows.ecmwf.int/api/v2/getReachID',
             data: {'lat': event.latlng['lat'], 'lon': event.latlng['lng']},
             success: function(response) {
-                selectedReachId = response.reach_id;
-                $('#reach-id-input').val(selectedReachId);
+                selectedReachID = response.reach_id;
+                $('#reach-id-input').val(selectedReachID);
                 resolve("success in getting the reach id!");
             },
             error: function() {
                 reject(new Error("Fail to find the reach_id"));
             },
 
-        })
-    })
-}
-
-let forecastPlotDate;
-
-let setupDatePicker = function() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getAvailableDates + L.Util.getParamString({
-                reach_id: selectedReachId,
-                is_test: isTest.toString()
-            }),
-            success: function(response) {
-                console.log(response);
-                let dates = response["dates"]
-                let latestAvailableDate = dates.sort(
-                    (a, b) => parseFloat(b) - parseFloat(a)
-                )[0]
-                forecastPlotDate = new Date(
-                    latestAvailableDate.slice(0, 4),
-                    parseInt(latestAvailableDate.slice(4, 6)) - 1,
-                    latestAvailableDate.slice(6, 8)
-                )
-                // TODO add feature: the user can change the forecast_date
-                resolve("success in getting forecast date!");
-            },
-            error: function() {
-                reject("fail to get available dates");
-            }
         })
     })
 }
@@ -903,20 +853,13 @@ let getFormattedDate = function(date) {
 }
 
 
-let getForecastData = function() {
+let getForecastData = function(reachID) {
     return new Promise(function(resolve, reject) {  // get forecast date first TODO
-        let selectedDate = forecastPlotDate;
-        let startDate = new Date();
-        let dateOffset = 24 * 60 * 60 * 1000 * 7;
-        startDate.setTime(selectedDate.getTime() - dateOffset);
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getForecastData + L.Util.getParamString({
-                reach_id: selectedReachId,
-                end_date: getFormattedDate(forecastPlotDate),
-                start_date: getFormattedDate(startDate),
-                is_test: isTest.toString()
+                reach_id: reachID
             }),
             success: function(response) {
                 tabs[streamTabId].plotData["forecast"] = response["forecast"];
@@ -932,25 +875,22 @@ let getForecastData = function() {
 }
 
 
-let getHistoricalData = function(selectedYear) {
+let getHistoricalData = function(year, reachID) {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getHistoricalData + L.Util.getParamString({
-                reach_id: selectedReachId,
-                selected_year: selectedYear,
-                is_test: isTest.toString()
+                reach_id: reachID,
+                selected_year: year
             }),
             success: function(response) {
                 tabs[streamTabId].plotData["historical"] = response["historical"];
                 tabs[streamTabId].plotData["flow-duration"] = response["flow_duration"];
                 tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
-                console.log("success in getting historical data!");
                 resolve("success in getting historical data!");
             },
             error: function() {
-                console.error("fail to get historical data");
                 reject("fail to get historical data")
             }
         })
@@ -958,22 +898,20 @@ let getHistoricalData = function(selectedYear) {
 }
 
 
-let getAnnualDischarge = function() {
+let getAnnualDischarge = function(reachID) {
     return new Promise(function(resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getAnnualDischarge + L.Util.getParamString({
-                reach_id: selectedReachId
+                reach_id: reachID
             }),
             success: function(response) {
                 plot = response["plot"]
                 tabs[streamTabId].plotData["annual-discharge"] = response["plot"];
-                console.log("success in getting annual discharge!");
                 resolve("success in getting annual discharge!");
             },
             error: function() {
-                console.error("fail to get annual discharge!");
                 reject("fail to get annual discharge!")
             }
         })
@@ -981,13 +919,14 @@ let getAnnualDischarge = function() {
 }
 
 
-let updateFlowRegime = function(year) {
+let updateFlowRegime = function(year, reachID) {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
             async: false,
             url: URL_updateFlowRegime + L.Util.getParamString({
-                selected_year: year
+                selected_year: year,
+                reach_id: reachID
             }),
             success: function(response) {
                 tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
