@@ -2,10 +2,11 @@ import logging
 import ee
 from ee.ee_exception import EEException
 import os
-from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app 
+from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 
 
 log = logging.getLogger(f'tethys.apps.{__name__}')
+
 
 def gee_initialization():
     service_account = app.get_custom_setting('service_account_email')
@@ -16,10 +17,10 @@ def gee_initialization():
             credentials = ee.ServiceAccountCredentials(service_account, private_key_path)
             ee.Initialize(credentials)
             log.info('Successfully initialized GEE using service account.')
-        except EEException as e:
+        except EEException:
             log.warning('Unable to initialize GEE using service account. If installing ignore this warning.')
     else:
         try:
             ee.Initialize()
-        except EEException as e:
+        except EEException:
             log.warning('Unable to initialize GEE with local credentials. If installing ignore this warning.')

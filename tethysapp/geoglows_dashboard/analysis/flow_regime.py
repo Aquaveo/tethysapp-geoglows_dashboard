@@ -34,7 +34,7 @@ def plot_flow_regime(hist, selected_year, reach_id):
         desired_year (string): desired year
         hist (csv):the csv response from historic_simulation
     """
-    
+
     hist = hist.rename(columns={reach_id: 'streamflow_m^3/s'})
     hdf = hist.copy()
     hdf = hdf[hdf.index.year >= 1991]
@@ -44,7 +44,7 @@ def plot_flow_regime(hist, selected_year, reach_id):
     above_normal = []
     normal = []
     below_normal = []
-    
+
     for i in range(1, 13):
         filtered_month = hist[hist.index.month == i]
         filtered_month_mean = filtered_month.groupby(filtered_month.index.year).mean()
@@ -59,7 +59,7 @@ def plot_flow_regime(hist, selected_year, reach_id):
         normal.append(stream_estimate(filtered_month_mean, 0.28))
         below_normal.append(stream_estimate(filtered_month_mean, 0.13))
         # lowflow.append(stream_estimate(filtered_month_mean, 0.87))
-        
+
     year_data = hist[hist.index.year == selected_year]
     months = ["Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"]
     dataframe = pd.DataFrame(months)
@@ -68,22 +68,38 @@ def plot_flow_regime(hist, selected_year, reach_id):
     dataframe["normal"] = normal
     dataframe["below"] = below_normal
     dataframe["year"] = year_data.groupby(year_data.index.month).mean().reset_index().drop("time", axis=1)
-    
+
     # draw the plots
     scatter_plots = []
-    scatter_plots.append(go.Scatter(x=dataframe[0], y=dataframe['below'], fill='tozeroy', fillcolor='rgba(205, 35, 63, 0.5)', mode='none', name="below"))
-    scatter_plots.append(go.Scatter(x=dataframe[0], y=dataframe['normal'], fill='tonexty', fillcolor='rgba(255, 168, 133, 0.5)', mode='none', name="normal"))
-    scatter_plots.append(go.Scatter(x=dataframe[0], y=dataframe['above'], fill='tonexty', fillcolor='rgba(231, 226, 188, 0.5)', mode='none', name="above"))
-    scatter_plots.append(go.Scatter(x=dataframe[0], y=dataframe['high'], fill='tonexty', fillcolor='rgba(142, 206, 238, 0.5)', mode='none', name="high"))
-    scatter_plots.append(go.Scatter(x=dataframe[0], y=dataframe['high'] * 2, fill='tonexty', fillcolor='rgba(44, 125, 205, 0.5)', mode='none', name="high * 2"))
+    scatter_plots.append(go.Scatter(
+        x=dataframe[0], y=dataframe['below'], fill='tozeroy',
+        fillcolor='rgba(205, 35, 63, 0.5)', mode='none', name="below"
+    ))
+    scatter_plots.append(go.Scatter(
+        x=dataframe[0], y=dataframe['normal'], fill='tonexty',
+        fillcolor='rgba(255, 168, 133, 0.5)', mode='none', name="normal"
+    ))
+    scatter_plots.append(go.Scatter(
+        x=dataframe[0], y=dataframe['above'], fill='tonexty',
+        fillcolor='rgba(231, 226, 188, 0.5)', mode='none', name="above"
+    ))
+    scatter_plots.append(go.Scatter(
+        x=dataframe[0], y=dataframe['high'], fill='tonexty',
+        fillcolor='rgba(142, 206, 238, 0.5)', mode='none', name="high"
+    ))
+    scatter_plots.append(go.Scatter(
+        x=dataframe[0], y=dataframe['high'] * 2, fill='tonexty',
+        fillcolor='rgba(44, 125, 205, 0.5)', mode='none', name="high * 2"
+    ))
 
     for col in dataframe.columns[1:]:
         if col == "year":
-            plot = go.Scatter( name=col, x=dataframe[0], y=dataframe[col], mode="lines", line=dict(color="black", width=2))
+            plot = go.Scatter(name=col, x=dataframe[0], y=dataframe[col],
+                              mode="lines", line=dict(color="black", width=2))
         else:
-            plot = go.Scatter( name=col, x=dataframe[0], y=dataframe[col], mode="lines",line=dict(color="gray", width=1), showlegend=False)
+            plot = go.Scatter(name=col, x=dataframe[0], y=dataframe[col],
+                              mode="lines", line=dict(color="gray", width=1), showlegend=False)
         scatter_plots.append(plot)
-
 
     layout = go.Layout(
         # title=f"{selected_year} Monthly Streamflow with HydroSOS",
@@ -92,9 +108,9 @@ def plot_flow_regime(hist, selected_year, reach_id):
         xaxis={'title': 'Month of Year'},
         margin={"t": 0, "b": 0, "r": 0, "l": 0}
     )
-    
-    figure = go.Figure(scatter_plots, layout=layout)    
-    
+
+    figure = go.Figure(scatter_plots, layout=layout)
+
     return offline_plot(
         figure,
         config={'autosizable': True, 'responsive': True},

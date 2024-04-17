@@ -18,7 +18,7 @@ gs_engine.link_sqlalchemy_db_to_geoserver(
 # create the style layer in GeoServer
 
 categories = [
-    {"value": "extremely dry" , "color": "#CD233F"},
+    {"value": "extremely dry", "color": "#CD233F"},
     {"value": "dry", "color": "#FFA885"},
     {"value": "normal range", "color": "#E7E2BC"},
     {"value": "wet", "color": "#8ECEEE"},
@@ -37,7 +37,6 @@ gs_engine.create_style(
 
 # create the sql view layer
 
-# sql_template_path = os.path.join(os.path.dirname(__file__), 'resources', 'sql_templates', 'hydrosos_streamflow_layer.sql')
 sql_template_path = 'resources/sql_templates/hydrosos_streamflow_layer.sql'
 sql_context = {}
 with open(sql_template_path, 'r') as sql_template_file:
@@ -57,12 +56,12 @@ gs_engine.create_sql_view_layer(
         {
             'name': 'selected_month',
             'default_value': '2015-01-01',
-            'regex_validator': '^\d{4}-\d{2}-\d{2}$'
+            'regex_validator': '^\d{4}-\d{2}-\d{2}$'  # noqa: W605
         },
         {
             'name': 'min_stream_order',
             'default_value': '8',
-            'regex_validator': '^[2-8]$'
+            'regex_validator': '^[2-8]$'  # noqa: W605
         },
     )
 )

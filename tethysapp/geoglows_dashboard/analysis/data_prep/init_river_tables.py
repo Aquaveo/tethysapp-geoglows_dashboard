@@ -5,21 +5,22 @@ import json
 from shapely.geometry import shape
 import pandas as pd
 
-from  tethysapp.geoglows_dashboard.model import add_new_river_bulk, add_new_river_hydrosos_bulk
+from tethysapp.geoglows_dashboard.model import add_new_river_bulk, add_new_river_hydrosos_bulk
 
 
 def get_hydrosos_data_sample(all_data, monthly_data, year, month, rivids):
     filtered_data = all_data["ds_grouped_avg"].sel(
         variable="Qout",
         time=(all_data["ds_grouped_avg"]["time"].dt.month == month) &
-            (all_data["ds_grouped_avg"]["time"].dt.year == year)
+             (all_data["ds_grouped_avg"]["time"].dt.year == year)
     )
     month_df = filtered_data.to_dataframe().reset_index()
     average_df = monthly_data["monthly_average"].to_dataframe().reset_index()
     average_df = average_df[(average_df["variable"] == "Qout") & (average_df["month"] == month)]
     std_df = monthly_data["monthly_std_dev"].to_dataframe().reset_index()
     std_df = std_df[(std_df["variable"] == "Qout") & (std_df["month"] == month)]
-    merged_df = month_df.merge(average_df[['rivid', 'monthly_average']], on='rivid', how='left').drop_duplicates(["rivid"]).reset_index()
+    merged_df = month_df.merge(average_df[['rivid', 'monthly_average']], on='rivid', how='left'). \
+        drop_duplicates(["rivid"]).reset_index()
     merged_df = merged_df.merge(std_df[['rivid', 'monthly_std_dev']], on='rivid', how='left')
     # Calculate Z-score for ds_grouped_avg using mean and standard deviation
     merged_df['z_score'] = (merged_df['ds_grouped_avg'] - merged_df['monthly_average']) / merged_df['monthly_std_dev']
@@ -32,26 +33,22 @@ def get_hydrosos_data_sample(all_data, monthly_data, year, month, rivids):
     # Map the exceedance_probability values to categories
     merged_df['category'] = np.select(
         [merged_df['probability'] >= 0.87,
-        (merged_df['probability'] >= 0.72) & (merged_df['probability'] < 0.87),
-        (merged_df['probability'] >= 0.28) & (merged_df['probability'] < 0.72),
-        (merged_df['probability'] >= 0.13) & (merged_df['probability'] < 0.28),
-        merged_df['probability'] < 0.13],
+         (merged_df['probability'] >= 0.72) & (merged_df['probability'] < 0.87),
+         (merged_df['probability'] >= 0.28) & (merged_df['probability'] < 0.72),
+         (merged_df['probability'] >= 0.13) & (merged_df['probability'] < 0.28),
+         merged_df['probability'] < 0.13],
         categories, default="unknown"
     )
-    
+
     merged_df = merged_df[merged_df["rivid"].isin(rivids)].rename(columns={'time': 'month'})
     merged_df['month'] = merged_df['month'].dt.strftime('%Y-%m-01')
-    
-    return merged_df[["rivid", "month", "category"]]
-            
 
-# app_workspace_dir = os.path.join(os.path.dirname(__file__), "../../workspaces/app_workspace")
+    return merged_df[["rivid", "month", "category"]]
+
+
 app_workspace_dir = "../../workspaces/app_workspace"
 
 # TODO how to put if __name__ == '__main__': in this file?
-
-# randomly select 1000 rivers for year 2012 ~ 2022
-
 # insert river samples
 rivers_geojson = json.load(open(f"{app_workspace_dir}/hydrosos_streamflow_geometry.geojson"))
 rivers, rivids = [], []
