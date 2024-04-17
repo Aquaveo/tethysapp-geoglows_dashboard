@@ -17,7 +17,7 @@ class GeoglowsDashboard(TethysAppBase):
     tags = ''
     enable_feedback = False
     feedback_emails = []
-    
+
     def custom_settings(self):
         """
         Custom settings.
@@ -39,8 +39,7 @@ class GeoglowsDashboard(TethysAppBase):
             ),
         )
         return custom_settings
-    
-    
+
     def persistent_store_settings(self):
         ps_settings = (
             PersistentStoreDatabaseSetting(
@@ -52,8 +51,7 @@ class GeoglowsDashboard(TethysAppBase):
             ),
         )
         return ps_settings
-    
-    
+
     def spatial_dataset_service_settings(self):
         sds_settings = (
             SpatialDatasetServiceSetting(
@@ -61,6 +59,6 @@ class GeoglowsDashboard(TethysAppBase):
                 description='GeoServer service for app to use.',
                 engine=SpatialDatasetServiceSetting.GEOSERVER,
                 required=True
-            ), # comma is used to indicate this is a tuple!
+            ),
         )
         return sds_settings

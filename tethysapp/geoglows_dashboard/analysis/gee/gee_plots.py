@@ -22,30 +22,28 @@ class GEEPlots:
         self.end_year = int(end_pieces[0])
         self.end_month = int(end_pieces[1])
 
-
     def set_date_for_avg_data(self, row):
         month = int(row.name) + 1
         if month >= self.start_month:
             year = self.start_year
         else:
-          year = self.end_year
+            year = self.end_year
         return f"{year}-{month}-15"
-        
-    
+
     def clip_to_bounds(self, img):
         return img.updateMask(ee.Image.constant(1).clip(self.area).mask())
-    
-    
+
     def avg_in_bounds(self, img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=self.area,
         ))
-        
-    
+
     def get_gldas_data(self):
         gldas_ic = ee.ImageCollection("NASA/GLDAS/V021/NOAH/G025/T3H")
-        gldas_ytd = gldas_ic.select(["Rainf_tavg", "RootMoist_inst"]).filterDate(self.start_date, self.end_date).map(self.clip_to_bounds).map(self.avg_in_bounds)
+        gldas_ytd = gldas_ic.select(["Rainf_tavg", "RootMoist_inst"]). \
+            filterDate(self.start_date, self.end_date). \
+            map(self.clip_to_bounds).map(self.avg_in_bounds)
         gldas_ytd_df = pd.DataFrame(
             gldas_ytd.aggregate_array('avg_value').getInfo(),
             index=pd.to_datetime(np.array(gldas_ytd.aggregate_array('system:time_start').getInfo()) * 1e6)
@@ -65,7 +63,7 @@ class GEEPlots:
         gldas_avg_df = gldas_avg_df.sort_index()
         days_in_month = np.array([calendar.monthrange(date.year, date.month)[1] for date in gldas_avg_df.index])
         gldas_avg_df['Rainf_tavg'] = gldas_avg_df['Rainf_tavg'].cumsum() * days_in_month * 86400
-        
+
         date_generated_gldas = pd.date_range(self.start_date, periods=365)
         cum_df_gldas = pd.DataFrame(date_generated_gldas)
         values_list = []
@@ -79,24 +77,25 @@ class GEEPlots:
         # code will look for columns names 'date' and 'data_values' so rename to those
         cum_df_gldas['date'] = cum_df_gldas[0].dt.strftime("%Y-%m-%d")
         cum_df_gldas["data_values"] = cum_df_gldas['val_per_day']
-        
+
         self.gldas_ytd_df = gldas_ytd_df
         self.gldas_avg_df = gldas_avg_df
         self.cum_df_gldas = cum_df_gldas
         self.has_gldas_data = True
-        
-    
+
     def plot_gldas_precip_and_soil_moisture(self):
         if not self.has_gldas_data:
             self.get_gldas_data()
         self.gldas_avg_df['date'] = pd.to_datetime(self.gldas_avg_df['date'])
         self.cum_df_gldas['date'] = pd.to_datetime(self.cum_df_gldas['date'])
-        
+
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.add_trace(go.Bar(x=self.cum_df_gldas['date'], y=-self.cum_df_gldas['data_values'], marker_color="#0d61cb", opacity=0.7, name="Precipitation"))
+        fig.add_trace(go.Bar(x=self.cum_df_gldas['date'], y=-self.cum_df_gldas['data_values'],
+                             marker_color="#0d61cb", opacity=0.7, name="Precipitation"))
         fig.update_yaxes(title_text='Precipitation (mm)')
 
-        fig.add_trace(go.Scatter(x=self.gldas_avg_df['date'], y=self.gldas_avg_df['RootMoist_inst'], marker_color="rgb(0.2, 0.2, 0.2)", name='Soil Moisture'), secondary_y=True)
+        fig.add_trace(go.Scatter(x=self.gldas_avg_df['date'], y=self.gldas_avg_df['RootMoist_inst'],
+                                 marker_color="rgb(0.2, 0.2, 0.2)", name='Soil Moisture'), secondary_y=True)
         fig.update_layout(
             yaxis2=dict(
                 title='Soil Moisture (kg/m^2)',
@@ -126,15 +125,22 @@ class GEEPlots:
             output_type='div',
             include_plotlyjs=False
         )
-        
-    
+
     def plot_gldas_precipitation(self):
         if not self.has_gldas_data:
             self.get_gldas_data()
-            
+
         scatter_plots = []
-        scatter_plots.append(go.Scatter(x=self.gldas_ytd_df.index, y=self.gldas_ytd_df['Rainf_tavg'], name='Values from the last 12 months'))
-        scatter_plots.append(go.Scatter(x=self.gldas_avg_df.index, y=self.gldas_avg_df['Rainf_tavg'], name='Average Values since 2000'))
+        scatter_plots.append(go.Scatter(
+            x=self.gldas_ytd_df.index,
+            y=self.gldas_ytd_df['Rainf_tavg'],
+            name='Values from the last 12 months'
+        ))
+        scatter_plots.append(go.Scatter(
+            x=self.gldas_avg_df.index,
+            y=self.gldas_avg_df['Rainf_tavg'],
+            name='Average Values since 2000'
+        ))
 
         layout = go.Layout(
             title=None,
@@ -151,15 +157,22 @@ class GEEPlots:
             output_type='div',
             include_plotlyjs=False
         )
-        
-        
+
     def plot_gldas_soil_moisture(self):
         if not self.has_gldas_data:
             self.get_gldas_data()
-            
+
         scatter_plots = []
-        scatter_plots.append(go.Scatter(x=self.gldas_ytd_df.index, y=self.gldas_ytd_df['RootMoist_inst'], name='Values from the last 12 months'))
-        scatter_plots.append(go.Scatter(x=self.gldas_avg_df.index, y=self.gldas_avg_df['RootMoist_inst'], name='Average Values since 2000'))
+        scatter_plots.append(go.Scatter(
+            x=self.gldas_ytd_df.index,
+            y=self.gldas_ytd_df['RootMoist_inst'],
+            name='Values from the last 12 months'
+        ))
+        scatter_plots.append(go.Scatter(
+            x=self.gldas_avg_df.index,
+            y=self.gldas_avg_df['RootMoist_inst'],
+            name='Average Values since 2000'
+        ))
 
         layout = go.Layout(
             title=None,
@@ -169,15 +182,14 @@ class GEEPlots:
             margin={"t": 0, "b": 0, "r": 0, "l": 0},
             legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor='rgba(255, 255, 255, 0.6)')
         )
-        
+
         return offline_plot(
             go.Figure(scatter_plots, layout),
             config={'autosizable': True, 'responsive': True},
             output_type='div',
             include_plotlyjs=False
         )
-        
-        
+
     def get_imerg_data(self):
         # get IMERG image collection from assets and then turn it into a dataframe
         imerg_1m_ic = ee.ImageCollection(
@@ -198,7 +210,8 @@ class GEEPlots:
 
         # get IMERG values - they are grouped in 30 minute intervals
         imerg_30min_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_V06")
-        imerg_ytd_values_ic = imerg_30min_ic.select('HQprecipitation').filterDate(self.start_date, self.end_date).map(self.avg_in_bounds)
+        imerg_ytd_values_ic = imerg_30min_ic.select('HQprecipitation'). \
+            filterDate(self.start_date, self.end_date).map(self.avg_in_bounds)
         imerg_ytd_df = pd.DataFrame(
             imerg_ytd_values_ic.aggregate_array('avg_value').getInfo(),
             index=pd.to_datetime(np.array(imerg_ytd_values_ic.aggregate_array('system:time_start').getInfo()) * 1e6),
@@ -216,12 +229,19 @@ class GEEPlots:
         self.imerg_ytd_df = imerg_ytd_df
         self.imerg_df = imerg_df
 
-
     def plot_imerg_precipitation(self):
         self.get_imerg_data()
         scatter_plots = []
-        scatter_plots.append(go.Scatter(x=self.imerg_ytd_df.index, y=self.imerg_ytd_df['data_values'], name='Values from the last 12 months'))
-        scatter_plots.append(go.Scatter(x=self.imerg_df.index, y=self.imerg_df['data_values'], name='Average Values since 2000'))
+        scatter_plots.append(go.Scatter(
+            x=self.imerg_ytd_df.index,
+            y=self.imerg_ytd_df['data_values'],
+            name='Values from the last 12 months'
+        ))
+        scatter_plots.append(go.Scatter(
+            x=self.imerg_df.index,
+            y=self.imerg_df['data_values'],
+            name='Average Values since 2000'
+        ))
         layout = go.Layout(
             title=None,
             yaxis={'title': 'Precipitation (mm)'},
@@ -235,12 +255,12 @@ class GEEPlots:
             output_type='div',
             include_plotlyjs=False
         )
-        
-        
+
     def get_era5_data(self):
         # get year-to-date averages
         era_ic = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-        era_ytd_values_ic = era_ic.select(["total_precipitation"]).filterDate(self.start_date, self.end_date).map(self.avg_in_bounds)
+        era_ytd_values_ic = era_ic.select(["total_precipitation"]). \
+            filterDate(self.start_date, self.end_date).map(self.avg_in_bounds)
         # create dataframe from image collection
         era_ytd_df = pd.DataFrame(
             era_ytd_values_ic.aggregate_array('avg_value').getInfo(),
@@ -260,7 +280,6 @@ class GEEPlots:
         era_ytd_df['date'] = era_ytd_df['date'].dt.strftime("%Y-%m-%d")
         era_ytd_df["data_values"] = (era_ytd_df["data_values"] * 1000).cumsum()
 
-
         # read in img col of averages
         img_col_avg = ee.ImageCollection(
             [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_updated_{i:02}' for i in range(1, 13)])
@@ -277,7 +296,7 @@ class GEEPlots:
         # rearrange dataframe to account for last 12 months if necessary
         # Then sum the values for precipitation
         days_in_month = np.array([calendar.monthrange(date.year, date.month)[1] for date in avg_df.index])
-        for i in range(12 - curr_month):
+        for _ in range(12 - curr_month):
             extra_val = days_in_month[11]
             days_in_month = np.delete(days_in_month, 11, 0)
             days_in_month = np.insert(days_in_month, 0, extra_val)
@@ -287,12 +306,19 @@ class GEEPlots:
         self.era_ytd_df = era_ytd_df
         self.era5_avg_df = avg_df
 
-
     def plot_era5_precipitation(self):
         self.get_era5_data()
         scatter_plots = []
-        scatter_plots.append(go.Scatter(x=self.era_ytd_df.index, y=self.era_ytd_df['data_values'], name='Values from the last 12 months'))
-        scatter_plots.append(go.Scatter(x=self.era5_avg_df.index, y=self.era5_avg_df['data_values'], name='Average Values since 2000'))
+        scatter_plots.append(go.Scatter(
+            x=self.era_ytd_df.index,
+            y=self.era_ytd_df['data_values'],
+            name='Values from the last 12 months'
+        ))
+        scatter_plots.append(go.Scatter(
+            x=self.era5_avg_df.index,
+            y=self.era5_avg_df['data_values'],
+            name='Average Values since 2000'
+        ))
         layout = go.Layout(
             title=None,
             # title=f"Precipitation in Kasungu, Malawi using ERA5",
@@ -308,7 +334,6 @@ class GEEPlots:
             include_plotlyjs=False
         )
 
-
     def plot_gfs_forecast_data(self):
         current_date = datetime.datetime.now().date()
         one_week_ago = current_date - timedelta(days=7)
@@ -317,16 +342,17 @@ class GEEPlots:
         one_week_ago_string = one_week_ago.strftime("%Y-%m-%d")
         ic = ee.ImageCollection("NOAA/GFS0P25").filterDate(one_week_ago_string, future_date_string)
         last_time = ic.sort('system:time_start', False).first()
-        data_collection = ee.ImageCollection("NOAA/GFS0P25");
+        data_collection = ee.ImageCollection("NOAA/GFS0P25")
         forecast_date = ee.Date(last_time.get('system:time_start'))
-        forecast00 = data_collection.filterDate(forecast_date,forecast_date.advance(6,'hour'))#.filter(ee.Filter.lt('forecast_time',forecast_date.advance(1,'day').millis()))
-        new_ic = forecast00.filterMetadata('forecast_hours', 'greater_than', 0).select("total_precipitation_surface").map(self.avg_in_bounds)
+        forecast00 = data_collection.filterDate(forecast_date, forecast_date.advance(6, 'hour'))
+        new_ic = forecast00.filterMetadata('forecast_hours', 'greater_than', 0). \
+            select("total_precipitation_surface").map(self.avg_in_bounds)
         df = pd.DataFrame(
             new_ic.aggregate_array('avg_value').getInfo(),
-            index = pd.to_datetime(np.array(new_ic.aggregate_array('forecast_time').getInfo())*1e6)
+            index=pd.to_datetime(np.array(new_ic.aggregate_array('forecast_time').getInfo())*1e6)
         )
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y = df["total_precipitation_surface"]))
+        fig.add_trace(go.Scatter(x=df.index, y=df["total_precipitation_surface"]))
         fig.update_layout(
             xaxis={'title': 'Date'},
             margin={"t": 0, "b": 0, "r": 0, "l": 0}
@@ -337,8 +363,7 @@ class GEEPlots:
             output_type='div',
             include_plotlyjs=False
         )
-        
-        
+
     def get_plot(self, plot_name):
         # TODO cache the gldas data so it can be reused
         match plot_name:
@@ -354,4 +379,3 @@ class GEEPlots:
                 return self.plot_era5_precipitation()
             case "gfs-forecast":
                 return self.plot_gfs_forecast_data()
-            

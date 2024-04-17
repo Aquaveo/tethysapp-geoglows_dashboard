@@ -38,9 +38,9 @@ def home(request):
         icon='save',
         style='success',
         attributes={
-            'data-bs-toggle':'tooltip',
-            'data-bs-placement':'top',
-            'title':'Save'
+            'data-bs-toggle': 'tooltip',
+            'data-bs-placement': 'top',
+            'title': 'Save'
         }
     )
 
@@ -50,9 +50,9 @@ def home(request):
         icon='pen',
         style='warning',
         attributes={
-            'data-bs-toggle':'tooltip',
-            'data-bs-placement':'top',
-            'title':'Edit'
+            'data-bs-toggle': 'tooltip',
+            'data-bs-placement': 'top',
+            'title': 'Edit'
         }
     )
 
@@ -62,9 +62,9 @@ def home(request):
         icon='trash',
         style='danger',
         attributes={
-            'data-bs-toggle':'tooltip',
-            'data-bs-placement':'top',
-            'title':'Remove'
+            'data-bs-toggle': 'tooltip',
+            'data-bs-placement': 'top',
+            'title': 'Remove'
         }
     )
 
@@ -72,9 +72,9 @@ def home(request):
         display_text='Previous',
         name='previous-button',
         attributes={
-            'data-bs-toggle':'tooltip',
-            'data-bs-placement':'top',
-            'title':'Previous'
+            'data-bs-toggle': 'tooltip',
+            'data-bs-placement': 'top',
+            'title': 'Previous'
         }
     )
 
@@ -82,9 +82,9 @@ def home(request):
         display_text='Next',
         name='next-button',
         attributes={
-            'data-bs-toggle':'tooltip',
-            'data-bs-placement':'top',
-            'title':'Next'
+            'data-bs-toggle': 'tooltip',
+            'data-bs-placement': 'top',
+            'title': 'Next'
         }
     )
 
@@ -105,13 +105,13 @@ def find_reach_id(request):
     lat, lon = geoglows.streams.river_to_latlon(int(reach_id))
     return JsonResponse({'lat': lat, 'lon': lon})
 
-    
-### Streamflow Plots ###
-        
+# Streamflow Plots
+
+
 @controller(name='get_forecast_data', url='get_forecast_data')
 def get_forecast_data(request):
     reach_id = int(request.GET['reach_id'])
-        
+
     # get forecast data
     forecast_file_path = os.path.join(cache_dir_path, f'forecast-{reach_id}.csv')
     if os.path.exists(forecast_file_path):
@@ -119,7 +119,7 @@ def get_forecast_data(request):
     else:
         df_forecast = geoglows.data.forecast(river_id=reach_id)
         df_forecast.to_csv(forecast_file_path)
-    
+
     # get return periods data
     rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
     if os.path.exists(rperiods_file_path):
@@ -129,16 +129,16 @@ def get_forecast_data(request):
     else:
         df_rperiods = geoglows.data.return_periods(river_id=reach_id)
         df_rperiods.to_csv(rperiods_file_path)
-    
+
     plot = geoglows.plots.forecast(df=df_forecast, rp_df=df_rperiods)
     return JsonResponse(dict(forecast=format_plot(plot)))
-    
+
 
 @controller(name='get_historical_data', url='get_historical_data')
 def get_historical_data(request):
     reach_id = int(request.GET['reach_id'])
     selected_year = int(request.GET['selected_year'])
-        
+
     # get historical data
     hist_file_path = os.path.join(cache_dir_path, f'hist-{reach_id}.csv')
     if os.path.exists(hist_file_path):
@@ -148,7 +148,7 @@ def get_historical_data(request):
     else:
         df_hist = geoglows.data.retrospective(reach_id)
         df_hist.to_csv(hist_file_path)
-    
+
     # get return periods data
     rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
     if os.path.exists(rperiods_file_path):
@@ -158,7 +158,7 @@ def get_historical_data(request):
     else:
         df_rperiods = geoglows.data.return_periods(river_id=reach_id)
         df_rperiods.to_csv(rperiods_file_path)
-    
+
     historical_plot = geoglows.plots.retrospective(df=df_hist, rp_df=df_rperiods)
     flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_hist)
     return JsonResponse(dict(
@@ -166,8 +166,8 @@ def get_historical_data(request):
         flow_duration=format_plot(flow_duration_plot),
         flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)
     ))
-    
-    
+
+
 def format_plot(plot):
     plot.update_layout(
         title=None,
@@ -179,7 +179,7 @@ def format_plot(plot):
         output_type='div',
         include_plotlyjs=False
     )
-    
+
 
 @controller(name='update_flow_regime', url='update_flow_regime')
 def update_flow_regime(request):
@@ -195,7 +195,7 @@ def get_annual_discharge(request):
     reach_id = int(request.GET['reach_id'])
     plot = plot_annual_discharge_volumes(reach_id)
     return JsonResponse(dict(plot=plot))
-    
+
 
 def parse_coordinates_string(area_type, coordinate_string):
     coordinates = ast.literal_eval(coordinate_string)
@@ -205,8 +205,8 @@ def parse_coordinates_string(area_type, coordinate_string):
         result = [[]]
         for point in coordinates[0]:
             result[0].append([point['lng'], point['lat']])
-        return ee.Geometry.Polygon(result)    
-    
+        return ee.Geometry.Polygon(result)
+
 
 @controller(name='get_gee_plot', url='get_gee_plot')
 def get_gee_plot(request):
@@ -217,7 +217,7 @@ def get_gee_plot(request):
     start_date = data['startDate']
     end_date = data['endDate']
     plot_name = data['plotName']
-    plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)  
+    plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)
     return JsonResponse(dict(plot=plot))
 
 
@@ -264,23 +264,23 @@ def add_country(request):
 def parse_hydrosos_data(geojson, precip, soil):
     hydrosos_data = json.loads(geojson)
     features = hydrosos_data["features"]
-    
+
     precip_data = pd.read_csv(io.StringIO(precip), sep=",")
     precip_dict = dict()
     for column in precip_data.columns[1:]:
         precip_dict[column] = precip_data[["month", column]].values.tolist()
-        
+
     soil_data = pd.read_csv(io.StringIO(soil), sep=",")
     soil_dict = dict()
     for column in soil_data.columns[1:]:
         soil_dict[column] = soil_data[["month", column]].values.tolist()
-        
+
     for feature in features:
         properties = feature["properties"]
         name = properties["ADM1_ES"]
         properties["precipitation"] = precip_dict[name]
         properties["soil moisture"] = soil_dict[name]
-    
+
     return hydrosos_data
 
 
@@ -290,5 +290,3 @@ def update_default_country(request):
     country = data["country"]
     update_default_country_db(country)
     return JsonResponse(dict(res=f"{country} is set as default!"))
-    
-    

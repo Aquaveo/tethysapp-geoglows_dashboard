@@ -7,6 +7,7 @@ from functools import reduce
 
 from ...model import get_country
 
+
 def compute_country_dry_level(country, year, month, type):
     # get data
     country_data = get_country(country).hydrosos
@@ -23,7 +24,7 @@ def compute_country_dry_level(country, year, month, type):
         dfs.append(pd.DataFrame(area_soil_data, columns=["month", area_name]))
     hist = reduce(lambda left, right: pd.merge(left, right, on="month"), dfs)
     hist["month"] = pd.to_datetime(hist["month"])
-    
+
     # TODO better way? don't cache in the file
     app_workspace_dir = os.path.join(os.path.dirname(__file__), "../../workspaces/app_workspace")
     file_path = f"{app_workspace_dir}/hydrosos_storage_temp.json"
@@ -42,7 +43,7 @@ def compute_country_dry_level(country, year, month, type):
         filtered_month["rank"] = filtered_month["ratio"].rank()
         filtered_month.loc[:, "percentile"] = filtered_month.loc[:, "rank"] / (len(filtered_month["rank"]) + 1)
         df_subset = filtered_month.loc[filtered_month.index.year == year]
-        
+
         val = df_subset["percentile"][0]
         if val >= 0.87:
             category = "extremely wet"
@@ -57,7 +58,7 @@ def compute_country_dry_level(country, year, month, type):
 
         classification.append(category)
         cuencas.append(region)
-            
+
     dict_cuencas = {"classification": classification, "ADM1_ES": cuencas}
     vals_df = pd.DataFrame(dict_cuencas)
     map_this = area.merge(vals_df, on="ADM1_ES")
