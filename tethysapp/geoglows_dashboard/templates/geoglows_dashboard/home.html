@@ -210,8 +210,7 @@
 {% block global_scripts %}
   {{ block.super }}
   <script>
-    let URL_find_reach_id = "{% url 'geoglows_dashboard:find_reach_id' %}"
-    let URL_getAvailableDates = "{% url 'geoglows_dashboard:get_available_dates' %}";
+    let URL_findReachID = "{% url 'geoglows_dashboard:find_reach_id' %}"
     let URL_getForecastData = "{% url 'geoglows_dashboard:get_forecast_data' %}";
     let URL_getHistoricalData = "{% url 'geoglows_dashboard:get_historical_data' %}";
     let URL_getAnnualDischarge =  "{% url 'geoglows_dashboard:get_annual_discharge' %}";

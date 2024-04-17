@@ -1,11 +1,3 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from tethys_sdk.routing import controller
-from tethys_sdk.gizmos import Button
-from plotly.offline import plot as offline_plot
-import geoglows
-
-import requests
 import pandas as pd
 import json
 import ast
@@ -13,16 +5,26 @@ import ee
 import os
 import io
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from plotly.offline import plot as offline_plot
+from tethys_sdk.routing import controller
+from tethys_sdk.gizmos import Button
+from tethys_sdk.workspaces import get_app_workspace
+import geoglows
+
 from .analysis.flow_regime import plot_flow_regime
 from .analysis.annual_discharge import plot_annual_discharge_volumes
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.hydrosos.compute_country_dry_level import compute_country_dry_level
 from .analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer
 from .model import add_new_country, get_all_countries, remove_country, update_default_country_db
+from .app import GeoglowsDashboard as app
 
 
-test_dir = "test/"
-cache_dir = "cache/"
+cache_dir_path = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
+if not os.path.exists(cache_dir_path):
+    os.makedirs(cache_dir_path)
 
 
 @controller
@@ -97,242 +99,196 @@ def home(request):
     return render(request, 'geoglows_dashboard/home.html', context)
 
 
-@controller(url='findReachID')
+@controller(url='find_reach_id')
 def find_reach_id(request):
-    reach_id = request.GET['reach_id']
-    lat, lon = geoglows.streams.reach_to_latlon(int(reach_id))
+    reach_id = int(request.GET['reach_id'])
+    lat, lon = geoglows.streams.river_to_latlon(int(reach_id))
     return JsonResponse({'lat': lat, 'lon': lon})
 
-
-@controller(name='get_available_dates', url='get_available_dates', user_workspace=True)
-def get_available_dates(request, user_workspace):
-    reach_id = request.GET['reach_id']
-    is_test = request.GET['is_test'] == 'true'
-    if is_test:
-        dates = json.load(open(os.path.join(user_workspace.path, test_dir, "dates.json")))
-    else:
-        dates = geoglows.data.dates({'reach_id': reach_id})
-        
-    # cache the data
-    with open(os.path.join(user_workspace.path, cache_dir, "dates.json"), "w") as file: 
-        json.dump(dates, file)
-        
-    return JsonResponse(dict(
-        dates=list(map(lambda x: x.split(".")[0], dates["available_dates"])),
-    ))
-    
     
 ### Streamflow Plots ###
         
-# @controller(name='get_forecast_data', url='get_forecast_data', user_workspace=True)
-# def get_forecast_data(request, user_workspace):
-#     s = requests.Session()
-#     reach_id = request.GET['reach_id']
-#     start_date = request.GET['start_date']
-#     end_date = request.GET['end_date']
-#     is_test = (request.GET['is_test'] == 'true')
-    
-#     files = {"records": None, "stats": None, "ensembles": None, "rperiods": None}
-#     cache_folder_path = os.path.join(user_workspace.path, cache_dir)
-#     test_folder_path = os.path.join(user_workspace.path, test_dir)
-#     if is_test:
-#         for file in files.keys():
-#             if file == "rperiods":
-#                 files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), index_col=[0])
-#             else:
-#                 files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), parse_dates=['datetime'], index_col=[0])
-#     else:
-#         files["records"] = gsf.forecast_records(reach_id, start_date=start_date.split('.')[0], end_date=end_date.split('.')[0], s=s)
-#         files["stats"] = gsf.forecast_stats(reach_id, forecast_date=end_date, s=s)
-#         files["ensembles"] = gsf.forecast_ensembles(reach_id, forecast_date=end_date, s=s)
-#         files["rperiods"] = gsf.return_periods(reach_id, s=s)
-    
-#     # cache the data
-#     for file in files.keys():
-#         files[file].to_csv(os.path.join(cache_folder_path, file + ".csv"))
-            
-#     s.close()
-    
-#     # return json of plot html
-#     plot = gpp.hydroviewer(files["records"], files["stats"], files["ensembles"], files["rperiods"], outformat='plotly')
-#     plot.update_layout(
-#         title=None,
-#         margin={"t": 0, "b": 0, "r": 0, "l": 0},
-#     )
-#     return JsonResponse(dict(
-#         forecast=offline_plot(
-#             plot,
-#             config={'autosizable': True, 'responsive': True},
-#             output_type='div',
-#             include_plotlyjs=False
-#         )
-#     ))
-    
-
-# @controller(name='get_historical_data', url='get_historical_data', user_workspace=True)
-# def get_historical_data(request, user_workspace):
-#     # get data
-#     s = requests.Session()
-#     reach_id = request.GET['reach_id']
-#     selected_year = request.GET['selected_year']
-#     is_test = (request.GET['is_test'] == 'true')
-    
-#     files = {"hist": None, "rperiods": None}
-#     cache_folder_path = os.path.join(user_workspace.path, cache_dir)
-#     test_folder_path = os.path.join(user_workspace.path, test_dir)
-#     if is_test:
-#         for file in files.keys():
-#             if file == "rperiods":
-#                 files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), index_col=[0])
-#             else:
-#                 files[file] = pd.read_csv(os.path.join(test_folder_path, file + ".csv"), parse_dates=['datetime'], index_col=[0])
-#     else:
-#         files["hist"] = gsf.historic_simulation(reach_id, s=s)
-#         files["rperiods"] = gsf.return_periods(reach_id, s=s)  # TODO read rperiods from cache folder if it exists
-    
-#     # cache the data
-#     for file in files.keys():
-#         path = os.path.join(cache_folder_path, file + ".csv")
-#         files[file].to_csv(path)
-            
-#     s.close()
-    
-#     # process data
-#     title_headers = {'Reach ID': reach_id}
-#     historical_plot = gpp.historic_simulation(files["hist"], files["rperiods"], titles=title_headers, outformat='plotly')
-#     historical_plot.update_layout(
-#         title=None,
-#         margin={"t": 0, "b": 0, "r": 0, "l": 0},
-#     )
-    
-#     flow_duration_plot = gpp.flow_duration_curve(files["hist"], titles=title_headers, outformat='plotly')
-#     flow_duration_plot.update_layout(
-#         title=None,
-#         margin={"t": 0, "b": 0, "r": 0, "l": 0}
-#     )
-    
-#     return JsonResponse(dict(
-#         historical=format_plot(historical_plot),
-#         flow_duration=format_plot(flow_duration_plot),
-#         flow_regime=plot_flow_regime(files["hist"], int(selected_year))  # TODO
-#     ))
-    
-    
-# def format_plot(plot):
-#     return offline_plot(
-#         plot,
-#         config={'autosizable': True, 'responsive': True},
-#         output_type='div',
-#         include_plotlyjs=False
-#     )
-    
-
-# @controller(name='update_flow_regime', url='update_flow_regime', user_workspace=True)
-# def update_flow_regime(request, user_workspace):
-#     selected_year = request.GET['selected_year']
-#     hist = pd.read_csv(os.path.join(user_workspace.path, cache_dir, "hist.csv"), parse_dates=['datetime'], index_col=[0])
-#     return JsonResponse(dict(flow_regime=plot_flow_regime(hist, int(selected_year))))
-
-
-# @controller(name='get_annual_discharge', url='get_annual_discharge')
-# def get_annual_discharge(request):
-#     reach_id = request.GET['reach_id']
-#     plot = plot_annual_discharge_volumes(110229254) # TODO use reach_id after switching to Geoglows-v2
-#     return JsonResponse(dict(plot=plot))
-    
-
-# def parse_coordinates_string(area_type, coordinate_string):
-#     coordinates = ast.literal_eval(coordinate_string)
-#     if (area_type == "point"):
-#         return ee.Geometry.Point([coordinates['lng'], coordinates['lat']])
-#     else:
-#         result = [[]]
-#         for point in coordinates[0]:
-#             result[0].append([point['lng'], point['lat']])
-#         return ee.Geometry.Polygon(result)    
-    
-
-# @controller(name='get_gee_plot', url='get_gee_plot')
-# def get_gee_plot(request):
-#     data = json.loads(request.body.decode('utf-8'))
-#     area_type = data['areaType']
-#     coordinates = str(data['coordinates'])
-#     area = parse_coordinates_string(area_type, coordinates)
-#     start_date = data['startDate']
-#     end_date = data['endDate']
-#     plot_name = data['plotName']
-#     plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)  
-#     return JsonResponse(dict(plot=plot))
-
-
-# @controller(name='get_country_dry_level', url='get_country_dry_level')
-# def get_country_dry_level(request):
-#     country = request.GET["country"]
-#     date = request.GET["date"]
-#     type = request.GET["type"]
-#     year, month, _ = date.split("-")
-#     return JsonResponse(compute_country_dry_level(country, int(year), int(month), type), safe=False)
-
-
-# @controller(name="get_hydrosos_streamflow_layer", url="get_hydrosos_streamflow_layer")
-# def get_hydrosos_streamflow_layer(request):
-#     year, month, _ = request.GET["date"].split("-")
-#     return JsonResponse(compute_hydrosos_streamflow_layer(int(year), int(month)), safe=False)
-
-
-# @controller(name="country", url="country")
-# def add_country(request):
-#     if request.method == "POST":
-#         data = json.loads(request.body.decode('utf-8'))
-#         country = data["country"]
-#         geojson = data["geoJSON"]
-#         precip = data["precip"]
-#         soil = data["soil"]
-#         is_default = data["isDefault"]
-#         hydrosos_data = parse_hydrosos_data(geojson, precip, soil)
-#         add_new_country(country, hydrosos_data, is_default)
-#         return JsonResponse(dict(res=f"{country} is added!"))
-#     elif request.method == "GET":
-#         countries = get_all_countries()
-#         countries_dict = {}
-#         for country in countries:
-#             countries_dict[country.name] = {"hydrosos": country.hydrosos, "default": country.default}
-#         return JsonResponse(dict(data=json.dumps(countries_dict)))
-#     elif request.method == "DELETE":
-#         data = json.loads(request.body.decode('utf-8'))
-#         country = data["country"]
-#         remove_country(country)
-#         return JsonResponse(dict(res=f"{country} is removed!"))
-
-
-# def parse_hydrosos_data(geojson, precip, soil):
-#     hydrosos_data = json.loads(geojson)
-#     features = hydrosos_data["features"]
-    
-#     precip_data = pd.read_csv(io.StringIO(precip), sep=",")
-#     precip_dict = dict()
-#     for column in precip_data.columns[1:]:
-#         precip_dict[column] = precip_data[["month", column]].values.tolist()
+@controller(name='get_forecast_data', url='get_forecast_data')
+def get_forecast_data(request):
+    reach_id = int(request.GET['reach_id'])
         
-#     soil_data = pd.read_csv(io.StringIO(soil), sep=",")
-#     soil_dict = dict()
-#     for column in soil_data.columns[1:]:
-#         soil_dict[column] = soil_data[["month", column]].values.tolist()
-        
-#     for feature in features:
-#         properties = feature["properties"]
-#         name = properties["ADM1_ES"]
-#         properties["precipitation"] = precip_dict[name]
-#         properties["soil moisture"] = soil_dict[name]
+    # get forecast data
+    forecast_file_path = os.path.join(cache_dir_path, f'forecast-{reach_id}.csv')
+    if os.path.exists(forecast_file_path):
+        df_forecast = pd.read_csv(forecast_file_path, parse_dates=['time'], index_col=[0])
+    else:
+        df_forecast = geoglows.data.forecast(river_id=reach_id)
+        df_forecast.to_csv(forecast_file_path)
     
-#     return hydrosos_data
+    # get return periods data
+    rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
+    if os.path.exists(rperiods_file_path):
+        df_rperiods = pd.read_csv(rperiods_file_path, index_col=[0])
+        df_rperiods.columns = df_rperiods.columns.astype('int')
+        df_rperiods.columns.name = 'return_period'
+    else:
+        df_rperiods = geoglows.data.return_periods(river_id=reach_id)
+        df_rperiods.to_csv(rperiods_file_path)
+    
+    plot = geoglows.plots.forecast(df=df_forecast, rp_df=df_rperiods)
+    return JsonResponse(dict(forecast=format_plot(plot)))
+    
+
+@controller(name='get_historical_data', url='get_historical_data')
+def get_historical_data(request):
+    reach_id = int(request.GET['reach_id'])
+    selected_year = int(request.GET['selected_year'])
+        
+    # get historical data
+    hist_file_path = os.path.join(cache_dir_path, f'hist-{reach_id}.csv')
+    if os.path.exists(hist_file_path):
+        df_hist = pd.read_csv(hist_file_path, parse_dates=['time'], index_col=[0])
+        df_hist.columns.name = 'rivid'
+        df_hist.columns = df_hist.columns.astype('int64')
+    else:
+        df_hist = geoglows.data.retrospective(reach_id)
+        df_hist.to_csv(hist_file_path)
+    
+    # get return periods data
+    rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
+    if os.path.exists(rperiods_file_path):
+        df_rperiods = pd.read_csv(rperiods_file_path, index_col=[0])
+        df_rperiods.columns = df_rperiods.columns.astype('int')
+        df_rperiods.columns.name = 'return_period'
+    else:
+        df_rperiods = geoglows.data.return_periods(river_id=reach_id)
+        df_rperiods.to_csv(rperiods_file_path)
+    
+    historical_plot = geoglows.plots.retrospective(df=df_hist, rp_df=df_rperiods)
+    flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_hist)
+    return JsonResponse(dict(
+        historical=format_plot(historical_plot),
+        flow_duration=format_plot(flow_duration_plot),
+        flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)
+    ))
+    
+    
+def format_plot(plot):
+    plot.update_layout(
+        title=None,
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
+    )
+    return offline_plot(
+        plot,
+        config={'autosizable': True, 'responsive': True},
+        output_type='div',
+        include_plotlyjs=False
+    )
+    
+
+@controller(name='update_flow_regime', url='update_flow_regime')
+def update_flow_regime(request):
+    selected_year = int(request.GET['selected_year'])
+    reach_id = int(request.GET['reach_id'])
+    df_hist = pd.read_csv(os.path.join(cache_dir_path, f"hist-{reach_id}.csv"), parse_dates=['time'], index_col=[0])
+    df_hist.columns = df_hist.columns.astype('int64')
+    return JsonResponse(dict(flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)))
 
 
-# @controller(name="update_default_country", url="country/default")
-# def update_default_country(request):
-#     data = json.loads(request.body.decode('utf-8'))
-#     country = data["country"]
-#     update_default_country_db(country)
-#     return JsonResponse(dict(res=f"{country} is set as default!"))
+@controller(name='get_annual_discharge', url='get_annual_discharge')
+def get_annual_discharge(request):
+    reach_id = int(request.GET['reach_id'])
+    plot = plot_annual_discharge_volumes(reach_id)
+    return JsonResponse(dict(plot=plot))
+    
+
+def parse_coordinates_string(area_type, coordinate_string):
+    coordinates = ast.literal_eval(coordinate_string)
+    if (area_type == "point"):
+        return ee.Geometry.Point([coordinates['lng'], coordinates['lat']])
+    else:
+        result = [[]]
+        for point in coordinates[0]:
+            result[0].append([point['lng'], point['lat']])
+        return ee.Geometry.Polygon(result)    
+    
+
+@controller(name='get_gee_plot', url='get_gee_plot')
+def get_gee_plot(request):
+    data = json.loads(request.body.decode('utf-8'))
+    area_type = data['areaType']
+    coordinates = str(data['coordinates'])
+    area = parse_coordinates_string(area_type, coordinates)
+    start_date = data['startDate']
+    end_date = data['endDate']
+    plot_name = data['plotName']
+    plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)  
+    return JsonResponse(dict(plot=plot))
+
+
+@controller(name='get_country_dry_level', url='get_country_dry_level')
+def get_country_dry_level(request):
+    country = request.GET["country"]
+    date = request.GET["date"]
+    type = request.GET["type"]
+    year, month, _ = date.split("-")
+    return JsonResponse(compute_country_dry_level(country, int(year), int(month), type), safe=False)
+
+
+@controller(name="get_hydrosos_streamflow_layer", url="get_hydrosos_streamflow_layer")
+def get_hydrosos_streamflow_layer(request):
+    year, month, _ = request.GET["date"].split("-")
+    return JsonResponse(compute_hydrosos_streamflow_layer(int(year), int(month)), safe=False)
+
+
+@controller(name="country", url="country")
+def add_country(request):
+    if request.method == "POST":
+        data = json.loads(request.body.decode('utf-8'))
+        country = data["country"]
+        geojson = data["geoJSON"]
+        precip = data["precip"]
+        soil = data["soil"]
+        is_default = data["isDefault"]
+        hydrosos_data = parse_hydrosos_data(geojson, precip, soil)
+        add_new_country(country, hydrosos_data, is_default)
+        return JsonResponse(dict(res=f"{country} is added!"))
+    elif request.method == "GET":
+        countries = get_all_countries()
+        countries_dict = {}
+        for country in countries:
+            countries_dict[country.name] = {"hydrosos": country.hydrosos, "default": country.default}
+        return JsonResponse(dict(data=json.dumps(countries_dict)))
+    elif request.method == "DELETE":
+        data = json.loads(request.body.decode('utf-8'))
+        country = data["country"]
+        remove_country(country)
+        return JsonResponse(dict(res=f"{country} is removed!"))
+
+
+def parse_hydrosos_data(geojson, precip, soil):
+    hydrosos_data = json.loads(geojson)
+    features = hydrosos_data["features"]
+    
+    precip_data = pd.read_csv(io.StringIO(precip), sep=",")
+    precip_dict = dict()
+    for column in precip_data.columns[1:]:
+        precip_dict[column] = precip_data[["month", column]].values.tolist()
+        
+    soil_data = pd.read_csv(io.StringIO(soil), sep=",")
+    soil_dict = dict()
+    for column in soil_data.columns[1:]:
+        soil_dict[column] = soil_data[["month", column]].values.tolist()
+        
+    for feature in features:
+        properties = feature["properties"]
+        name = properties["ADM1_ES"]
+        properties["precipitation"] = precip_dict[name]
+        properties["soil moisture"] = soil_dict[name]
+    
+    return hydrosos_data
+
+
+@controller(name="update_default_country", url="country/default")
+def update_default_country(request):
+    data = json.loads(request.body.decode('utf-8'))
+    country = data["country"]
+    update_default_country_db(country)
+    return JsonResponse(dict(res=f"{country} is set as default!"))
     
     
