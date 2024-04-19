@@ -1,26 +1,32 @@
-const currentYear = new Date().getFullYear();
 let selectedReachID;
 let streamTabId = "#stream-tab", otherTabId = "#other-tab";
 let selectedTab = streamTabId;
-let tabs = {
+let tabsData = {
     [streamTabId]: {
         "plotName": { 
             "forecast": "Forecast",
             "historical": "Historical",
             "flow-duration": "Flow Duration",
             "flow-regime": "Flow Regime",
-            "annual-discharge": "Annual Discharge"
+            "annual-discharge": "Annual Discharge",
+            "ssi-monthly": "SSI Monthly",
+            "ssi-one-month": "SSI One Month"
         }, 
         "plotData": {
             "forecast": null,
             "historical": null,
             "flow-duration": null,
             "flow-regime": null,
-            "annual-discharge": null
+            "annual-discharge": null,
+            "ssi-monthly": null,
+            "ssi-one-month": null,
         },
         "selectedYear": { // only flow-regime need year
             "flow-regime": null,
         }, 
+        "selectedMonth": {
+            "ssi-one-month": null, // only ssi-one-month need month
+        },
         "startDate": "1940-01",
         "endDate": "2022-12",
     }, 
@@ -78,7 +84,7 @@ window.addEventListener("resize", resize);
 
 
 let initTabs = function() {
-    for (let tab in tabs) {
+    for (let tab in tabsData) {
         $(tab).on('click', function(event) {
             event.preventDefault();
             if (selectedTab != tab) {
@@ -106,11 +112,11 @@ let initMapCard = function() {
 let selectedMonth = $('#month-picker').val();
 let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
-        $('#search-addon').click(findReachIDByID);
+        $('#search-addon').click(findLatLonByReachID);
         $('#reach-id-input').keydown(event => {
             if (event.keyCode === 13) {
                 showSpinners();
-                findReachIDByID()
+                findLatLonByReachID()
                 .then(function() {
                     initSelectedPlots(update=true);
                 })
@@ -152,19 +158,19 @@ let initMapCardHeader = function() {
 let updateMonthPicker = function() {
     console.log("Month Picker is updated, current tab is: " + selectedTab);
     if (selectedTab == streamTabId) {
-        $('#month-picker').datepicker('setStartDate', tabs[streamTabId].startDate);
-        $('#month-picker').datepicker('setEndDate', tabs[streamTabId].endDate);
+        $('#month-picker').datepicker('setStartDate', tabsData[streamTabId].startDate);
+        $('#month-picker').datepicker('setEndDate', tabsData[streamTabId].endDate);
     } else {
-        $('#month-picker').datepicker('setStartDate', tabs[otherTabId].startDate);
-        $('#month-picker').datepicker('setEndDate', tabs[otherTabId].endDate);
+        $('#month-picker').datepicker('setStartDate', tabsData[otherTabId].startDate);
+        $('#month-picker').datepicker('setEndDate', tabsData[otherTabId].endDate);
     }
 
-    if (selectedTab == streamTabId && selectedMonth > tabs[streamTabId].endDate) {
-        $('#month-picker').datepicker('update', tabs[streamTabId].endDate);
+    if (selectedTab == streamTabId && selectedMonth > tabsData[streamTabId].endDate) {
+        $('#month-picker').datepicker('update', tabsData[streamTabId].endDate);
     }
 
-    if (selectedTab == otherTabId && selectedMonth < tabs[otherTabId].startDate) {
-        $('#month-picker').datepicker('update', tabs[otherTabId].startDate);
+    if (selectedTab == otherTabId && selectedMonth < tabsData[otherTabId].startDate) {
+        $('#month-picker').datepicker('update', tabsData[otherTabId].startDate);
     }
 }
 
@@ -593,7 +599,7 @@ let initPlotCards = function() {
     // add options to the plot-select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
-        let plots = tabs[selectedTab].plotName;
+        let plots = tabsData[selectedTab].plotName;
         let plotIndex = 0;
         for (let key in plots) {
             // when tabIndex == plotIndex, set the option as selected
@@ -621,7 +627,7 @@ let initPlotCards = function() {
     $('.year-picker').datepicker({
         minViewMode: 2,
         format: 'yyyy',
-        endDate: currentYear.toString()
+        endDate: new Date().getFullYear().toString()
     });
 
     // update the plot once the year changes
@@ -656,7 +662,7 @@ let initPlotCards = function() {
         let plotSelect = $(card).find(".plot-select");
         plotSelect.on("change", function() {
             let plotName = $(this).val();
-            getSelectedPlot(card, newArea=false, newYear=false);
+            getSelectedPlot(card);
             // disable the option in the other select
             $(".plot-select").not(this).find('option').prop('disabled', false);
             $(".plot-select").not(this).find('option[value="' + plotName + '"]').prop('disabled', true);
@@ -665,14 +671,14 @@ let initPlotCards = function() {
 }
 
 
-let initSelectedPlots = function(newArea=false, newYear=false) {
+let initSelectedPlots = function(isNewArea=false, isNewYear=false, isNewMonth=false) {
     $(".plot-card").each(function(index, card) {
-        getSelectedPlot(card, newArea, newYear);
+        getSelectedPlot(card, isNewArea, isNewYear, isNewMonth);
     })
 }
 
 
-let getSelectedPlot = function(plotCard, newArea=false, newYear=false) {
+let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNewMonth=false) {
     let plotSelect = $(plotCard).find(".plot-select");
     let yearSelect = $(plotCard).find(".year-select");
     let plotContainer = $(plotCard).find(".plot-div");
@@ -681,6 +687,7 @@ let getSelectedPlot = function(plotCard, newArea=false, newYear=false) {
     let plotName = plotSelect.val();
     let yearOption = yearSelect.val();
     let selectedYear = Number($(plotCard).find(".year-picker").val());
+    let selectedMonth = Number($('#month-picker').val().slice(5, 7));
 
     let startDate, endDate;
     if (yearOption == "calendar-year") {
@@ -695,22 +702,31 @@ let getSelectedPlot = function(plotCard, newArea=false, newYear=false) {
         endDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
     }
 
-    if (newArea) { // new area
+    if (isNewArea) { // new area
         showSpinner(plotContainer, spinner);
         requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
             drawPlot(plotCard);
         })
-    } else if (newYear) { // new year
-        let needYear = plotName in tabs[selectedTab].selectedYear;
-        let oldYear = tabs[selectedTab].selectedYear[plotName];
+    } else if (isNewYear) { // new year
+        let needYear = plotName in tabsData[selectedTab].selectedYear;
+        let oldYear = tabsData[selectedTab].selectedYear[plotName];
         if (needYear && oldYear != selectedYear && (hasReachId() || hasDrawnArea())) {
             showSpinner(plotContainer, spinner);
             requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
+    } else if (isNewMonth) {  // new month (not in use right now) TODO
+        let needMonth = plotName in tabsData[selectedTab].selectedMonth;
+        let oldMonth = tabsData[selectedTab].selectedMonth[plotName];
+        if (needMonth && oldMonth != selectedMonth && (hasReachId() || hasDrawnArea())) {
+            showSpinner(plotContainer, spinner);
+            requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
+                drawPlot(plotCard);
+            })
+        }
     } else { // new plot selection
-        let plotData = tabs[selectedTab].plotData[plotName];
+        let plotData = tabsData[selectedTab].plotData[plotName];
         if (plotData != null) {
             drawPlot(plotCard);
         } else if (hasReachId() || hasDrawnArea()) {
@@ -727,18 +743,22 @@ let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
     console.log("sending a request for " + plotName + " plot");
     switch (plotName) {
         case "forecast":
-            return getForecastData(selectedReachID);
+            return getForecastPlot(selectedReachID);
         case "historical":
-            return getHistoricalData(selectedYear, selectedReachID);
+            return getHistoricalPlot(selectedYear, selectedReachID);
         case "flow-duration":
-            return getHistoricalData(selectedYear, selectedReachID);
+            return getHistoricalPlot(selectedYear, selectedReachID);
         case "flow-regime":
-            if (tabs[selectedTab].plotData[plotName] == null) {
-                return getHistoricalData(selectedYear, selectedReachID);
+            if (tabsData[selectedTab].plotData[plotName] == null) {
+                return getHistoricalPlot(selectedYear, selectedReachID);
             }
-            return updateFlowRegime(selectedYear, selectedReachID);
+            return updateFlowRegimePlot(selectedYear, selectedReachID);
         case "annual-discharge":
-            return getAnnualDischarge(selectedReachID);
+            return getAnnualDischargePlot(selectedReachID);
+        case "ssi-monthly":
+            return getSSIPlot(selectedReachID, -1)
+        case "ssi-one-month":
+            return getSSIPlot(selectedReachID, Number(selectedMonth.slice(5, 7)));
         default:
             return getGeePlot(plotName, startDate, endDate);
     }
@@ -749,7 +769,7 @@ let drawPlot = function(plotCard) {
     let plotSelect = $(plotCard).find(".plot-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner = $(plotCard).find(".spinner");
-    let plotData = tabs[selectedTab].plotData[plotSelect.val()];
+    let plotData = tabsData[selectedTab].plotData[plotSelect.val()];
     showPlot(plotContainer, spinner);
     plotContainer.html(plotData);
     resize();
@@ -798,14 +818,13 @@ let showPlotContainerMessages = function() {
 /////////////////// Requesting Plot Data ///////////////////
 
 
-let findReachIDByID = function() {
-    console.log("find a reach lat lon by id ...");
+let findLatLonByReachID = function() {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
             url:
-                URL_findReachID + 
+                URL_getReachLatLon + 
                 L.Util.getParamString({
                     reach_id: $('#reach-id-input').val()
                 }),
@@ -846,23 +865,16 @@ let findReachIDByLatLon = function(event) {
 }
 
 
-let getFormattedDate = function(date) {
-    return `${date.getFullYear()}${("0" + (date.getMonth() + 1)).slice(-2)}${(
-        "0" + date.getDate()
-    ).slice(-2)}.00`
-}
-
-
-let getForecastData = function(reachID) {
+let getForecastPlot = function(reachID) {
     return new Promise(function(resolve, reject) {  // get forecast date first TODO
         $.ajax({
             type: "GET",
             async: true,
-            url: URL_getForecastData + L.Util.getParamString({
+            url: URL_getForecastPlot + L.Util.getParamString({
                 reach_id: reachID
             }),
             success: function(response) {
-                tabs[streamTabId].plotData["forecast"] = response["forecast"];
+                tabsData[streamTabId].plotData["forecast"] = response["forecast"];
                 console.log("success in getting forecast data!");
                 resolve("success in getting forecast data!")
             },
@@ -875,19 +887,19 @@ let getForecastData = function(reachID) {
 }
 
 
-let getHistoricalData = function(year, reachID) {
+let getHistoricalPlot = function(year, reachID) {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
-            url: URL_getHistoricalData + L.Util.getParamString({
+            url: URL_getHistoricalPlot + L.Util.getParamString({
                 reach_id: reachID,
                 selected_year: year
             }),
             success: function(response) {
-                tabs[streamTabId].plotData["historical"] = response["historical"];
-                tabs[streamTabId].plotData["flow-duration"] = response["flow_duration"];
-                tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
+                tabsData[streamTabId].plotData["historical"] = response["historical"];
+                tabsData[streamTabId].plotData["flow-duration"] = response["flow_duration"];
+                tabsData[streamTabId].plotData["flow-regime"] = response["flow_regime"];
                 resolve("success in getting historical data!");
             },
             error: function() {
@@ -898,17 +910,16 @@ let getHistoricalData = function(year, reachID) {
 }
 
 
-let getAnnualDischarge = function(reachID) {
+let getAnnualDischargePlot = function(reachID) {
     return new Promise(function(resolve, reject) {
         $.ajax({
             type: "GET",
             async: true,
-            url: URL_getAnnualDischarge + L.Util.getParamString({
+            url: URL_getAnnualDischargePlot + L.Util.getParamString({
                 reach_id: reachID
             }),
             success: function(response) {
-                plot = response["plot"]
-                tabs[streamTabId].plotData["annual-discharge"] = response["plot"];
+                tabsData[streamTabId].plotData["annual-discharge"] = response["plot"];
                 resolve("success in getting annual discharge!");
             },
             error: function() {
@@ -919,17 +930,39 @@ let getAnnualDischarge = function(reachID) {
 }
 
 
-let updateFlowRegime = function(year, reachID) {
+let getSSIPlot = function(reachID, month) {
+    let plotName = month < 0 ? "ssi-monthly" : "ssi-one-month";
+    return new Promise(function(resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getSSIPlot + L.Util.getParamString({
+                reach_id: reachID,
+                month: month
+            }),
+            success: function(response) {
+                tabsData[streamTabId].plotData[plotName] = response["plot"];
+                resolve(`success in getting ${plotName}!`);
+            },
+            error: function() {
+                reject(`fail to get ${plotName}!`)
+            }
+        })
+    })
+}
+
+
+let updateFlowRegimePlot = function(year, reachID) {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
             async: false,
-            url: URL_updateFlowRegime + L.Util.getParamString({
+            url: URL_updateFlowRegimePlot + L.Util.getParamString({
                 selected_year: year,
                 reach_id: reachID
             }),
             success: function(response) {
-                tabs[streamTabId].plotData["flow-regime"] = response["flow_regime"];
+                tabsData[streamTabId].plotData["flow-regime"] = response["flow_regime"];
                 console.log("success in drawing new flow regime plot");
                 resolve("success in drawing new flow regime plot")
             },
@@ -958,7 +991,7 @@ let getGeePlot = function(plotName, startDate, endDate) {
             data: JSON.stringify(data),
             dataType: "json",
             success: function(response) {
-                tabs[otherTabId].plotData[plotName] = response["plot"];
+                tabsData[otherTabId].plotData[plotName] = response["plot"];
                 console.log("success in getting GEE plot: " + plotName);
                 resolve("success in getting GEE plot: " + plotName);
             },
