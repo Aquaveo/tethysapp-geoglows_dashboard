@@ -13,8 +13,9 @@ from tethys_sdk.gizmos import Button
 from tethys_sdk.workspaces import get_app_workspace
 import geoglows
 
-from .analysis.flow_regime import plot_flow_regime
-from .analysis.annual_discharge import plot_annual_discharge_volumes
+from .analysis.streamflow.flow_regime import plot_flow_regime
+from .analysis.streamflow.annual_discharge import plot_annual_discharge_volumes
+from .analysis.streamflow.ssi_plots import plot_ssi_each_month_since_year, plot_ssi_one_month_each_year
 from .analysis.gee.gee_plots import GEEPlots
 from .analysis.hydrosos.compute_country_dry_level import compute_country_dry_level
 from .analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer
@@ -99,8 +100,8 @@ def home(request):
     return render(request, 'geoglows_dashboard/home.html', context)
 
 
-@controller(url='find_reach_id')
-def find_reach_id(request):
+@controller(url='get_reach_latlon')
+def get_reach_latlon(request):
     reach_id = int(request.GET['reach_id'])
     lat, lon = geoglows.streams.river_to_latlon(int(reach_id))
     return JsonResponse({'lat': lat, 'lon': lon})
@@ -108,8 +109,21 @@ def find_reach_id(request):
 # Streamflow Plots
 
 
-@controller(name='get_forecast_data', url='get_forecast_data')
-def get_forecast_data(request):
+def format_plot(plot):
+    plot.update_layout(
+        title=None,
+        margin={"t": 0, "b": 0, "r": 0, "l": 0}
+    )
+    return offline_plot(
+        plot,
+        config={'autosizable': True, 'responsive': True},
+        output_type='div',
+        include_plotlyjs=False
+    )
+
+
+@controller(name='get_forecast_plot', url='get_forecast_plot')
+def get_forecast_plot(request):
     reach_id = int(request.GET['reach_id'])
 
     # get forecast data
@@ -134,20 +148,20 @@ def get_forecast_data(request):
     return JsonResponse(dict(forecast=format_plot(plot)))
 
 
-@controller(name='get_historical_data', url='get_historical_data')
-def get_historical_data(request):
+@controller(name='get_historical_plot', url='get_historical_plot')
+def get_historical_plot(request):
     reach_id = int(request.GET['reach_id'])
     selected_year = int(request.GET['selected_year'])
 
     # get historical data
-    hist_file_path = os.path.join(cache_dir_path, f'hist-{reach_id}.csv')
-    if os.path.exists(hist_file_path):
-        df_hist = pd.read_csv(hist_file_path, parse_dates=['time'], index_col=[0])
-        df_hist.columns.name = 'rivid'
-        df_hist.columns = df_hist.columns.astype('int64')
+    retro_file_path = os.path.join(cache_dir_path, f'retro-{reach_id}.csv')
+    if os.path.exists(retro_file_path):
+        df_retro = pd.read_csv(retro_file_path, parse_dates=['time'], index_col=[0])
+        df_retro.columns.name = 'rivid'
+        df_retro.columns = df_retro.columns.astype('int64')
     else:
-        df_hist = geoglows.data.retrospective(reach_id)
-        df_hist.to_csv(hist_file_path)
+        df_retro = geoglows.data.retrospective(reach_id)
+        df_retro.to_csv(retro_file_path)
 
     # get return periods data
     rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
@@ -159,41 +173,55 @@ def get_historical_data(request):
         df_rperiods = geoglows.data.return_periods(river_id=reach_id)
         df_rperiods.to_csv(rperiods_file_path)
 
-    historical_plot = geoglows.plots.retrospective(df=df_hist, rp_df=df_rperiods)
-    flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_hist)
+    historical_plot = geoglows.plots.retrospective(df=df_retro, rp_df=df_rperiods)
+    flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_retro)
     return JsonResponse(dict(
         historical=format_plot(historical_plot),
         flow_duration=format_plot(flow_duration_plot),
-        flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)
+        flow_regime=plot_flow_regime(df_retro, selected_year, reach_id)
     ))
 
 
-def format_plot(plot):
-    plot.update_layout(
-        title=None,
-        margin={"t": 0, "b": 0, "r": 0, "l": 0}
-    )
-    return offline_plot(
-        plot,
-        config={'autosizable': True, 'responsive': True},
-        output_type='div',
-        include_plotlyjs=False
-    )
-
-
-@controller(name='update_flow_regime', url='update_flow_regime')
-def update_flow_regime(request):
+@controller(name='update_flow_regime_plot', url='update_flow_regime_plot')
+def update_flow_regime_plot(request):
     selected_year = int(request.GET['selected_year'])
     reach_id = int(request.GET['reach_id'])
-    df_hist = pd.read_csv(os.path.join(cache_dir_path, f"hist-{reach_id}.csv"), parse_dates=['time'], index_col=[0])
-    df_hist.columns = df_hist.columns.astype('int64')
-    return JsonResponse(dict(flow_regime=plot_flow_regime(df_hist, selected_year, reach_id)))
+    df_retro = pd.read_csv(os.path.join(cache_dir_path, f"retro-{reach_id}.csv"), parse_dates=['time'], index_col=[0])
+    df_retro.columns = df_retro.columns.astype('int64')
+    return JsonResponse(dict(flow_regime=plot_flow_regime(df_retro, selected_year, reach_id)))
 
 
-@controller(name='get_annual_discharge', url='get_annual_discharge')
-def get_annual_discharge(request):
+@controller(name='get_annual_discharge_plot', url='get_annual_discharge_plot')
+def get_annual_discharge_plot(request):
     reach_id = int(request.GET['reach_id'])
     plot = plot_annual_discharge_volumes(reach_id)
+    return JsonResponse(dict(plot=plot))
+
+
+@controller(name='get_ssi_plot', url='get_ssi_plot')
+def get_ssi_plot(request):
+    reach_id = int(request.GET['reach_id'])
+    month = int(request.GET['month'])
+    if month < 0:
+        plot = plot_ssi_each_month_since_year(reach_id, 2010)
+    else:
+        plot = plot_ssi_one_month_each_year(reach_id, month)
+    return JsonResponse(dict(plot=plot))
+
+
+# GEE Plots
+
+
+@controller(name='get_gee_plot', url='get_gee_plot')
+def get_gee_plot(request):
+    data = json.loads(request.body.decode('utf-8'))
+    area_type = data['areaType']
+    coordinates = str(data['coordinates'])
+    area = parse_coordinates_string(area_type, coordinates)
+    start_date = data['startDate']
+    end_date = data['endDate']
+    plot_name = data['plotName']
+    plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)
     return JsonResponse(dict(plot=plot))
 
 
@@ -208,17 +236,7 @@ def parse_coordinates_string(area_type, coordinate_string):
         return ee.Geometry.Polygon(result)
 
 
-@controller(name='get_gee_plot', url='get_gee_plot')
-def get_gee_plot(request):
-    data = json.loads(request.body.decode('utf-8'))
-    area_type = data['areaType']
-    coordinates = str(data['coordinates'])
-    area = parse_coordinates_string(area_type, coordinates)
-    start_date = data['startDate']
-    end_date = data['endDate']
-    plot_name = data['plotName']
-    plot = GEEPlots(start_date, end_date, area).get_plot(plot_name)
-    return JsonResponse(dict(plot=plot))
+# HydroSOS Layers
 
 
 @controller(name='get_country_dry_level', url='get_country_dry_level')

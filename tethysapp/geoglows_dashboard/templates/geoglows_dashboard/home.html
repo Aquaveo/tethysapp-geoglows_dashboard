@@ -210,16 +210,17 @@
 {% block global_scripts %}
   {{ block.super }}
   <script>
-    let URL_findReachID = "{% url 'geoglows_dashboard:find_reach_id' %}"
-    let URL_getForecastData = "{% url 'geoglows_dashboard:get_forecast_data' %}";
-    let URL_getHistoricalData = "{% url 'geoglows_dashboard:get_historical_data' %}";
-    let URL_getAnnualDischarge =  "{% url 'geoglows_dashboard:get_annual_discharge' %}";
-    let URL_updateFlowRegime = "{% url 'geoglows_dashboard:update_flow_regime' %}";
+    let URL_getReachLatLon = "{% url 'geoglows_dashboard:get_reach_latlon' %}"
+    let URL_getForecastPlot = "{% url 'geoglows_dashboard:get_forecast_plot' %}";
+    let URL_getHistoricalPlot = "{% url 'geoglows_dashboard:get_historical_plot' %}";
+    let URL_getAnnualDischargePlot =  "{% url 'geoglows_dashboard:get_annual_discharge_plot' %}";
+    let URL_updateFlowRegimePlot = "{% url 'geoglows_dashboard:update_flow_regime_plot' %}";
     let URL_getGEEPlot = "{% url 'geoglows_dashboard:get_gee_plot' %}";
     let URL_getCountryDryLevel = "{% url 'geoglows_dashboard:get_country_dry_level' %}";
     let URL_country = "{% url 'geoglows_dashboard:country' %}";
     let URL_updateDefaultCountry = "{% url 'geoglows_dashboard:update_default_country' %}"
     let URL_getHydroSOSStreamflowLayer = "{% url 'geoglows_dashboard:get_hydrosos_streamflow_layer' %}"
+    let URL_getSSIPlot = "{% url 'geoglows_dashboard:get_ssi_plot' %}"
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js" integrity="sha512-qSE34Lz9JHdaPt3AZsi6L3dcqYHO9nnQEIxfrkgrRqqe+R0DPuAMu+j2vlb92zPka9O+XHZV4+9G5/rHT5ADsQ==" crossorigin=""></script>
