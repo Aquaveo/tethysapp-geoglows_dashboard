@@ -1,65 +1,109 @@
-let selectedReachID;
-let streamTabId = "#stream-tab", otherTabId = "#other-tab";
-let selectedTab = streamTabId;
+const streamTabID = "#stream-tab", otherTabID = "#other-tab";
+const forecastPlotID = "forecast", 
+    historicalPlotID = "historical", 
+    flowDurationPlotID = "flow-duration",
+    flowRegimePlotID = "flow-regime",
+    annualDischargePlotID = "annual-discharge",
+    SSIMonthlyPlotID = "ssi-monthly",
+    SSIOneMonthPlotID = "ssi-one-month",
+    GLDASPrecipSoilPlotID = "gldas-precip-soil",
+    GLDASSoilPlotID = "gldas-soil",
+    GLDASPrecipPlotID = "gldas-precip",
+    IMERGPrecipPlotID = "imerg-precip",
+    ERA5PrecipPlotID = "era5-precip",
+    GFSForecasePlotID = "gfs-forecast";
+
 let tabsData = {
-    [streamTabId]: {
-        "plotName": { 
-            "forecast": "Forecast",
-            "historical": "Historical",
-            "flow-duration": "Flow Duration",
-            "flow-regime": "Flow Regime",
-            "annual-discharge": "Annual Discharge",
-            "ssi-monthly": "SSI Monthly",
-            "ssi-one-month": "SSI One Month"
-        }, 
-        "plotData": {
-            "forecast": null,
-            "historical": null,
-            "flow-duration": null,
-            "flow-regime": null,
-            "annual-discharge": null,
-            "ssi-monthly": null,
-            "ssi-one-month": null,
-        },
-        "selectedYear": { // only flow-regime need year
-            "flow-regime": null,
-        }, 
-        "selectedMonth": {
-            "ssi-one-month": null, // only ssi-one-month need month
-        },
+    [streamTabID]: {
         "startDate": "1940-01",
         "endDate": "2022-12",
-    }, 
-    [otherTabId]: {
-        "plotName": {
-            "gldas-precip-soil": "Average Precipitation and Soil Moisture", 
-            "gldas-soil": "GLDAS Soil Moisture", 
-            "gldas-precip": "GLDAS Precipitation", 
-            "imerg-precip": "IMERG Precipitation", 
-            "era5-precip": "ERA5 Precipitation",
-            "gfs-forecast": "GFS Forecast Precipitation"
-        }, 
-        "plotData": {
-            "gldas-precip-soil": null, 
-            "gldas-soil": null, 
-            "gldas-precip": null, 
-            "imerg-precip": null, 
-            "era5-precip": null,
-            "gfs-forecast": null
-        },
-        "selectedYear": {
-            "gldas-precip-soil": null, 
-            "gldas-soil": null, 
-            "gldas-precip": null, 
-            "imerg-precip": null, 
-            "era5-precip": null,
-        },
+        "plots": {
+            [forecastPlotID]: {
+                "name": "Forecase",
+                "data": null,
+                "needYear": false,
+                "needMonth": false,
+            },
+            [historicalPlotID]: {
+                "name": "Historical",
+                "data": null,
+                "needYear": false,
+                "needMonth": false,
+            },
+            [flowDurationPlotID]: {
+                "name": "Flow Duration",
+                "data": null,
+                "needYear": false,
+                "needMonth": false,
+            },
+            [flowRegimePlotID]: {
+                "name": "Flow Regime",
+                "data": null,
+                "needYear": true,
+                "selectedYear": null,
+                "needMonth": false,
+            },
+            [annualDischargePlotID]: {
+                "name": "Annual Discharge",
+                "data": null,
+                "needYear": false,
+                "needMonth": false,
+            },
+            [SSIMonthlyPlotID]: {
+                "name": "SSI Monthly",
+                "data": null,
+                "needYear": false,
+                "needMonth": false,
+            },
+            [SSIOneMonthPlotID]: {
+                "name": "SSI One Month",
+                "data": null,
+                "needYear": false,
+                "needMonth": true,
+                "selectedMonth": null,
+            }
+        }
+    },
+    [otherTabID]: {
         "startDate": "2001-01",
-        "endDate": "2023-05"
+        "endDate": "2023-05",
+        "plots": {
+            [GLDASPrecipSoilPlotID]: {
+                "name": "Average Precipitation and Soil Moisture",
+                "data": null,
+                "needYear": true,
+                "selectedYear": null,
+            },
+            [GLDASSoilPlotID]: {
+                "name": "GLDAS Soil Moisture",
+                "data": null,
+                "needYear": true,
+                "selectedYear": null,
+            },
+            [IMERGPrecipPlotID]: {
+                "name": "IMERG Precipitation",
+                "data": null,
+                "needYear": true,
+                "selectedYear": null,
+            },
+            [ERA5PrecipPlotID]: {
+                "name": "ERA5 Precipitation",
+                "data": null,
+                "needYear": true,
+                "selectedYear": null,
+            },
+            [GFSForecasePlotID]: {
+                "name": "GFS Forecast Precipitation",
+                "data": null,
+                "needYear": true,
+                "selectedYear": null
+            }
+        }
     }
 }
 
 
+let selectedTab = streamTabID;
 $(function() {
     initTabs();
     initPlotCards();
@@ -140,7 +184,7 @@ let initMapCardHeader = function() {
             $(this).datepicker('hide');
             let date = $(this).val();
             if (date != selectedYearMonth) {
-                if (selectedTab == otherTabId) {
+                if (selectedTab == otherTabID) {
                     addOtherHydroSOSLayers(date);
                 } else {
                     updateHydroSOSStreamflowLayer(date);
@@ -157,20 +201,20 @@ let initMapCardHeader = function() {
 
 let updateMonthPicker = function() {
     console.log("Year-Month Picker is updated, current tab is: " + selectedTab);
-    if (selectedTab == streamTabId) {
-        $('#year-month-picker').datepicker('setStartDate', tabsData[streamTabId].startDate);
-        $('#year-month-picker').datepicker('setEndDate', tabsData[streamTabId].endDate);
+    if (selectedTab == streamTabID) {
+        $('#year-month-picker').datepicker('setStartDate', tabsData[streamTabID].startDate);
+        $('#year-month-picker').datepicker('setEndDate', tabsData[streamTabID].endDate);
     } else {
-        $('#year-month-picker').datepicker('setStartDate', tabsData[otherTabId].startDate);
-        $('#year-month-picker').datepicker('setEndDate', tabsData[otherTabId].endDate);
+        $('#year-month-picker').datepicker('setStartDate', tabsData[otherTabID].startDate);
+        $('#year-month-picker').datepicker('setEndDate', tabsData[otherTabID].endDate);
     }
 
-    if (selectedTab == streamTabId && selectedYearMonth > tabsData[streamTabId].endDate) {
-        $('#year-month-picker').datepicker('update', tabsData[streamTabId].endDate);
+    if (selectedTab == streamTabID && selectedYearMonth > tabsData[streamTabID].endDate) {
+        $('#year-month-picker').datepicker('update', tabsData[streamTabID].endDate);
     }
 
-    if (selectedTab == otherTabId && selectedYearMonth < tabsData[otherTabId].startDate) {
-        $('#year-month-picker').datepicker('update', tabsData[otherTabId].startDate);
+    if (selectedTab == otherTabID && selectedYearMonth < tabsData[otherTabID].startDate) {
+        $('#year-month-picker').datepicker('update', tabsData[otherTabID].startDate);
     }
 }
 
@@ -295,7 +339,7 @@ let initMapCardBody = function() {
     }
 
     // init time control and drawing control
-    if (selectedTab == streamTabId) {
+    if (selectedTab == streamTabID) {
         mapObj.timeDimension = L.timeDimension({
             timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
             period: "PT3H",
@@ -330,7 +374,7 @@ let initMapCardBody = function() {
     // init map layers
     basemaps["Open Street Map"].addTo(mapObj);
     // init map markers & layers for different tabs
-    if (selectedTab == streamTabId) {
+    if (selectedTab == streamTabID) {
         // remove markers from other tab
         if (drawnFeatures) {
             mapObj.removeLayer(drawnFeatures);
@@ -582,11 +626,11 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
 }
 
 let hasReachId = function() {
-    return selectedTab == streamTabId && selectedReachID != null;
+    return selectedTab == streamTabID && selectedReachID != null;
 }
 
 let hasDrawnArea = function() {
-    return selectedTab == otherTabId && drawnFeatures != null && drawnFeatures.getLayers().length !== 0;
+    return selectedTab == otherTabID && drawnFeatures != null && drawnFeatures.getLayers().length !== 0;
 }
 
 
@@ -600,11 +644,12 @@ let initPlotCards = function() {
     // add options to the plot-select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
-        let plots = tabsData[selectedTab].plotName;
         let plotIndex = 0;
+        let plots = tabsData[selectedTab].plots;
         for (let key in plots) {
-            // when tabIndex == plotIndex, set the option as selected
-            $(this).append(new Option(plots[key], key, false, tabIndex == plotIndex));
+            let plot = plots[key];
+            let plotName = plot["name"];
+            $(this).append(new Option(plotName, key, false, tabIndex == plotIndex));
             plotIndex++;
         }
     })
@@ -616,7 +661,7 @@ let initPlotCards = function() {
     })
 
     //////////// init year-select ////////////
-    if (selectedTab == streamTabId) {
+    if (selectedTab == streamTabID) {
         $(".year-select").prop('disabled', true);
         $(".year-select").addClass("disabled-select")
     } else {
@@ -700,7 +745,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner =  $(plotCard).find(".spinner");
 
-    let plotName = plotSelect.val();
+    let plotID = plotSelect.val();
     let yearOption = yearSelect.val();
     let selectedYear = Number($(plotCard).find(".year-picker").val());
     let selectedMonth = Number($(plotCard).find(".month-picker").val());
@@ -720,65 +765,65 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
 
     if (isNewArea) { // new area
         showSpinner(plotContainer, spinner);
-        requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
+        requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
             drawPlot(plotCard);
         })
     } else if (isNewYear) { // new year
-        let needYear = plotName in tabsData[selectedTab].selectedYear;
-        let oldYear = tabsData[selectedTab].selectedYear[plotName];
+        let needYear =  tabsData[selectedTab].plots[plotID].needYear;
+        let oldYear = tabsData[selectedTab].plots[plotID].selectedYear;
         if (needYear && oldYear != selectedYear && (hasReachId() || hasDrawnArea())) {
-            tabsData[selectedTab].selectedYear[plotName] = selectedYear;
+            tabsData[selectedTab].plots[plotID].selectedYear = selectedYear;
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
+            requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
     } else if (isNewMonth) {  // new month
-        let needMonth = plotName in tabsData[selectedTab].selectedMonth;
-        let oldMonth = tabsData[selectedTab].selectedMonth[plotName];
+        let needMonth = tabsData[selectedTab].plots[plotID].needMonth;
+        let oldMonth = tabsData[selectedTab].plots[plotID].selectedMonth;
         if (needMonth && oldMonth != selectedMonth && (hasReachId() || hasDrawnArea())) {
-            tabsData[selectedTab].selectedMonth[plotName] = selectedMonth;
+            tabsData[selectedTab].plots[plotID].selectedMonth = selectedMonth;
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
+            requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
     } else { // new plot selection
-        let plotData = tabsData[selectedTab].plotData[plotName];
+        let plotData = tabsData[selectedTab].plots[plotID].data;
         if (plotData != null) {
             drawPlot(plotCard);
         } else if (hasReachId() || hasDrawnArea()) {
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
+            requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
     }
 }
 
-
-let requestPlotData = function(plotName, selectedYear, selectedMonth, startDate, endDate) {
-    console.log("sending a request for " + plotName + " plot");
-    switch (plotName) {
-        case "forecast":
+let selectedReachID;
+let requestPlotData = function(plotID, selectedYear, selectedMonth, startDate, endDate) {
+    console.log("sending a request for " + plotID + " plot");
+    switch (plotID) {
+        case forecastPlotID:
             return getForecastPlot(selectedReachID);
-        case "historical":
+        case historicalPlotID:
             return getHistoricalPlot(selectedYear, selectedReachID);
-        case "flow-duration":
+        case flowDurationPlotID:
             return getHistoricalPlot(selectedYear, selectedReachID);
-        case "flow-regime":
-            if (tabsData[selectedTab].plotData[plotName] == null) {
+        case flowRegimePlotID:
+            if (tabsData[selectedTab].plots[plotID].data == null) {
                 return getHistoricalPlot(selectedYear, selectedReachID);
             }
             return updateFlowRegimePlot(selectedYear, selectedReachID);
-        case "annual-discharge":
+        case annualDischargePlotID:
             return getAnnualDischargePlot(selectedReachID);
-        case "ssi-monthly":
+        case SSIMonthlyPlotID:
             return getSSIPlot(selectedReachID, -1)
-        case "ssi-one-month":
+        case SSIOneMonthPlotID:
             return getSSIPlot(selectedReachID, selectedMonth);
         default:
-            return getGeePlot(plotName, startDate, endDate);
+            return getGeePlot(plotID, startDate, endDate);
     }
 }
 
@@ -787,7 +832,7 @@ let drawPlot = function(plotCard) {
     let plotSelect = $(plotCard).find(".plot-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner = $(plotCard).find(".spinner");
-    let plotData = tabsData[selectedTab].plotData[plotSelect.val()];
+    let plotData = tabsData[selectedTab].plots[plotSelect.val()].data;
     showPlot(plotContainer, spinner);
     plotContainer.html(plotData);
     resize();
@@ -824,7 +869,7 @@ let showSpinner = function(plotContainer, spinner) {
 let showPlotContainerMessages = function() {
     showPlots();
     $(".plot-card").each(function(index, card) {
-        if (selectedTab == streamTabId) {
+        if (selectedTab == streamTabID) {
             $(card).find(".plot-div").html("Please select a stream");
         } else {
             $(card).find(".plot-div").html("Please draw an area on the map");
@@ -892,7 +937,7 @@ let getForecastPlot = function(reachID) {
                 reach_id: reachID
             }),
             success: function(response) {
-                tabsData[streamTabId].plotData["forecast"] = response["forecast"];
+                tabsData[streamTabID].plots[forecastPlotID].data = response["forecast"];
                 console.log("success in getting forecast data!");
                 resolve("success in getting forecast data!")
             },
@@ -915,9 +960,9 @@ let getHistoricalPlot = function(year, reachID) {
                 selected_year: year
             }),
             success: function(response) {
-                tabsData[streamTabId].plotData["historical"] = response["historical"];
-                tabsData[streamTabId].plotData["flow-duration"] = response["flow_duration"];
-                tabsData[streamTabId].plotData["flow-regime"] = response["flow_regime"];
+                tabsData[streamTabID].plots[historicalPlotID].data = response["historical"];
+                tabsData[streamTabID].plots[flowDurationPlotID].data = response["flow_duration"];
+                tabsData[streamTabID].plots[flowRegimePlotID].data = response["flow_regime"];
                 resolve("success in getting historical data!");
             },
             error: function() {
@@ -937,7 +982,7 @@ let getAnnualDischargePlot = function(reachID) {
                 reach_id: reachID
             }),
             success: function(response) {
-                tabsData[streamTabId].plotData["annual-discharge"] = response["plot"];
+                tabsData[streamTabID].plots[annualDischargePlotID].data = response["plot"];
                 resolve("success in getting annual discharge!");
             },
             error: function() {
@@ -949,7 +994,7 @@ let getAnnualDischargePlot = function(reachID) {
 
 
 let getSSIPlot = function(reachID, month) {
-    let plotName = month < 0 ? "ssi-monthly" : "ssi-one-month";
+    let plotID = month < 0 ? SSIMonthlyPlotID: SSIOneMonthPlotID;
     return new Promise(function(resolve, reject) {
         $.ajax({
             type: "GET",
@@ -959,11 +1004,11 @@ let getSSIPlot = function(reachID, month) {
                 month: month
             }),
             success: function(response) {
-                tabsData[streamTabId].plotData[plotName] = response["plot"];
-                resolve(`success in getting ${plotName}!`);
+                tabsData[streamTabID].plots[plotID].data = response["plot"];
+                resolve(`success in getting ${plotID}!`);
             },
             error: function() {
-                reject(`fail to get ${plotName}!`)
+                reject(`fail to get ${plotID}!`)
             }
         })
     })
@@ -980,7 +1025,7 @@ let updateFlowRegimePlot = function(year, reachID) {
                 reach_id: reachID
             }),
             success: function(response) {
-                tabsData[streamTabId].plotData["flow-regime"] = response["flow_regime"];
+                tabsData[streamTabID].plots[flowRegimePlotID].data = response["flow_regime"];
                 console.log("success in drawing new flow regime plot");
                 resolve("success in drawing new flow regime plot")
             },
@@ -993,14 +1038,14 @@ let updateFlowRegimePlot = function(year, reachID) {
 }
 
 
-let getGeePlot = function(plotName, startDate, endDate) {
-    console.log("Get GEE plot: " + plotName + " " + startDate + " " + endDate);
+let getGeePlot = function(plotID, startDate, endDate) {
+    console.log("Get GEE plot: " + plotID + " " + startDate + " " + endDate);
     let data = {
         areaType: drawnType,
         coordinates: drawnCoordinates,
         startDate: startDate,
         endDate: endDate,
-        plotName: plotName
+        plotName: plotID
     }
     return new Promise(function (resolve, reject) {
         $.ajax({
@@ -1009,13 +1054,13 @@ let getGeePlot = function(plotName, startDate, endDate) {
             data: JSON.stringify(data),
             dataType: "json",
             success: function(response) {
-                tabsData[otherTabId].plotData[plotName] = response["plot"];
-                console.log("success in getting GEE plot: " + plotName);
-                resolve("success in getting GEE plot: " + plotName);
+                tabsData[otherTabID].plots[plotID].data = response["plot"];
+                console.log("success in getting GEE plot: " + plotID);
+                resolve("success in getting GEE plot: " + plotID);
             },
             error: function() {
-                console.error("fail to draw GEE plot: " + plotName);
-                reject("fail to draw GEE plot: " + plotName);
+                console.error("fail to draw GEE plot: " + plotID);
+                reject("fail to draw GEE plot: " + plotID);
             }
         })
     })
