@@ -109,7 +109,7 @@ let initMapCard = function() {
 
 /////////////////// Initialize the Map Card Header ///////////////////
 
-let selectedMonth = $('#month-picker').val();
+let selectedYearMonth = $('#year-month-picker').val();
 let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
         $('#search-addon').click(findLatLonByReachID);
@@ -118,7 +118,7 @@ let initMapCardHeader = function() {
                 showSpinners();
                 findLatLonByReachID()
                 .then(function() {
-                    initSelectedPlots(update=true);
+                    initSelectedPlots();
                 })
                 .catch(error => {
                     alert(error);
@@ -128,49 +128,49 @@ let initMapCardHeader = function() {
         })
     }
     
-    let initMonthPicker = function() {
-        $('#month-picker').datepicker({
+    let initYearMonthPicker = function() {
+        $('#year-month-picker').datepicker({
             minViewMode: 1,
             format: 'yyyy-mm-01',
             startDate: '1940-01',
             endDate: '2022-12'
         });
     
-        $('#month-picker').on('changeDate', function() {
+        $('#year-month-picker').on('changeDate', function() {
             $(this).datepicker('hide');
             let date = $(this).val();
-            if (date != selectedMonth) {
+            if (date != selectedYearMonth) {
                 if (selectedTab == otherTabId) {
                     addOtherHydroSOSLayers(date);
                 } else {
                     updateHydroSOSStreamflowLayer(date);
                 }
-                selectedMonth = date;
+                selectedYearMonth = date;
             }
         }) 
     }
 
     initStreamSearchBox();
-    initMonthPicker();
+    initYearMonthPicker();
 }
 
 
 let updateMonthPicker = function() {
-    console.log("Month Picker is updated, current tab is: " + selectedTab);
+    console.log("Year-Month Picker is updated, current tab is: " + selectedTab);
     if (selectedTab == streamTabId) {
-        $('#month-picker').datepicker('setStartDate', tabsData[streamTabId].startDate);
-        $('#month-picker').datepicker('setEndDate', tabsData[streamTabId].endDate);
+        $('#year-month-picker').datepicker('setStartDate', tabsData[streamTabId].startDate);
+        $('#year-month-picker').datepicker('setEndDate', tabsData[streamTabId].endDate);
     } else {
-        $('#month-picker').datepicker('setStartDate', tabsData[otherTabId].startDate);
-        $('#month-picker').datepicker('setEndDate', tabsData[otherTabId].endDate);
+        $('#year-month-picker').datepicker('setStartDate', tabsData[otherTabId].startDate);
+        $('#year-month-picker').datepicker('setEndDate', tabsData[otherTabId].endDate);
     }
 
-    if (selectedTab == streamTabId && selectedMonth > tabsData[streamTabId].endDate) {
-        $('#month-picker').datepicker('update', tabsData[streamTabId].endDate);
+    if (selectedTab == streamTabId && selectedYearMonth > tabsData[streamTabId].endDate) {
+        $('#year-month-picker').datepicker('update', tabsData[streamTabId].endDate);
     }
 
-    if (selectedTab == otherTabId && selectedMonth < tabsData[otherTabId].startDate) {
-        $('#month-picker').datepicker('update', tabsData[otherTabId].startDate);
+    if (selectedTab == otherTabId && selectedYearMonth < tabsData[otherTabId].startDate) {
+        $('#year-month-picker').datepicker('update', tabsData[otherTabId].startDate);
     }
 }
 
@@ -213,7 +213,7 @@ let initMapCardBody = function() {
             soilMoistureLayer.remove();
         }
         streamflowLayer.addTo(mapObj);
-        updateHydroSOSStreamflowLayer($("#month-picker").val());
+        updateHydroSOSStreamflowLayer($("#year-month-picker").val());
         layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} , {
             collapsed: false
         }).addTo(mapObj);
@@ -250,7 +250,7 @@ let initMapCardBody = function() {
             drawnFeatures.addLayer(e.layer);
             isDrawing = false;
             readAreaOfDrawnFeature();
-            initSelectedPlots(update=true);
+            initSelectedPlots();
         });
     };
 
@@ -359,7 +359,7 @@ let initMapCardBody = function() {
             drawnFeatures.addTo(mapObj);
         }
         // soil moisture layer
-        addOtherHydroSOSLayers($("#month-picker").val());
+        addOtherHydroSOSLayers($("#year-month-picker").val());
         // zoom in to the selected country
         if (selectedCountry) {
             mapObj.fitBounds(selectedCountry.getBounds());
@@ -379,7 +379,7 @@ let initMapCardBody = function() {
             showSpinners();
             findReachIDByLatLon(event)
                 .then(function() {
-                    return initSelectedPlots(update=true);
+                    return initSelectedPlots();
                 })
                 .catch(error => {
                     alert(error);
@@ -466,7 +466,7 @@ let updateHydroSOSStreamflowLayer = function(date) {
             if (newMinStreamOrder != minStreamOrder) {
                 console.log(`stream_order: >=${newMinStreamOrder}`);
                 minStreamOrder = newMinStreamOrder;
-                hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${$('#month-picker').val()};min_stream_order:${minStreamOrder}`});
+                hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${$('#year-month-picker').val()};min_stream_order:${minStreamOrder}`});
             }
         })
     } else {
@@ -594,6 +594,7 @@ let hasDrawnArea = function() {
 
 
 let yearPickerValues = [$(".year-picker:eq(0)").val(), $(".year-picker:eq(1)").val()];
+let monthPickerValues = [$(".month-picker:eq(0)").val(), $(".month-picker:eq(1)").val()];
 let initPlotCards = function() {
     //////////// init plot-select /////////
     // add options to the plot-select
@@ -623,30 +624,45 @@ let initPlotCards = function() {
         $(".year-select").removeClass("disabled-select")
     }
 
-    //////////// init yearpicker ////////////
+    //////////// init datepickers ////////////
     $('.year-picker').datepicker({
-        minViewMode: 2,
+        minViewMode: 'years',
         format: 'yyyy',
         endDate: new Date().getFullYear().toString()
     });
 
-    // update the plot once the year changes
+    $('.month-picker').datepicker({
+        minViewMode: 'months',
+        maxViewMode: 'months',
+        format: 'm'
+    })
+
+    // update the plot once the year/month/year-option changes
     $(".plot-card").each(function(index, card) {
         let yearPicker = $(card).find(".year-picker");
-        // update the plot when selected year changes
         yearPicker.on('changeDate', function() {
             let newYearValue = yearPicker.val();
             if (newYearValue != yearPickerValues[index]) {
                 yearPickerValues[index] = newYearValue;
-                getSelectedPlot(card, newArea=false, newYear=true);
+                getSelectedPlot(card, isNewArea=false, isNewYear=true, isNewMonth=false);
                 $('.year-picker').datepicker('hide');
             }
         })
 
+        let monthPicker = $(card).find(".month-picker");
+        monthPicker.on('changeDate', function() {
+            newMonthValue = monthPicker.val();
+            console.log(newMonthValue);
+            if (newMonthValue != monthPickerValues[index]) {
+                monthPickerValues[index] = newMonthValue;
+                getSelectedPlot(card, isNewArea=false, isNewYear=false, isNewMonth=true);
+                $('month-picker').datepicker('hide');
+            }
+        })
+
         let yearSelect = $(card).find(".year-select");
-        // update the plot when year option changes
         yearSelect.on("change", function() {
-            getSelectedPlot(card, newArea=false, newYear=true);
+            getSelectedPlot(card, isNewArea=false, isNewYear=true, isNewMonth=false);
         })
     })
 
@@ -654,7 +670,7 @@ let initPlotCards = function() {
     if (!hasReachId() && !hasDrawnArea()) {
         showPlotContainerMessages();
     } else {
-        initSelectedPlots(newArea=false, newYear=false);
+        initSelectedPlots();
     }
 
     // load the plot or send a request when the selected value changes
@@ -687,7 +703,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
     let plotName = plotSelect.val();
     let yearOption = yearSelect.val();
     let selectedYear = Number($(plotCard).find(".year-picker").val());
-    let selectedMonth = Number($('#month-picker').val().slice(5, 7));
+    let selectedMonth = Number($(plotCard).find(".month-picker").val());
 
     let startDate, endDate;
     if (yearOption == "calendar-year") {
@@ -704,24 +720,26 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
 
     if (isNewArea) { // new area
         showSpinner(plotContainer, spinner);
-        requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
+        requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
             drawPlot(plotCard);
         })
     } else if (isNewYear) { // new year
         let needYear = plotName in tabsData[selectedTab].selectedYear;
         let oldYear = tabsData[selectedTab].selectedYear[plotName];
         if (needYear && oldYear != selectedYear && (hasReachId() || hasDrawnArea())) {
+            tabsData[selectedTab].selectedYear[plotName] = selectedYear;
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
+            requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
-    } else if (isNewMonth) {  // new month (not in use right now) TODO
+    } else if (isNewMonth) {  // new month
         let needMonth = plotName in tabsData[selectedTab].selectedMonth;
         let oldMonth = tabsData[selectedTab].selectedMonth[plotName];
         if (needMonth && oldMonth != selectedMonth && (hasReachId() || hasDrawnArea())) {
+            tabsData[selectedTab].selectedMonth[plotName] = selectedMonth;
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
+            requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
@@ -731,7 +749,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
             drawPlot(plotCard);
         } else if (hasReachId() || hasDrawnArea()) {
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotName, selectedYear, startDate, endDate).then(function() {
+            requestPlotData(plotName, selectedYear, selectedMonth, startDate, endDate).then(function() {
                 drawPlot(plotCard);
             })
         }
@@ -739,7 +757,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
 }
 
 
-let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
+let requestPlotData = function(plotName, selectedYear, selectedMonth, startDate, endDate) {
     console.log("sending a request for " + plotName + " plot");
     switch (plotName) {
         case "forecast":
@@ -758,7 +776,7 @@ let requestPlotData = function(plotName, selectedYear, startDate, endDate) {
         case "ssi-monthly":
             return getSSIPlot(selectedReachID, -1)
         case "ssi-one-month":
-            return getSSIPlot(selectedReachID, Number(selectedMonth.slice(5, 7)));
+            return getSSIPlot(selectedReachID, selectedMonth);
         default:
             return getGeePlot(plotName, startDate, endDate);
     }
