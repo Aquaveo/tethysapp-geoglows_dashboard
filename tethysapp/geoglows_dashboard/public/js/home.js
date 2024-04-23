@@ -154,7 +154,7 @@ let initTabs = function() {
                 $('.nav-link').removeClass('active');
                 $(this).addClass('active');
                 
-                updateMonthPicker();
+                updateYearMonthPicker();
                 initPlotCards();
                 initMapCardBody();
             }
@@ -170,21 +170,26 @@ let initMapCard = function() {
 
 /////////////////// Initialize the Map Card Header ///////////////////
 
+let updateSelectedReachByID = function(reachID, isSubbasinOutlet=false) {
+    $('#reach-id-input').val(reachID);
+    findLatLonByReachID(reachID, isSubbasinOutlet)
+        .then(initSelectedPlots)
+        .catch(error => {
+            alert(error);
+            showPlotContainerMessages();
+        })
+}
 let selectedYearMonth = $('#year-month-picker').val();
+
 let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
-        $('#search-addon').click(findLatLonByReachID);
+        $('#search-addon').click(function() {
+            updateSelectedReachByID($('#reach-id-input').val(), isSubbasinOutlet=false)
+        });
         $('#reach-id-input').keydown(event => {
             if (event.keyCode === 13) {
                 showSpinners();
-                findLatLonByReachID()
-                .then(function() {
-                    initSelectedPlots();
-                })
-                .catch(error => {
-                    alert(error);
-                    showPlotContainerMessages();
-                })
+                updateSelectedReachByID($('#reach-id-input').val(), isSubbasinOutlet=false);
             }
         })
     }
@@ -216,8 +221,7 @@ let initMapCardHeader = function() {
 }
 
 
-let updateMonthPicker = function() {
-    console.log("Year-Month Picker is updated, current tab is: " + selectedTab);
+let updateYearMonthPicker = function() {
     if (selectedTab == streamTabID) {
         $('#year-month-picker').datepicker('setStartDate', tabsData[streamTabID].startDate);
         $('#year-month-picker').datepicker('setEndDate', tabsData[streamTabID].endDate);
@@ -241,8 +245,8 @@ let updateMonthPicker = function() {
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-let mapObj, resetButton, mapMarker, selectedStream, selectedCountry;
-let streamflowLayer = L.esri.dynamicMapLayer({
+let mapObj, resetButton, mapMarker, selectedStream, selectedCountry, selectedSubbasin;
+const geoglowsStreamflowLayer = L.esri.dynamicMapLayer({
     url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
     layers: [0],
     from: startDateTime,
@@ -260,29 +264,69 @@ const basemaps = {
     ),
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
-let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend, hydroSOSStreamflowLayer;
+let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend, hydroSOSStreamflowLayer, subbasinLayer;
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let isDrawing = false;
 
 
 let initMapCardBody = function() {
-    let addStreamflowLayers = function() {
+    let addSubbasinLayer = function() {
+        function onEachFeature(feature, layer) {
+            let riverID = feature.properties['River ID'];
+            layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
+            layer.on('click', function() {
+                if (selectedSubbasin != null) {
+                    selectedSubbasin.setStyle({'color': '#3388ff'});
+                }
+                layer.setStyle({'color': 'red'});
+                selectedSubbasin = layer;
+                updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+            })
+        }
+    
+        fetch("/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("nile_sub_basins was not ok");
+                }
+                return response.json()
+            })
+            .then((data) => {
+                data = JSON.parse(JSON.stringify(data));
+                subbasinLayer = L.geoJSON(data, {
+                    style: {
+                        "color": "#3388ff",
+                        "weight": 2
+                    },
+                    onEachFeature: onEachFeature
+                });
+                layerControl.addOverlay(subbasinLayer, "Subbasins");
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+    }
+
+    let addStreamTabLayers = function() {
         if (layerControl != null) {
             layerControl.remove();
         }
         if (soilMoistureLayer != null) {
             soilMoistureLayer.remove();
         }
-        streamflowLayer.addTo(mapObj);
+        geoglowsStreamflowLayer.addTo(mapObj);
         updateHydroSOSStreamflowLayer($("#year-month-picker").val());
-        layerControl = L.control.layers(basemaps, {"Streamflow": streamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} , {
-            collapsed: false
-        }).addTo(mapObj);
+        layerControl = L.control.layers(
+            basemaps,
+            {"Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
+            {collapsed: false}
+        ).addTo(mapObj);
+        addSubbasinLayer();
     }
 
     let refreshGeoglowsStreamflowLayer = function() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-        streamflowLayer.setTimeRange(sliderTime, endDateTime);
+        geoglowsStreamflowLayer.setTimeRange(sliderTime, endDateTime);
     }
 
     let initDrawControl = function() {
@@ -399,12 +443,12 @@ let initMapCardBody = function() {
         if (mapMarker != null) {
             mapMarker.addTo(mapObj);
         }
-        // add markers for this tab
+        // add markers to this tab
         if (selectedStream != null) {
             selectedStream.addTo(mapObj);
         }
         // streamflow layers
-        addStreamflowLayers();
+        addStreamTabLayers();
         // re-zoom mapObj
         mapObj.setView([0, 0], 3);
     } else {
@@ -439,9 +483,7 @@ let initMapCardBody = function() {
             mapObj.flyTo(event.latlng, 10);
             showSpinners();
             findReachIDByLatLon(event)
-                .then(function() {
-                    return initSelectedPlots();
-                })
+                .then(initSelectedPlots)
                 .catch(error => {
                     alert(error);
                     showPlotContainerMessages();
@@ -500,7 +542,6 @@ let addDryLevelLegend = function() {
 
 let minStreamOrder;
 let updateHydroSOSStreamflowLayer = function(date) {
-    
     let getMinStreamOrder = function() {
         let currentZoom = mapObj.getZoom();
         if (currentZoom <= 2) {
@@ -522,10 +563,8 @@ let updateHydroSOSStreamflowLayer = function(date) {
 
         // update the layer every time we zoom in/out
         mapObj.on("zoomend", function() {
-            console.log(`zoom: ${mapObj.getZoom()}`);
             let newMinStreamOrder = getMinStreamOrder();
             if (newMinStreamOrder != minStreamOrder) {
-                console.log(`stream_order: >=${newMinStreamOrder}`);
                 minStreamOrder = newMinStreamOrder;
                 hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${$('#year-month-picker').val()};min_stream_order:${minStreamOrder}`});
             }
@@ -595,8 +634,8 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
     }
 
     // remove all previous layers
-    if (streamflowLayer != null) {
-        mapObj.removeLayer(streamflowLayer);
+    if (geoglowsStreamflowLayer != null) {
+        mapObj.removeLayer(geoglowsStreamflowLayer);
     }
     if (hydroSOSStreamflowLayer != null) {
         mapObj.removeLayer(hydroSOSStreamflowLayer);
@@ -916,7 +955,7 @@ let showPlotContainerMessages = function() {
 /////////////////// Requesting Plot Data ///////////////////
 
 
-let findLatLonByReachID = function() {
+let findLatLonByReachID = function(reachID, isSubbasinOutlet=false) {
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
@@ -924,15 +963,17 @@ let findLatLonByReachID = function() {
             url:
                 URL_getReachLatLon + 
                 L.Util.getParamString({
-                    reach_id: $('#reach-id-input').val()
+                    reach_id: reachID
                 }),
             success: function(response) {
                 if (mapMarker) {
                     mapObj.removeLayer(mapMarker);
                 }
                 mapMarker = L.marker(L.latLng(response["lat"], response["lon"])).addTo(mapObj);
-                mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9);
-                selectedReachID = $('#reach-id-input').val();
+                if (!isSubbasinOutlet) {
+                    mapObj.flyTo(L.latLng(response["lat"], response["lon"]), 9);
+                }
+                selectedReachID = reachID;
                 resolve("success in getting the reach id!");
             },
             error: function() {
@@ -973,11 +1014,9 @@ let getForecastPlot = function(reachID) {
             }),
             success: function(response) {
                 tabsData[streamTabID].plots[forecastPlotID].data = response["forecast"];
-                console.log("success in getting forecast data!");
                 resolve("success in getting forecast data!")
             },
             error: function() {
-                console.error("fail to get forecast data");
                 reject("fail to get forecast data");
             }
         })
@@ -1061,11 +1100,9 @@ let updateFlowRegimePlot = function(year, reachID) {
             }),
             success: function(response) {
                 tabsData[streamTabID].plots[flowRegimePlotID].data = response["flow_regime"];
-                console.log("success in drawing new flow regime plot");
                 resolve("success in drawing new flow regime plot")
             },
             error: function() {
-                console.error("fail to draw new flow regime plot");
                 reject("fail to draw new flow regime plot");
             }
         })
@@ -1090,11 +1127,9 @@ let getGeePlot = function(plotID, startDate, endDate) {
             dataType: "json",
             success: function(response) {
                 tabsData[otherTabID].plots[plotID].data = response["plot"];
-                console.log("success in getting GEE plot: " + plotID);
                 resolve("success in getting GEE plot: " + plotID);
             },
             error: function() {
-                console.error("fail to draw GEE plot: " + plotID);
                 reject("fail to draw GEE plot: " + plotID);
             }
         })
