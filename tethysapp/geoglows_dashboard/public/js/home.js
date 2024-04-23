@@ -19,22 +19,25 @@ let tabsData = {
         "endDate": "2022-12",
         "plots": {
             [forecastPlotID]: {
-                "name": "Forecase",
+                "name": "Forecast",
                 "data": null,
                 "needYear": false,
                 "needMonth": false,
+                "needYearOption": false,
             },
             [historicalPlotID]: {
                 "name": "Historical",
                 "data": null,
                 "needYear": false,
                 "needMonth": false,
+                "needYearOption": false,
             },
             [flowDurationPlotID]: {
                 "name": "Flow Duration",
                 "data": null,
                 "needYear": false,
                 "needMonth": false,
+                "needYearOption": false,
             },
             [flowRegimePlotID]: {
                 "name": "Flow Regime",
@@ -42,18 +45,21 @@ let tabsData = {
                 "needYear": true,
                 "selectedYear": null,
                 "needMonth": false,
+                "needYearOption": false,
             },
             [annualDischargePlotID]: {
                 "name": "Annual Discharge",
                 "data": null,
                 "needYear": false,
                 "needMonth": false,
+                "needYearOption": false,
             },
             [SSIMonthlyPlotID]: {
                 "name": "SSI Monthly",
                 "data": null,
                 "needYear": false,
                 "needMonth": false,
+                "needYearOption": false,
             },
             [SSIOneMonthPlotID]: {
                 "name": "SSI One Month",
@@ -61,6 +67,7 @@ let tabsData = {
                 "needYear": false,
                 "needMonth": true,
                 "selectedMonth": null,
+                "needYearOption": false,
             }
         }
     },
@@ -73,37 +80,46 @@ let tabsData = {
                 "data": null,
                 "needYear": true,
                 "selectedYear": null,
+                "needMonth": false,
+                "needYearOption": true,
             },
             [GLDASSoilPlotID]: {
                 "name": "GLDAS Soil Moisture",
                 "data": null,
                 "needYear": true,
                 "selectedYear": null,
+                "needMonth": false,
+                "needYearOption": true,
             },
             [IMERGPrecipPlotID]: {
                 "name": "IMERG Precipitation",
                 "data": null,
                 "needYear": true,
                 "selectedYear": null,
+                "needMonth": false,
+                "needYearOption": true,
             },
             [ERA5PrecipPlotID]: {
                 "name": "ERA5 Precipitation",
                 "data": null,
                 "needYear": true,
                 "selectedYear": null,
+                "needMonth": false,
+                "needYearOption": true,
             },
             [GFSForecasePlotID]: {
                 "name": "GFS Forecast Precipitation",
                 "data": null,
                 "needYear": true,
-                "selectedYear": null
+                "selectedYear": null,
+                "needMonth": false,
+                "needYearOption": true,
             }
         }
     }
 }
 
 
-let selectedTab = streamTabID;
 $(function() {
     initTabs();
     initPlotCards();
@@ -127,6 +143,7 @@ let resize = function() {
 window.addEventListener("resize", resize);
 
 
+let selectedTab = streamTabID;
 let initTabs = function() {
     for (let tab in tabsData) {
         $(tab).on('click', function(event) {
@@ -640,36 +657,47 @@ let hasDrawnArea = function() {
 let yearPickerValues = [$(".year-picker:eq(0)").val(), $(".year-picker:eq(1)").val()];
 let monthPickerValues = [$(".month-picker:eq(0)").val(), $(".month-picker:eq(1)").val()];
 let initPlotCards = function() {
+    let initSelectorsForPlot = function(plotCard) {
+        let plotSelect = $(plotCard).find(".plot-select");
+        let plotID = $(plotSelect).val();
+        if (tabsData[selectedTab].plots[plotID].needYear) {
+            $(plotCard).find('.year-picker-div').removeClass('d-none').addClass('d-flex');
+        } else {
+            $(plotCard).find('.year-picker-div').addClass('d-none');
+        }
+        if (tabsData[selectedTab].plots[plotID].needMonth) {
+            $(plotCard).find('.month-picker-div').removeClass('d-none').addClass('d-flex');
+        } else {
+            $(plotCard).find('.month-picker-div').addClass('d-none');
+        }
+        if (tabsData[selectedTab].plots[plotID].needYearOption) {
+            $(plotCard).find('.year-option-select-div').removeClass('d-none').addClass('d-flex');
+        } else {
+            $(plotCard).find('.year-option-select-div').addClass('d-none');
+        }
+    }
+
     //////////// init plot-select /////////
     // add options to the plot-select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
-        let plotIndex = 0;
         let plots = tabsData[selectedTab].plots;
-        for (let key in plots) {
-            let plot = plots[key];
+        let plotIndex = 0;
+        for (let plotID in plots) {
+            let plot = plots[plotID];
             let plotName = plot["name"];
-            $(this).append(new Option(plotName, key, false, tabIndex == plotIndex));
+            $(this).append(new Option(plotName, plotID, false, tabIndex == plotIndex));
             plotIndex++;
         }
     })
 
     // two plot-selects can't choose the same option
     $(".plot-select").each(function() {
-        let value = $(this).val();
-        $(".plot-select").not(this).find('option[value="' + value + '"]').prop('disabled', true);
+        let plotID = $(this).val();
+        $(".plot-select").not(this).find('option[value="' + plotID + '"]').prop('disabled', true);
     })
 
-    //////////// init year-select ////////////
-    if (selectedTab == streamTabID) {
-        $(".year-select").prop('disabled', true);
-        $(".year-select").addClass("disabled-select")
-    } else {
-        $(".year-select").prop('disabled', false);
-        $(".year-select").removeClass("disabled-select")
-    }
-
-    //////////// init datepickers ////////////
+    //////////// init datepickers //////////// TODO don't init it every time switching the tab
     $('.year-picker').datepicker({
         minViewMode: 'years',
         format: 'yyyy',
@@ -682,8 +710,11 @@ let initPlotCards = function() {
         format: 'm'
     })
 
-    // update the plot once the year/month/year-option changes
+    // init selects
     $(".plot-card").each(function(index, card) {
+        initSelectorsForPlot(card);
+
+        // update the plot once the year/month/year-option changes
         let yearPicker = $(card).find(".year-picker");
         yearPicker.on('changeDate', function() {
             let newYearValue = yearPicker.val();
@@ -697,7 +728,6 @@ let initPlotCards = function() {
         let monthPicker = $(card).find(".month-picker");
         monthPicker.on('changeDate', function() {
             newMonthValue = monthPicker.val();
-            console.log(newMonthValue);
             if (newMonthValue != monthPickerValues[index]) {
                 monthPickerValues[index] = newMonthValue;
                 getSelectedPlot(card, isNewArea=false, isNewYear=false, isNewMonth=true);
@@ -705,8 +735,8 @@ let initPlotCards = function() {
             }
         })
 
-        let yearSelect = $(card).find(".year-select");
-        yearSelect.on("change", function() {
+        let yearOptionSelect = $(card).find(".year-option-select");
+        yearOptionSelect.on("change", function() {
             getSelectedPlot(card, isNewArea=false, isNewYear=true, isNewMonth=false);
         })
     })
@@ -718,15 +748,16 @@ let initPlotCards = function() {
         initSelectedPlots();
     }
 
-    // load the plot or send a request when the selected value changes
-    $(".plot-card").each(function(index, card) {
+    // load the plot & add selectors when the selected plotID changes
+    $(".plot-card").each(function(_index, card) {
         let plotSelect = $(card).find(".plot-select");
         plotSelect.on("change", function() {
-            let plotName = $(this).val();
+            initSelectorsForPlot(card);
             getSelectedPlot(card);
             // disable the option in the other select
+            let plotID = $(this).val();
             $(".plot-select").not(this).find('option').prop('disabled', false);
-            $(".plot-select").not(this).find('option[value="' + plotName + '"]').prop('disabled', true);
+            $(".plot-select").not(this).find('option[value="' + plotID + '"]').prop('disabled', true);
         })        
     })
 }
@@ -741,7 +772,7 @@ let initSelectedPlots = function(isNewArea=false, isNewYear=false, isNewMonth=fa
 
 let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNewMonth=false) {
     let plotSelect = $(plotCard).find(".plot-select");
-    let yearSelect = $(plotCard).find(".year-select");
+    let yearSelect = $(plotCard).find(".year-option-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner =  $(plotCard).find(".spinner");
 
