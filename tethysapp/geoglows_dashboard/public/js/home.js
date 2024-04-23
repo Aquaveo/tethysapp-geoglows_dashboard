@@ -707,7 +707,7 @@ let initPlotCards = function() {
     $('.month-picker').datepicker({
         minViewMode: 'months',
         maxViewMode: 'months',
-        format: 'm'
+        format: 'M'
     })
 
     // init selects
@@ -770,6 +770,10 @@ let initSelectedPlots = function(isNewArea=false, isNewYear=false, isNewMonth=fa
 }
 
 
+const monthToNumber = {
+    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+    'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+};
 let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNewMonth=false) {
     let plotSelect = $(plotCard).find(".plot-select");
     let yearSelect = $(plotCard).find(".year-option-select");
@@ -779,7 +783,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
     let plotID = plotSelect.val();
     let yearOption = yearSelect.val();
     let selectedYear = Number($(plotCard).find(".year-picker").val());
-    let selectedMonth = Number($(plotCard).find(".month-picker").val());
+    let selectedMonth = monthToNumber[$(plotCard).find(".month-picker").val()];
 
     let startDate, endDate;
     if (yearOption == "calendar-year") {
