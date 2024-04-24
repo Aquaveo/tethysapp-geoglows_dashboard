@@ -264,7 +264,7 @@ const basemaps = {
     ),
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
-let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend, hydroSOSStreamflowLayer, subbasinLayer;
+let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend, hydroSOSStreamflowLayer;
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let isDrawing = false;
 
@@ -293,7 +293,7 @@ let initMapCardBody = function() {
             })
             .then((data) => {
                 data = JSON.parse(JSON.stringify(data));
-                subbasinLayer = L.geoJSON(data, {
+                let subbasinLayer = L.geoJSON(data, {
                     style: {
                         "color": "#3388ff",
                         "weight": 2
@@ -305,6 +305,22 @@ let initMapCardBody = function() {
             .catch((error) => {
                 console.error("Error:", error);
             });
+    }
+
+    let addGEEMapLayer = function() {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: URL_getGEEMapLayer,
+            success: function(response) {
+                let url = response['url'];
+                let geeMapLayer = L.tileLayer(url);
+                layerControl.addOverlay(geeMapLayer, "CHIRPS SPI");
+            },
+            error: function(error) {
+                console.log(error)
+            }
+        })
     }
 
     let addStreamTabLayers = function() {
@@ -322,6 +338,7 @@ let initMapCardBody = function() {
             {collapsed: false}
         ).addTo(mapObj);
         addSubbasinLayer();
+        addGEEMapLayer();
     }
 
     let refreshGeoglowsStreamflowLayer = function() {
