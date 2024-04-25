@@ -99,6 +99,12 @@ select {
     color: #555;
 }
 
+.legend-title {
+    padding: 3px;
+    font-weight: 550;
+    text-align:center;
+}
+
 .legend i {
     width: 18px;
     height: 18px;
