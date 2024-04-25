@@ -264,11 +264,12 @@ const basemaps = {
     ),
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
-let layerControl, soilMoistureLayer, precipitationLayer, currentHydroSOSLayer, dryLevelLegend, hydroSOSStreamflowLayer;
+let layerControl, soilMoistureLayer, precipitationLayer, dryLevelLegend, hydroSOSStreamflowLayer;
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let isDrawing = false;
 
 
+let currentStreamflowLayer, currentHydroSOSLayer;
 let initMapCardBody = function() {
     let addSubbasinLayer = function() {
         function onEachFeature(feature, layer) {
@@ -300,6 +301,8 @@ let initMapCardBody = function() {
                     },
                     onEachFeature: onEachFeature
                 });
+                subbasinLayer.addTo(mapObj);
+                mapObj.fitBounds(subbasinLayer.getBounds());
                 layerControl.addOverlay(subbasinLayer, "Subbasins");
             })
             .catch((error) => {
@@ -331,14 +334,31 @@ let initMapCardBody = function() {
             soilMoistureLayer.remove();
         }
         geoglowsStreamflowLayer.addTo(mapObj);
+        currentStreamflowLayer = geoglowsStreamflowLayer;
         updateHydroSOSStreamflowLayer($("#year-month-picker").val());
         layerControl = L.control.layers(
             basemaps,
-            {"Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
+            {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
             {collapsed: false}
         ).addTo(mapObj);
         addSubbasinLayer();
         addGEEMapLayer();
+
+        // make geoglows and hydrosos streamflow mutually exclusive
+        mapObj.on("overlayadd", function(e) {
+            if ([geoglowsStreamflowLayer, hydroSOSStreamflowLayer].includes(e.layer)) {
+                if (currentStreamflowLayer != null) {
+                    removeWithTimeout(currentStreamflowLayer);
+                }
+                currentStreamflowLayer = e.layer;
+            }
+        })
+
+        mapObj.on("overlayremove", function(e) {
+            if ([geoglowsStreamflowLayer, hydroSOSStreamflowLayer].includes(e.layer) && currentStreamflowLayer == e.layer) {
+                currentStreamflowLayer = null;
+            }
+        })
     }
 
     let refreshGeoglowsStreamflowLayer = function() {
@@ -591,6 +611,9 @@ let updateHydroSOSStreamflowLayer = function(date) {
     }
 }
 
+let removeWithTimeout = function(layer) {
+    setTimeout(() => mapObj.removeLayer(layer), 10);
+}
 
 let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
     function getSoilMoistureLayer(date) {
@@ -646,10 +669,6 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
         })
     }
 
-    function removeWithTimeout(layer) {
-        setTimeout(() => mapObj.removeLayer(layer), 10);
-    }
-
     // remove all previous layers
     if (geoglowsStreamflowLayer != null) {
         mapObj.removeLayer(geoglowsStreamflowLayer);
@@ -678,14 +697,23 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
                 collapsed: false,
             }).addTo(mapObj);
 
+            soilMoistureLayer.addTo(mapObj);
+            currentHydroSOSLayer = soilMoistureLayer;
             // make 2 hydroSOS layers mutually exclusive 
-
             mapObj.on("overlayadd", function(e) {
-                if (currentHydroSOSLayer && e.layer !== currentHydroSOSLayer) {
-                    removeWithTimeout(currentHydroSOSLayer);
-                    // TODO explain: https://gis.stackexchange.com/questions/382017/leaflet-mutually-exclusive-overlay-layers-overlayadd-event-firing-twice
+                if ([soilMoistureLayer, precipitationLayer].includes(e.layer)) {
+                    if (currentHydroSOSLayer != null) {
+                        removeWithTimeout(currentHydroSOSLayer);
+                        // TODO explain: https://gis.stackexchange.com/questions/382017/leaflet-mutually-exclusive-overlay-layers-overlayadd-event-firing-twice
+                    }
+                    currentHydroSOSLayer = e.layer;
                 }
-                currentHydroSOSLayer = e.layer;
+            })
+
+            mapObj.on("overlayremove", function(e) {
+                if ([soilMoistureLayer, precipitationLayer].includes(e.layer) && currentHydroSOSLayer == e.layer) {
+                    currentHydroSOSLayer = null;
+                }
             })
 
             if (!mapObj.hasLayer(soilMoistureLayer) && !mapObj.hasLayer(precipitationLayer)) {
