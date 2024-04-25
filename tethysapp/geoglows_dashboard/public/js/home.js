@@ -206,7 +206,7 @@ let initMapCardHeader = function() {
             let date = $(this).val();
             if (date != selectedYearMonth) {
                 if (selectedTab == otherTabID) {
-                    addOtherHydroSOSLayers(date);
+                    addOtherTabLayers(date);
                 } else {
                     updateHydroSOSStreamflowLayer(date);
                 }
@@ -376,9 +376,11 @@ let initMapCardBody = function() {
         if (layerControl != null) {
             layerControl.remove();
         }
-        if (soilMoistureLayer != null) {
-            soilMoistureLayer.remove();
+        if (currentHydroSOSLayer) {
+            currentHydroSOSLayer.remove();
+            currentHydroSOSLayer = null;
         }
+        hydroSOSLegend.remove();
 
         updateHydroSOSStreamflowLayer($("#year-month-picker").val());
         initSubbasinLayer(); // TODO no need to send a new request every time
@@ -476,13 +478,19 @@ let initMapCardBody = function() {
                 currentStreamflowLayer = hydroSOSStreamflowLayer;
             } else if (e.layer == geeSPILayer) {
                 spiLegend.addTo(mapObj);
+            } else if (e.layer == soilMoistureLayer) {
+                if (currentHydroSOSLayer == precipitationLayer) {
+                    removeWithTimeout(currentHydroSOSLayer);
+                }
+                setTimeout(() => hydroSOSLegend.addTo(mapObj), 10);
+                currentHydroSOSLayer = soilMoistureLayer;
+            } else if (e.layer == precipitationLayer) {
+                if (currentHydroSOSLayer == soilMoistureLayer) {
+                    removeWithTimeout(currentHydroSOSLayer);
+                }
+                setTimeout(() => hydroSOSLegend.addTo(mapObj), 10);
+                currentHydroSOSLayer = precipitationLayer;
             }
-            // if ([geoglowsStreamflowLayer, hydroSOSStreamflowLayer].includes(e.layer)) {
-            //     if (currentStreamflowLayer != null) {
-            //         removeWithTimeout(currentStreamflowLayer);
-            //     }
-            //     currentStreamflowLayer = e.layer;
-            // }
         })
 
         mapObj.on("overlayremove", function(e) {
@@ -492,9 +500,13 @@ let initMapCardBody = function() {
                 hydroSOSLegend.remove();
             } else if (e.layer == geeSPILayer) {
                 spiLegend.remove();
+            } else if (e.layer == precipitationLayer || e.layer == soilMoistureLayer) {
+                hydroSOSLegend.remove();
             }
-            if ([geoglowsStreamflowLayer, hydroSOSStreamflowLayer].includes(e.layer) && currentStreamflowLayer == e.layer) {
+            if (currentStreamflowLayer == e.layer) {
                 currentStreamflowLayer = null;
+            } else if (currentHydroSOSLayer == e.layer) {
+                currentHydroSOSLayer = null;
             }
         })
     }
@@ -570,8 +582,8 @@ let initMapCardBody = function() {
         if (drawnFeatures != null) {
             drawnFeatures.addTo(mapObj);
         }
-        // soil moisture layer
-        addOtherHydroSOSLayers($("#year-month-picker").val());
+        // other layer
+        addOtherTabLayers($("#year-month-picker").val());
         // zoom in to the selected country
         if (selectedCountry) {
             mapObj.fitBounds(selectedCountry.getBounds());
@@ -667,7 +679,7 @@ let removeWithTimeout = function(layer) {
     setTimeout(() => mapObj.removeLayer(layer), 10);
 }
 
-let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
+let addOtherTabLayers = function(date) { // yyyy-mm-01
     function getSoilMoistureLayer(date) {
         return new Promise(function (resolve, reject) {
             $.ajax({
@@ -728,6 +740,9 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
     if (hydroSOSStreamflowLayer != null) {
         mapObj.removeLayer(hydroSOSStreamflowLayer);
     }
+    if (geeSPILayer != null) {
+        mapObj.removeLayer(geeSPILayer);
+    }
 
     if (layerControl != null) {
         layerControl.remove();
@@ -744,37 +759,12 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
                 "HydroSOS Soil Moisture": soilMoistureLayer,
                 "HydroSOS Precipitation": precipitationLayer,
             };
-
             layerControl = L.control.layers(basemaps, overlayMaps, {
                 collapsed: false,
             }).addTo(mapObj);
 
             soilMoistureLayer.addTo(mapObj);
             currentHydroSOSLayer = soilMoistureLayer;
-            // make 2 hydroSOS layers mutually exclusive 
-            mapObj.on("overlayadd", function(e) {
-                if ([soilMoistureLayer, precipitationLayer].includes(e.layer)) {
-                    if (currentHydroSOSLayer != null) {
-                        removeWithTimeout(currentHydroSOSLayer);
-                        // TODO explain: https://gis.stackexchange.com/questions/382017/leaflet-mutually-exclusive-overlay-layers-overlayadd-event-firing-twice
-                    }
-                    currentHydroSOSLayer = e.layer;
-                }
-            })
-
-            mapObj.on("overlayremove", function(e) {
-                if ([soilMoistureLayer, precipitationLayer].includes(e.layer) && currentHydroSOSLayer == e.layer) {
-                    currentHydroSOSLayer = null;
-                }
-            })
-
-            if (!mapObj.hasLayer(soilMoistureLayer) && !mapObj.hasLayer(precipitationLayer)) {
-                soilMoistureLayer.addTo(mapObj);
-            } else if (mapObj.hasLayer(soilMoistureLayer)) {
-                soilMoistureLayer.addTo(mapObj);
-            } else if (mapObj.hasLayer(precipitationLayer)) {
-                precipitationLayer.addTo(mapObj);
-            }
         })
 }
 
