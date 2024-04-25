@@ -130,7 +130,6 @@ $(function() {
 
 /////////////////// Initialize the Page ///////////////////
 
-
 let cardBodyInitialHeight = $(".plot-div").height();
 let resize = function() {
     $(".plotly-graph-div").each(function(index, div) {
@@ -207,7 +206,7 @@ let initMapCardHeader = function() {
             let date = $(this).val();
             if (date != selectedYearMonth) {
                 if (selectedTab == otherTabID) {
-                    addOtherHydroSOSLayers(date);
+                    addOtherTabLayers(date);
                 } else {
                     updateHydroSOSStreamflowLayer(date);
                 }
@@ -264,14 +263,62 @@ const basemaps = {
     ),
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
-let layerControl, soilMoistureLayer, precipitationLayer, dryLevelLegend, hydroSOSStreamflowLayer;
+
+let layerControl, soilMoistureLayer, precipitationLayer, hydroSOSStreamflowLayer, geeSPILayer;
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let isDrawing = false;
-
-
 let currentStreamflowLayer, currentHydroSOSLayer;
+
+let geoglowsLegend, hydroSOSLegend, spiLegend;
+let initGeoglowsStreamflowLegend = function() {
+    geoglowsLegend = L.control({position: 'bottomright'});
+    geoglowsLegend.onAdd = function() {
+        let div = L.DomUtil.create('div', 'legend');
+        let start =
+            '<div><svg width="20" height="20" viewPort="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg">';
+        div.innerHTML =
+            '<div class="legend-title">Geoglows Streamflow Legend</div>' + 
+            start +
+            '<polyline points="19 1, 1 6, 19 14, 1 19" stroke="#ca60f5" fill="transparent" stroke-width="2"/></svg> 20-yr Return Period Flow </div>' +
+            start +
+            '<polyline points="19 1, 1 6, 19 14, 1 19" stroke="#f67676" fill="transparent" stroke-width="2"/></svg> 10-yr Return Period Flow </div>' +
+            start +
+            '<polyline points="19 1, 1 6, 19 14, 1 19" stroke="#f3de8b" fill="transparent" stroke-width="2"/></svg> 2-yr Return Period Flow</div>' +
+            start +
+            '<polyline points="19 1, 1 6, 19 14, 1 19" stroke="#2596be" fill="transparent" stroke-width="2"/></svg> Stream Line </div>';
+        return div;
+    }
+}
+
+let initSPILegend = function() {
+    spiLegend = L.control({position: 'bottomright'});
+    spiLegend.onAdd = function() {
+        let div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = 
+            '<div class="legend-title">SPI 16 Day Legend</div>' + 
+            '<img src="/static/geoglows_dashboard/images/spi-legend.jpg" style="height:40px; width:auto">';
+        return div;
+    }
+}
+
+let initHydroSOSLegend = function() {
+    hydroSOSLegend = L.control({position: 'bottomright'});
+    hydroSOSLegend.onAdd = function() {
+        let div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = '<div class="legend-title">HydroSOS Streamflow Legend</div>';
+        let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
+        for (let i = 0; i < dryLevels.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
+                dryLevels[i] + '<br>';
+        }
+
+        return div;
+    }
+}
+
 let initMapCardBody = function() {
-    let addSubbasinLayer = function() {
+    let initSubbasinLayer = function() {
         function onEachFeature(feature, layer) {
             let riverID = feature.properties['River ID'];
             layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
@@ -310,15 +357,14 @@ let initMapCardBody = function() {
             });
     }
 
-    let addGEEMapLayer = function() {
+    let addGEESPILayer = function() {
         $.ajax({
             type: "GET",
             async: true,
             url: URL_getGEEMapLayer,
             success: function(response) {
-                let url = response['url'];
-                let geeMapLayer = L.tileLayer(url);
-                layerControl.addOverlay(geeMapLayer, "CHIRPS SPI");
+                geeSPILayer = L.tileLayer(response['url']);
+                layerControl.addOverlay(geeSPILayer, "CHIRPS SPI");
             },
             error: function(error) {
                 console.log(error)
@@ -330,35 +376,22 @@ let initMapCardBody = function() {
         if (layerControl != null) {
             layerControl.remove();
         }
-        if (soilMoistureLayer != null) {
-            soilMoistureLayer.remove();
+        if (currentHydroSOSLayer) {
+            currentHydroSOSLayer.remove();
+            currentHydroSOSLayer = null;
         }
-        geoglowsStreamflowLayer.addTo(mapObj);
-        currentStreamflowLayer = geoglowsStreamflowLayer;
+        hydroSOSLegend.remove();
+
         updateHydroSOSStreamflowLayer($("#year-month-picker").val());
+        initSubbasinLayer(); // TODO no need to send a new request every time
+        addGEESPILayer();  // TODO no need to send a new request every time
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
             {collapsed: false}
         ).addTo(mapObj);
-        addSubbasinLayer();
-        addGEEMapLayer();
-
-        // make geoglows and hydrosos streamflow mutually exclusive
-        mapObj.on("overlayadd", function(e) {
-            if ([geoglowsStreamflowLayer, hydroSOSStreamflowLayer].includes(e.layer)) {
-                if (currentStreamflowLayer != null) {
-                    removeWithTimeout(currentStreamflowLayer);
-                }
-                currentStreamflowLayer = e.layer;
-            }
-        })
-
-        mapObj.on("overlayremove", function(e) {
-            if ([geoglowsStreamflowLayer, hydroSOSStreamflowLayer].includes(e.layer) && currentStreamflowLayer == e.layer) {
-                currentStreamflowLayer = null;
-            }
-        })
+        geoglowsStreamflowLayer.addTo(mapObj);
+        currentStreamflowLayer = geoglowsStreamflowLayer;
     }
 
     let refreshGeoglowsStreamflowLayer = function() {
@@ -425,7 +458,57 @@ let initMapCardBody = function() {
             fullscreenControl: true,
             timeDimension: true
         });
-        addDryLevelLegend();
+        initHydroSOSLegend();
+        initGeoglowsStreamflowLegend();
+        initSPILegend();
+
+        // make geoglows and hydrosos streamflow mutually exclusive
+        mapObj.on("overlayadd", function(e) {
+            if (e.layer == geoglowsStreamflowLayer) {
+                if (currentStreamflowLayer == hydroSOSStreamflowLayer) {
+                    removeWithTimeout(currentStreamflowLayer);
+                }
+                geoglowsLegend.addTo(mapObj);
+                currentStreamflowLayer = geoglowsStreamflowLayer;
+            } else if (e.layer == hydroSOSStreamflowLayer) {
+                if (currentStreamflowLayer == geoglowsStreamflowLayer) {
+                    removeWithTimeout(currentStreamflowLayer);
+                }
+                hydroSOSLegend.addTo(mapObj);
+                currentStreamflowLayer = hydroSOSStreamflowLayer;
+            } else if (e.layer == geeSPILayer) {
+                spiLegend.addTo(mapObj);
+            } else if (e.layer == soilMoistureLayer) {
+                if (currentHydroSOSLayer == precipitationLayer) {
+                    removeWithTimeout(currentHydroSOSLayer);
+                }
+                setTimeout(() => hydroSOSLegend.addTo(mapObj), 10);
+                currentHydroSOSLayer = soilMoistureLayer;
+            } else if (e.layer == precipitationLayer) {
+                if (currentHydroSOSLayer == soilMoistureLayer) {
+                    removeWithTimeout(currentHydroSOSLayer);
+                }
+                setTimeout(() => hydroSOSLegend.addTo(mapObj), 10);
+                currentHydroSOSLayer = precipitationLayer;
+            }
+        })
+
+        mapObj.on("overlayremove", function(e) {
+            if (e.layer == geoglowsStreamflowLayer) {
+                geoglowsLegend.remove();
+            } else if (e.layer == hydroSOSStreamflowLayer) {
+                hydroSOSLegend.remove();
+            } else if (e.layer == geeSPILayer) {
+                spiLegend.remove();
+            } else if (e.layer == precipitationLayer || e.layer == soilMoistureLayer) {
+                hydroSOSLegend.remove();
+            }
+            if (currentStreamflowLayer == e.layer) {
+                currentStreamflowLayer = null;
+            } else if (currentHydroSOSLayer == e.layer) {
+                currentHydroSOSLayer = null;
+            }
+        })
     }
 
     if (resetButton == null) {
@@ -484,7 +567,6 @@ let initMapCardBody = function() {
         if (selectedStream != null) {
             selectedStream.addTo(mapObj);
         }
-        // streamflow layers
         addStreamTabLayers();
         // re-zoom mapObj
         mapObj.setView([0, 0], 3);
@@ -500,8 +582,8 @@ let initMapCardBody = function() {
         if (drawnFeatures != null) {
             drawnFeatures.addTo(mapObj);
         }
-        // soil moisture layer
-        addOtherHydroSOSLayers($("#year-month-picker").val());
+        // other layer
+        addOtherTabLayers($("#year-month-picker").val());
         // zoom in to the selected country
         if (selectedCountry) {
             mapObj.fitBounds(selectedCountry.getBounds());
@@ -559,24 +641,6 @@ let getHydroSOSCountryDryLevelStyle = function(feature) {
 }
 
 
-let addDryLevelLegend = function() {
-    dryLevelLegend = L.control({position: 'bottomright'});
-    dryLevelLegend.onAdd = function() {
-        let div = L.DomUtil.create('div', 'legend');
-        let dryLevels = ["extremely dry", "dry", "normal range", "wet", "extremely wet"];
-
-        // loop through our dryLevels intervals and generate a label with a colored square for each interval
-        for (let i = 0; i < dryLevels.length; i++) {
-            div.innerHTML +=
-                '<i style="background:' + getColor(dryLevels[i]) + ';"></i> ' +
-                dryLevels[i] + '<br>';
-        }
-
-        return div;
-    }
-    dryLevelLegend.addTo(mapObj);
-}
-
 let minStreamOrder;
 let updateHydroSOSStreamflowLayer = function(date) {
     let getMinStreamOrder = function() {
@@ -615,7 +679,7 @@ let removeWithTimeout = function(layer) {
     setTimeout(() => mapObj.removeLayer(layer), 10);
 }
 
-let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
+let addOtherTabLayers = function(date) { // yyyy-mm-01
     function getSoilMoistureLayer(date) {
         return new Promise(function (resolve, reject) {
             $.ajax({
@@ -676,6 +740,9 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
     if (hydroSOSStreamflowLayer != null) {
         mapObj.removeLayer(hydroSOSStreamflowLayer);
     }
+    if (geeSPILayer != null) {
+        mapObj.removeLayer(geeSPILayer);
+    }
 
     if (layerControl != null) {
         layerControl.remove();
@@ -692,37 +759,12 @@ let addOtherHydroSOSLayers = function(date) { // yyyy-mm-01
                 "HydroSOS Soil Moisture": soilMoistureLayer,
                 "HydroSOS Precipitation": precipitationLayer,
             };
-
             layerControl = L.control.layers(basemaps, overlayMaps, {
                 collapsed: false,
             }).addTo(mapObj);
 
             soilMoistureLayer.addTo(mapObj);
             currentHydroSOSLayer = soilMoistureLayer;
-            // make 2 hydroSOS layers mutually exclusive 
-            mapObj.on("overlayadd", function(e) {
-                if ([soilMoistureLayer, precipitationLayer].includes(e.layer)) {
-                    if (currentHydroSOSLayer != null) {
-                        removeWithTimeout(currentHydroSOSLayer);
-                        // TODO explain: https://gis.stackexchange.com/questions/382017/leaflet-mutually-exclusive-overlay-layers-overlayadd-event-firing-twice
-                    }
-                    currentHydroSOSLayer = e.layer;
-                }
-            })
-
-            mapObj.on("overlayremove", function(e) {
-                if ([soilMoistureLayer, precipitationLayer].includes(e.layer) && currentHydroSOSLayer == e.layer) {
-                    currentHydroSOSLayer = null;
-                }
-            })
-
-            if (!mapObj.hasLayer(soilMoistureLayer) && !mapObj.hasLayer(precipitationLayer)) {
-                soilMoistureLayer.addTo(mapObj);
-            } else if (mapObj.hasLayer(soilMoistureLayer)) {
-                soilMoistureLayer.addTo(mapObj);
-            } else if (mapObj.hasLayer(precipitationLayer)) {
-                precipitationLayer.addTo(mapObj);
-            }
         })
 }
 
