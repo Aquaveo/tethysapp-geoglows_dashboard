@@ -7,7 +7,7 @@ class GeoglowsDashboard(TethysAppBase):
     Tethys app class for Geoglows Dashboard.
     """
 
-    name = 'Geoglows Dashboard'
+    name = 'Geoglows Dashboard (Experimental)'
     description = ''
     package = 'geoglows_dashboard'  # WARNING: Do not change this value
     index = 'home'
