@@ -4,11 +4,12 @@
 }
 
 #outer-container {
-    height: calc(100vh - 120px); /* 50 header + 40 tab + 10 margin-top + 10 margin-bottom*/
+    height: calc(100vh - 60px); /* 50 header + 40 tab + 10 margin-top + 10 margin-bottom*/
     color:white;
+    padding: 12px;
 }
 
-#nav-div {
+/* #nav-div {
     margin-bottom: 10px; 
     border-top: white 1px solid;
 }
@@ -33,7 +34,7 @@ a.nav-link:hover {
 .nav-link.active {
     background-color: #9EB384;
     color: white;
-}
+} */
 
 .card-header {
     background-color: #9EB384;
