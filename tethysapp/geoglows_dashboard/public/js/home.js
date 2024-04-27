@@ -1,3 +1,7 @@
+/************************************************************************
+*                       TAB DATA
+*************************************************************************/
+
 const streamTabID = "#stream-tab", otherTabID = "#other-tab";
 const forecastPlotID = "forecast", 
     historicalPlotID = "historical", 
@@ -13,7 +17,7 @@ const forecastPlotID = "forecast",
     ERA5PrecipPlotID = "era5-precip",
     GFSForecasePlotID = "gfs-forecast";
 
-let tabsData = {
+const tabsData = {
     [streamTabID]: {
         "startDate": "1940-01",
         "endDate": "2022-12",
@@ -120,6 +124,14 @@ let tabsData = {
 }
 
 
+let selectedTab = streamTabID;
+let selectedReachID;
+
+
+/************************************************************************
+*                       INITIALIZE THE PAGE
+*************************************************************************/
+
 $(function() {
     initTabs();
     initPlotCards();
@@ -128,21 +140,6 @@ $(function() {
 })
 
 
-/////////////////// Initialize the Page ///////////////////
-
-let cardBodyInitialHeight = $(".plot-div").height();
-let resize = function() {
-    $(".plotly-graph-div").each(function(index, div) {
-        Plotly.relayout(div, {
-            "height": cardBodyInitialHeight,
-            "width": $(".plot-div").width()
-        });
-    })
-}
-window.addEventListener("resize", resize);
-
-
-let selectedTab = streamTabID;
 let initTabs = function() {
     for (let tab in tabsData) {
         $(tab).on('click', function(event) {
@@ -167,7 +164,9 @@ let initMapCard = function() {
 }
 
 
-/////////////////// Initialize the Map Card Header ///////////////////
+/************************************************************************
+*                       INITIALIZE MAP CARD HEADER
+*************************************************************************/
 
 let updateSelectedReachByID = function(reachID, isSubbasinOutlet=false) {
     $('#reach-id-input').val(reachID);
@@ -178,8 +177,9 @@ let updateSelectedReachByID = function(reachID, isSubbasinOutlet=false) {
             showPlotContainerMessages();
         })
 }
-let selectedYearMonth = $('#year-month-picker').val();
 
+
+let selectedYearMonth = $('#year-month-picker').val();
 let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
         $('#search-addon').click(function() {
@@ -239,7 +239,9 @@ let updateYearMonthPicker = function() {
 }
 
 
-/////////////////// Initialize the Map Card Body ///////////////////
+/************************************************************************
+*                       INITIALIZE MAP CARD BODY
+*************************************************************************/
 
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
@@ -264,12 +266,13 @@ const basemaps = {
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
 
-let layerControl, soilMoistureLayer, precipitationLayer, hydroSOSStreamflowLayer, geeSPILayer;
+let layerControl, soilMoistureLayer, precipitationLayer, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer;
+let currentStreamflowLayer, currentHydroSOSLayer;
+let geoglowsLegend, hydroSOSLegend, spiLegend;
+
 let drawControl, drawnFeatures, drawnType, drawnCoordinates;
 let isDrawing = false;
-let currentStreamflowLayer, currentHydroSOSLayer;
 
-let geoglowsLegend, hydroSOSLegend, spiLegend;
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
     geoglowsLegend.onAdd = function() {
@@ -318,7 +321,7 @@ let initHydroSOSLegend = function() {
 }
 
 let initMapCardBody = function() {
-    let initSubbasinLayer = function() {
+    let addSubbasinLayer = function() {
         function onEachFeature(feature, layer) {
             let riverID = feature.properties['River ID'];
             layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
@@ -331,8 +334,9 @@ let initMapCardBody = function() {
                 updateSelectedReachByID(riverID, isSubbasinOutlet=true);
             })
         }
-    
-        fetch("/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson")
+
+        if (subbasinLayer == null) {
+            fetch("/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson")
             .then((response) => {
                 if (!response.ok) {
                     throw new Error("nile_sub_basins was not ok");
@@ -341,7 +345,7 @@ let initMapCardBody = function() {
             })
             .then((data) => {
                 data = JSON.parse(JSON.stringify(data));
-                let subbasinLayer = L.geoJSON(data, {
+                subbasinLayer = L.geoJSON(data, {
                     style: {
                         "color": "#3388ff",
                         "weight": 2
@@ -355,21 +359,29 @@ let initMapCardBody = function() {
             .catch((error) => {
                 console.error("Error:", error);
             });
+        } else {
+            mapObj.fitBounds(subbasinLayer.getBounds());
+            layerControl.addOverlay(subbasinLayer, "Subbasins");
+        }
     }
 
     let addGEESPILayer = function() {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getGEEMapLayer,
-            success: function(response) {
-                geeSPILayer = L.tileLayer(response['url']);
-                layerControl.addOverlay(geeSPILayer, "CHIRPS SPI");
-            },
-            error: function(error) {
-                console.log(error)
-            }
-        })
+        if (geeSPILayer == null) {
+            $.ajax({
+                type: "GET",
+                async: true,
+                url: URL_getGEEMapLayer,
+                success: function(response) {
+                    geeSPILayer = L.tileLayer(response['url']);
+                    layerControl.addOverlay(geeSPILayer, "CHIRPS SPI");
+                },
+                error: function(error) {
+                    console.log(error)
+                }
+            })
+        } else {
+            layerControl.addOverlay(geeSPILayer, "CHIRPS SPI");
+        }
     }
 
     let addStreamTabLayers = function() {
@@ -378,20 +390,18 @@ let initMapCardBody = function() {
         }
         if (currentHydroSOSLayer) {
             currentHydroSOSLayer.remove();
-            currentHydroSOSLayer = null;
+            hydroSOSLegend.remove();
         }
-        hydroSOSLegend.remove();
 
         updateHydroSOSStreamflowLayer($("#year-month-picker").val());
-        initSubbasinLayer(); // TODO no need to send a new request every time
-        addGEESPILayer();  // TODO no need to send a new request every time
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
             {collapsed: false}
         ).addTo(mapObj);
         geoglowsStreamflowLayer.addTo(mapObj);
-        currentStreamflowLayer = geoglowsStreamflowLayer;
+        addSubbasinLayer(); 
+        addGEESPILayer();
     }
 
     let refreshGeoglowsStreamflowLayer = function() {
@@ -509,6 +519,26 @@ let initMapCardBody = function() {
                 currentHydroSOSLayer = null;
             }
         })
+
+        mapObj.on('click', function(event) {
+            if (!isDrawing) {
+                if (mapMarker) {
+                    mapObj.removeLayer(mapMarker);
+                }
+                if (selectedStream) {
+                    selectedStream.clearLayers();
+                }
+                mapMarker = L.marker(event.latlng).addTo(mapObj);
+                mapObj.flyTo(event.latlng, 10);
+                showSpinners();
+                findReachIDByLatLon(event)
+                    .then(initSelectedPlots)
+                    .catch(error => {
+                        alert(error);
+                        showPlotContainerMessages();
+                    })
+            }        
+        })
     }
 
     if (resetButton == null) {
@@ -568,8 +598,6 @@ let initMapCardBody = function() {
             selectedStream.addTo(mapObj);
         }
         addStreamTabLayers();
-        // re-zoom mapObj
-        mapObj.setView([0, 0], 3);
     } else {
         // remove markers from streamflow tab
         if (mapMarker) {
@@ -589,26 +617,6 @@ let initMapCardBody = function() {
             mapObj.fitBounds(selectedCountry.getBounds());
         }
     }
-
-    mapObj.on('click', function(event) {
-        if (!isDrawing) {
-            if (mapMarker) {
-                mapObj.removeLayer(mapMarker);
-            }
-            if (selectedStream) {
-                selectedStream.clearLayers();
-            }
-            mapMarker = L.marker(event.latlng).addTo(mapObj);
-            mapObj.flyTo(event.latlng, 10);
-            showSpinners();
-            findReachIDByLatLon(event)
-                .then(initSelectedPlots)
-                .catch(error => {
-                    alert(error);
-                    showPlotContainerMessages();
-                })
-        }        
-    })
 };
 
 ///// HydroSOS Layers /////
@@ -680,7 +688,7 @@ let removeWithTimeout = function(layer) {
 }
 
 let addOtherTabLayers = function(date) { // yyyy-mm-01
-    function getSoilMoistureLayer(date) {
+    let getSoilMoistureLayer = function(date) {
         return new Promise(function (resolve, reject) {
             $.ajax({
                 type: "GET",
@@ -706,7 +714,7 @@ let addOtherTabLayers = function(date) { // yyyy-mm-01
         })
     }
 
-    function getPrecipitationLayer(date) {
+    let getPrecipitationLayer = function(date) {
         return new Promise(function (resolve, reject) {
             $.ajax({
                 type: "GET",
@@ -777,7 +785,9 @@ let hasDrawnArea = function() {
 }
 
 
-/////////////////// Utilities for Loading Plots ///////////////////
+/************************************************************************
+*                       INITIALIZE PLOT CARDS
+*************************************************************************/
 
 
 let yearPickerValues = [$(".year-picker:eq(0)").val(), $(".year-picker:eq(1)").val()];
@@ -823,7 +833,7 @@ let initPlotCards = function() {
         $(".plot-select").not(this).find('option[value="' + plotID + '"]').prop('disabled', true);
     })
 
-    //////////// init datepickers //////////// TODO don't init it every time switching the tab
+    //////////// init datepickers //////////// 
     $('.year-picker').datepicker({
         minViewMode: 'years',
         format: 'yyyy',
@@ -888,9 +898,12 @@ let initPlotCards = function() {
     })
 }
 
+/************************************************************************
+*                       UTILITIES FOR LOADING PLOTS
+*************************************************************************/
 
 let initSelectedPlots = function(isNewArea=false, isNewYear=false, isNewMonth=false) {
-    $(".plot-card").each(function(index, card) {
+    $(".plot-card").each(function(_index, card) {
         getSelectedPlot(card, isNewArea, isNewYear, isNewMonth);
     })
 }
@@ -962,7 +975,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
     }
 }
 
-let selectedReachID;
+
 let requestPlotData = function(plotID, selectedYear, selectedMonth, startDate, endDate) {
     console.log("sending a request for " + plotID + " plot");
     switch (plotID) {
@@ -987,6 +1000,18 @@ let requestPlotData = function(plotID, selectedYear, selectedMonth, startDate, e
             return getGeePlot(plotID, startDate, endDate);
     }
 }
+
+// resize the plot div
+const cardBodyInitialHeight = $(".plot-div").height();
+let resize = function() {
+    $(".plotly-graph-div").each(function(_index, div) {
+        Plotly.relayout(div, {
+            "height": cardBodyInitialHeight,
+            "width": $(".plot-div").width()
+        });
+    })
+}
+window.addEventListener("resize", resize);
 
 
 let drawPlot = function(plotCard) {
@@ -1224,7 +1249,9 @@ let getGeePlot = function(plotID, startDate, endDate) {
 }
 
 
-/////////////////// Admin Settings ///////////////////
+/************************************************************************
+*                       ADMIN SETTINGS
+*************************************************************************/
 
 let initAdminSettings = function() {
     initAllCountries();
@@ -1232,7 +1259,6 @@ let initAdminSettings = function() {
 
 let allCountries = {};
 let initAllCountries = function() {
-    // load countries
     fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
         .then((response) => {
             if (!response.ok) {
@@ -1285,7 +1311,7 @@ let addCountry = function() {
         url: URL_country,
         data: JSON.stringify(data),
         dataType: "json",
-        success: function(response) {
+        success: function(_response) {
             $("#submit-btn").prop("disabled", false);
             $("#submit-btn").find(".spinner-border").addClass("d-none");
             showCountryList();
