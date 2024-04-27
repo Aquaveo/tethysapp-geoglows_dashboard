@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block app_content %}
-<div id="nav-div">
+{% comment %} <div id="nav-div">
   <ul class="nav">
     <li class="nav-item">
       <a class="nav-link active" aria-current="page" href="" id="stream-tab">Streamflow</a>
@@ -19,17 +19,17 @@
       <a class="nav-link" href="" id="other-tab">Other</a>
     </li>
   </ul>
-</div>
+</div> {% endcomment %}
 <div class="container-fluid" id="outer-container">
   <div class="row" style="height:100%">
     <div class="col-md-7">
         <div class="card h-100">
         <div class="card-header">
             <div class="row">
-              <div class="col-md-4 option-div" id="country-select">
+              {% comment %} <div class="col-md-4 option-div" id="country-select">
                   <label>Country: </label>
                   <select id="country-selector"></select>
-              </div>
+              </div> {% endcomment %}
               <div class="col-md-4 option-div">
                 <label>Reach ID: </label>
                 <div class="input-group rounded">
