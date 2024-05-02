@@ -384,7 +384,7 @@ let initMapCardBody = function() {
         }
     }
 
-    let addStreamTabLayers = function() {
+    let addStreamTabLayers = async function() {
         if (layerControl != null) {
             layerControl.remove();
         }
@@ -393,7 +393,7 @@ let initMapCardBody = function() {
             hydroSOSLegend.remove();
         }
 
-        updateHydroSOSStreamflowLayer($("#year-month-picker").val());
+        await updateHydroSOSStreamflowLayer($("#year-month-picker").val())
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
@@ -648,9 +648,27 @@ let getHydroSOSCountryDryLevelStyle = function(feature) {
     };
 }
 
+let geoserverEndpoint;
+let getGeoserverEndpoint = function() {
+    return new Promise(function(resolve, reject) {
+        $.ajax({
+            type: "GET",
+            async: true,
+            url: 'get_geoserver_endpoint',
+            success: function(response) {
+                geoserverEndpoint = response['endpoint'];
+                resolve("get the geoserver endpoint: " + geoserverEndpoint);
+            },
+            error: function() {
+                reject("fail to get geoserver endpoint");
+            }
+        })
+    });
+    
+}
 
 let minStreamOrder;
-let updateHydroSOSStreamflowLayer = function(date) {
+let updateHydroSOSStreamflowLayer = async function(date) {
     let getMinStreamOrder = function() {
         let currentZoom = mapObj.getZoom();
         if (currentZoom <= 2) {
@@ -663,13 +681,17 @@ let updateHydroSOSStreamflowLayer = function(date) {
     }
 
     if (!hydroSOSStreamflowLayer) {
-        hydroSOSStreamflowLayer = L.tileLayer.wms("http://localhost:8181/geoserver/geoglows_dashboard/wms", {
-            layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
-            format: 'image/png',
-            transparent: true,
-            viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`
-        });
-
+        try {
+            await getGeoserverEndpoint()
+            hydroSOSStreamflowLayer = L.tileLayer.wms(`${geoserverEndpoint}geoglows_dashboard/wms`, {
+                layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
+                format: 'image/png',
+                transparent: true,
+                viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`
+            });
+        } catch(error) {
+            console.error("Error occurred while fetching Geoserver endpoint:", error);
+        }
         // update the layer every time we zoom in/out
         mapObj.on("zoomend", function() {
             let newMinStreamOrder = getMinStreamOrder();
