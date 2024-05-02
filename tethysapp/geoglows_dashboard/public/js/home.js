@@ -683,7 +683,7 @@ let updateHydroSOSStreamflowLayer = async function(date) {
     if (!hydroSOSStreamflowLayer) {
         try {
             await getGeoserverEndpoint()
-            hydroSOSStreamflowLayer = L.tileLayer.wms(`${geoserverEndpoint}geoglows_dashboard/wms`, {
+            hydroSOSStreamflowLayer = L.tileLayer.wms(`${geoserverEndpoint}/geoglows_dashboard/wms`, {
                 layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
                 format: 'image/png',
                 transparent: true,

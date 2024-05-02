@@ -104,8 +104,7 @@ def home(request):
 @controller(url='get_geoserver_endpoint')
 def get_geoserver_endpoint(request):
     endpoint = app.get_spatial_dataset_service('primary_geoserver', as_endpoint=True)
-    endpoint = endpoint.replace('rest/', '')
-    return JsonResponse(dict(endpoint=endpoint))
+    return JsonResponse(dict(endpoint=endpoint.split('/rest')[0]))
     
 
 @controller(url='get_reach_latlon')
