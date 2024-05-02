@@ -22,5 +22,5 @@ def gee_initialization():
     else:
         try:
             ee.Initialize()
-        except EEException:
+        except:
             log.warning('Unable to initialize GEE with local credentials. If installing ignore this warning.')
