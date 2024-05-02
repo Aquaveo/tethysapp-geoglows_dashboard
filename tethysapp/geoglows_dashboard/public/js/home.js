@@ -1100,7 +1100,7 @@ let findLatLonByReachID = function(reachID, isSubbasinOutlet=false) {
 let findReachIDByLatLon = function(event) {
     return new Promise(function(resolve, reject) {
         $.get({
-            url: 'http://geoglows.ecmwf.int/api/v2/getReachID',
+            url: 'https://geoglows.ecmwf.int/api/v2/getReachID',
             data: {'lat': event.latlng['lat'], 'lon': event.latlng['lng']},
             success: function(response) {
                 selectedReachID = response.reach_id;
