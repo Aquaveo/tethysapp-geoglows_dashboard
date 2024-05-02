@@ -101,6 +101,13 @@ def home(request):
     return render(request, 'geoglows_dashboard/home.html', context)
 
 
+@controller(url='get_geoserver_endpoint')
+def get_geoserver_endpoint(request):
+    endpoint = app.get_spatial_dataset_service('primary_geoserver', as_endpoint=True)
+    endpoint = endpoint.replace('rest/', '')
+    return JsonResponse(dict(endpoint=endpoint))
+    
+
 @controller(url='get_reach_latlon')
 def get_reach_latlon(request):
     reach_id = int(request.GET['reach_id'])
