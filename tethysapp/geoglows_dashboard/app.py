@@ -11,7 +11,7 @@ class GeoglowsDashboard(TethysAppBase):
     description = ''
     package = 'geoglows_dashboard'  # WARNING: Do not change this value
     index = 'home'
-    icon = f'{package}/images/icon.gif'
+    icon = f'{package}/images/icon.png'
     root_url = 'geoglows-dashboard'
     color = '#435334'
     tags = ''
