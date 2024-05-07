@@ -1122,10 +1122,10 @@ let findLatLonByReachID = function(reachID, isSubbasinOutlet=false) {
 let findReachIDByLatLon = function(event) {
     return new Promise(function(resolve, reject) {
         $.get({
-            url: 'https://geoglows.ecmwf.int/api/v2/getReachID',
+            url: 'https://geoglows.ecmwf.int/api/v2/getriverid',
             data: {'lat': event.latlng['lat'], 'lon': event.latlng['lng']},
             success: function(response) {
-                selectedReachID = response.reach_id;
+                selectedReachID = response.river_id;
                 $('#reach-id-input').val(selectedReachID);
                 resolve("success in getting the reach id!");
             },
