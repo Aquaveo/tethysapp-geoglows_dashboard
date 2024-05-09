@@ -7,7 +7,7 @@ class GeoglowsDashboard(TethysAppBase):
     Tethys app class for Geoglows Dashboard.
     """
 
-    name = 'Geoglows Dashboard (Experimental)'
+    name = 'Nile River Basin Regional Monitoring and Forecasting System with GEOGLOWS'
     description = ''
     package = 'geoglows_dashboard'  # WARNING: Do not change this value
     index = 'home'

@@ -397,7 +397,7 @@ let initMapCardBody = function() {
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
-            {collapsed: false}
+            {collapsed: true, position: 'topleft'}
         ).addTo(mapObj);
         geoglowsStreamflowLayer.addTo(mapObj);
         addSubbasinLayer(); 
@@ -478,12 +478,14 @@ let initMapCardBody = function() {
                 if (currentStreamflowLayer == hydroSOSStreamflowLayer) {
                     removeWithTimeout(currentStreamflowLayer);
                 }
+                $('#year-month-picker-div').css('display', 'none');
                 geoglowsLegend.addTo(mapObj);
                 currentStreamflowLayer = geoglowsStreamflowLayer;
             } else if (e.layer == hydroSOSStreamflowLayer) {
                 if (currentStreamflowLayer == geoglowsStreamflowLayer) {
                     removeWithTimeout(currentStreamflowLayer);
                 }
+                $('#year-month-picker-div').css('display', 'flex')
                 hydroSOSLegend.addTo(mapObj);
                 currentStreamflowLayer = hydroSOSStreamflowLayer;
             } else if (e.layer == geeSPILayer) {
@@ -508,6 +510,7 @@ let initMapCardBody = function() {
                 geoglowsLegend.remove();
             } else if (e.layer == hydroSOSStreamflowLayer) {
                 hydroSOSLegend.remove();
+                $('#year-month-picker-div').css('display', 'none')
             } else if (e.layer == geeSPILayer) {
                 spiLegend.remove();
             } else if (e.layer == precipitationLayer || e.layer == soilMoistureLayer) {
