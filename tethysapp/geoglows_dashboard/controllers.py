@@ -133,7 +133,6 @@ def format_plot(plot):
 def get_forecast_plot(request):
     reach_id = int(request.GET['reach_id'])
 
-    # get forecast data
     forecast_file_path = os.path.join(cache_dir_path, f'forecast-{reach_id}.csv')
     if os.path.exists(forecast_file_path):
         df_forecast = pd.read_csv(forecast_file_path, parse_dates=['time'], index_col=[0])
@@ -141,17 +140,7 @@ def get_forecast_plot(request):
         df_forecast = geoglows.data.forecast(river_id=reach_id)
         df_forecast.to_csv(forecast_file_path)
 
-    # get return periods data
-    rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
-    if os.path.exists(rperiods_file_path):
-        df_rperiods = pd.read_csv(rperiods_file_path, index_col=[0])
-        df_rperiods.columns = df_rperiods.columns.astype('int')
-        df_rperiods.columns.name = 'return_period'
-    else:
-        df_rperiods = geoglows.data.return_periods(river_id=reach_id)
-        df_rperiods.to_csv(rperiods_file_path)
-
-    plot = geoglows.plots.forecast(df=df_forecast, rp_df=df_rperiods)
+    plot = geoglows.plots.forecast(df=df_forecast)
     return JsonResponse(dict(forecast=format_plot(plot)))
 
 
@@ -160,7 +149,6 @@ def get_historical_plot(request):
     reach_id = int(request.GET['reach_id'])
     selected_year = int(request.GET['selected_year'])
 
-    # get historical data
     retro_file_path = os.path.join(cache_dir_path, f'retro-{reach_id}.csv')
     if os.path.exists(retro_file_path):
         df_retro = pd.read_csv(retro_file_path, parse_dates=['time'], index_col=[0])
@@ -170,17 +158,7 @@ def get_historical_plot(request):
         df_retro = geoglows.data.retrospective(reach_id)
         df_retro.to_csv(retro_file_path)
 
-    # get return periods data
-    rperiods_file_path = os.path.join(cache_dir_path, f'rperiods-{reach_id}.csv')
-    if os.path.exists(rperiods_file_path):
-        df_rperiods = pd.read_csv(rperiods_file_path, index_col=[0])
-        df_rperiods.columns = df_rperiods.columns.astype('int')
-        df_rperiods.columns.name = 'return_period'
-    else:
-        df_rperiods = geoglows.data.return_periods(river_id=reach_id)
-        df_rperiods.to_csv(rperiods_file_path)
-
-    historical_plot = geoglows.plots.retrospective(df=df_retro, rp_df=df_rperiods)
+    historical_plot = geoglows.plots.retrospective(df=df_retro)
     flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_retro)
     return JsonResponse(dict(
         historical=format_plot(historical_plot),
