@@ -42,7 +42,7 @@ def get_SSI_data(df_retro):
         df_mean = filtered_df.iloc[:, 0].mean()
         df_std_dev = filtered_df.iloc[:, 0].std()
         filtered_df['cumulative_probability'] = filtered_df.iloc[:, 0].apply(
-            lambda x, df_mean=df_mean, df_std_dev=df_std_dev: stats.norm.cdf(x, df_mean, df_std_dev)
+            lambda x, df_mean=df_mean, df_std_dev=df_std_dev: 1-stats.norm.cdf(x, df_mean, df_std_dev)
         )
         filtered_df['probability_less_than_0.5'] = filtered_df['cumulative_probability'] < 0.5
         filtered_df['p'] = filtered_df['cumulative_probability']
@@ -66,7 +66,7 @@ def get_SSI_monthly_data(df, month):
     filtered_df = monthly_average[monthly_average.index.month == month].copy()
     mean = filtered_df.iloc[:, 0].mean()
     std_dev = filtered_df.iloc[:, 0].std()
-    filtered_df['cumulative_probability'] = filtered_df.iloc[:, 0].apply(lambda x: stats.norm.cdf(x, mean, std_dev))
+    filtered_df['cumulative_probability'] = filtered_df.iloc[:, 0].apply(lambda x: 1-stats.norm.cdf(x, mean, std_dev))
     filtered_df['probability_less_than_0.5'] = filtered_df['cumulative_probability'] < 0.5
     filtered_df['p'] = filtered_df['cumulative_probability']
     filtered_df.loc[filtered_df['cumulative_probability'] > 0.5, 'p'] = 1 - filtered_df['cumulative_probability']
