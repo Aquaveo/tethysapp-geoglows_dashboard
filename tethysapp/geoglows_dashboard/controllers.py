@@ -4,6 +4,7 @@ import ast
 import ee
 import os
 import io
+import requests
 
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -132,12 +133,15 @@ def format_plot(plot):
 @controller(name='get_forecast_plot', url='get_forecast_plot')
 def get_forecast_plot(request):
     reach_id = int(request.GET['reach_id'])
-
     forecast_file_path = os.path.join(cache_dir_path, f'forecast-{reach_id}.csv')
     if os.path.exists(forecast_file_path):
         df_forecast = pd.read_csv(forecast_file_path, parse_dates=['time'], index_col=[0])
     else:
-        df_forecast = geoglows.data.forecast(river_id=reach_id)
+        url = f'https://geoglows.ecmwf.int/api/v2/forecast/{reach_id}'
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise RuntimeError(f'Failed to fetch data for the river {reach_id}: ' + response.text)
+        df_forecast = pd.read_csv(io.StringIO(response.text))
         df_forecast.to_csv(forecast_file_path)
 
     plot = geoglows.plots.forecast(df=df_forecast)

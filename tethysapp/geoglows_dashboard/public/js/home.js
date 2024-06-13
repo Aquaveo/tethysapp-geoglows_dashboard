@@ -248,7 +248,7 @@ const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
 let mapObj, resetButton, mapMarker, selectedStream, selectedCountry, selectedSubbasin;
 const geoglowsStreamflowLayer = L.esri.dynamicMapLayer({
-    url: "https://livefeeds2.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
+    url: "https://livefeeds3.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
     layers: [0],
     from: startDateTime,
     to: endDateTime,
