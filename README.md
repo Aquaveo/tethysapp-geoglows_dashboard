@@ -20,7 +20,7 @@
 
     | Dataset                                                      | Path                                                         |
     | ------------------------------------------------------------ | ------------------------------------------------------------ |
-    | [combined_all_data_101.nc](https://drive.google.com/file/d/1YO6SVNeRK3D6qYXISEKKiKAWMITsO438/view) | `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace` |
+    | [combined_all_data_122.nc](https://byu.app.box.com/s/j67orkjccn2u0bgwe38bj2dxy4yuo3xp) | `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace/hydrosos/streamflow/vpu_122` |
 
 
 4. Install this app in Tethys:
@@ -122,8 +122,8 @@
    ```
 
 10. Load the data to the database:
-    - Enter the folder `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/analysis/data_prep`
-    - Run the command `tethys manage shell < init_river_tables.py`, then wait for 20~30 minutes for it to be finished
+   - Enter the folder `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard`
+   - Run the command `tethys manage shell < init_river_tables.py`, then wait for 3~6 hours for it to be finished
 
 ### Set Up the GeoServer 
 
