@@ -20,7 +20,7 @@
 
     | Dataset                                                      | Path                                                         |
     | ------------------------------------------------------------ | ------------------------------------------------------------ |
-    | [combined_all_data_101.nc](https://byu-my.sharepoint.com/:u:/g/personal/rhuber6_byu_edu/EfRiUc3akuBEss42TOGXryUBJ-CIG66y5AR4Uqi3JISRMQ) | `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace` |
+    | [combined_all_data_101.nc](https://drive.google.com/file/d/1YO6SVNeRK3D6qYXISEKKiKAWMITsO438/view) | `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace` |
 
 
 4. Install this app in Tethys:

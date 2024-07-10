@@ -1,4 +1,0 @@
-[ZoneTransfer]
-ZoneId=3
-ReferrerUrl=http://geoglows-v2.s3-website-us-west-2.amazonaws.com/
-HostUrl=https://geoglows-v2.s3-us-west-2.amazonaws.com/streams-global/global_streams_simplified.gpkg
