@@ -250,6 +250,7 @@ let mapObj, resetButton, mapMarker, selectedStream, selectedCountry, selectedSub
 const geoglowsStreamflowLayer = L.esri.dynamicMapLayer({
     url: "https://livefeeds3.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
     layers: [0],
+    layerDefs: {0: "vpu = 122"},
     from: startDateTime,
     to: endDateTime,
     opacity: 0.7
@@ -1378,17 +1379,16 @@ let removeCountry = function() {
 
 ///// Get all countries /////
 
+// Zoom into the selectedCountry
+let zoomInTo = function(countryGeoJSON) {
+    selectedCountry.clearLayers();
+    selectedCountry.addData(countryGeoJSON);
+    mapObj.fitBounds(selectedCountry.getBounds());
+}
+
 // Dispaly all existing countries in the country list
 let existingCountries, countryToRemove;
 let initCountryList = function() {
-
-    let zoomInTo = function(countryGeoJSON) {
-        selectedCountry.clearLayers();
-        selectedCountry.addData(countryGeoJSON);
-        mapObj.fitBounds(selectedCountry.getBounds());
-    }
-
-
     $.ajax({
         type: "GET",
         url: URL_country,
@@ -1457,10 +1457,6 @@ let initCountryList = function() {
                     }
                     selectedCountry.addData(allCountries[country].geometry);
                 }
-
-                $("#country-selector").on("change", function() {
-                    zoomInTo(allCountries[$(this).val()].geometry);
-                })
             }
 
             $("#country-list-ul").append($(
@@ -1489,6 +1485,14 @@ let initCountryList = function() {
         }
     })
 };
+
+
+$("#country-selector").on("change", function() {
+    zoomInTo(allCountries[$(this).val()].geometry);
+    geoglowsStreamflowLayer.setLayerDefs(
+        {0: `rivercountry = '${$(this).val()}'`}
+    );
+});
 
 
 // switch between "country list" row and "add new country" row
