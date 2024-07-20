@@ -135,8 +135,8 @@ let selectedReachID;
 $(function() {
     initTabs();
     initPlotCards();
-    initMapCard();
     initAdminSettings();
+    initMapCard();
 })
 
 
@@ -321,6 +321,37 @@ let initHydroSOSLegend = function() {
     }
 }
 
+let getSelectedArea = function() {
+    let area;
+    if (selectedCountry && selectedCountry.getLayers().length != 0) {
+        area = selectedCountry.toGeoJSON();
+    } else if(mapObj.hasLayer(subbasinLayer)) {
+        area = subbasinLayer.toGeoJSON();
+    }
+    return area;
+}
+
+let isPointInSelectedArea = function(point) {
+    let area = getSelectedArea();
+    if (!area) return true;
+
+    let inside = false;
+    area.features.forEach(function(feature) {
+        if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+            if (turf.booleanPointInPolygon(point, feature.geometry)) {
+                inside = true;
+            }
+        }
+    })
+    return inside;
+}
+
+let removeMapMarker = function() {
+    if (mapMarker) {
+        mapObj.removeLayer(mapMarker);
+    }
+}
+
 let initMapCardBody = function() {
     let addSubbasinLayer = function() {
         function onEachFeature(feature, layer) {
@@ -349,7 +380,9 @@ let initMapCardBody = function() {
                 subbasinLayer = L.geoJSON(data, {
                     style: {
                         "color": "#3388ff",
-                        "weight": 2
+                        "weight": 2,
+                        "opacity": 1,
+                        "fillOpacity": 0
                     },
                     onEachFeature: onEachFeature
                 });
@@ -361,7 +394,6 @@ let initMapCardBody = function() {
                 console.error("Error:", error);
             });
         } else {
-            mapObj.fitBounds(subbasinLayer.getBounds());
             layerControl.addOverlay(subbasinLayer, "Subbasins");
         }
     }
@@ -394,7 +426,7 @@ let initMapCardBody = function() {
             hydroSOSLegend.remove();
         }
 
-        await updateHydroSOSStreamflowLayer($("#year-month-picker").val())
+        await updateHydroSOSStreamflowLayer($("#year-month-picker").val());
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
@@ -473,8 +505,8 @@ let initMapCardBody = function() {
         initGeoglowsStreamflowLegend();
         initSPILegend();
 
-        // make geoglows and hydrosos streamflow mutually exclusive
         mapObj.on("overlayadd", function(e) {
+            // make geoglows and hydrosos streamflow mutually exclusive
             if (e.layer == geoglowsStreamflowLayer) {
                 if (currentStreamflowLayer == hydroSOSStreamflowLayer) {
                     removeWithTimeout(currentStreamflowLayer);
@@ -489,6 +521,10 @@ let initMapCardBody = function() {
                 $('#year-month-picker-div').css('display', 'flex')
                 hydroSOSLegend.addTo(mapObj);
                 currentStreamflowLayer = hydroSOSStreamflowLayer;
+            } else if (e.layer == subbasinLayer) {
+                selectedCountry.clearLayers();
+                mapObj.fitBounds(subbasinLayer.getBounds());
+                geoglowsStreamflowLayer.setLayerDefs({0: 'vpu = 122'});
             } else if (e.layer == geeSPILayer) {
                 spiLegend.addTo(mapObj);
             } else if (e.layer == soilMoistureLayer) {
@@ -526,21 +562,22 @@ let initMapCardBody = function() {
 
         mapObj.on('click', function(event) {
             if (!isDrawing) {
-                if (mapMarker) {
-                    mapObj.removeLayer(mapMarker);
+                let point = turf.point([event.latlng.lng, event.latlng.lat]);
+                if (isPointInSelectedArea(point)) {
+                    removeMapMarker();
+                    if (selectedStream) {
+                        selectedStream.clearLayers();
+                    }
+                    mapMarker = L.marker(event.latlng).addTo(mapObj);
+                    mapObj.flyTo(event.latlng, 10);
+                    showSpinners();
+                    findReachIDByLatLon(event)
+                        .then(initSelectedPlots)
+                        .catch(error => {
+                            alert(error);
+                            showPlotContainerMessages();
+                        })
                 }
-                if (selectedStream) {
-                    selectedStream.clearLayers();
-                }
-                mapMarker = L.marker(event.latlng).addTo(mapObj);
-                mapObj.flyTo(event.latlng, 10);
-                showSpinners();
-                findReachIDByLatLon(event)
-                    .then(initSelectedPlots)
-                    .catch(error => {
-                        alert(error);
-                        showPlotContainerMessages();
-                    })
             }        
         })
     }
@@ -1380,14 +1417,14 @@ let removeCountry = function() {
 ///// Get all countries /////
 
 // Zoom into the selectedCountry
-let zoomInTo = function(countryGeoJSON) {
+let zoomInToCountry = function(countryGeoJSON) {
     selectedCountry.clearLayers();
     selectedCountry.addData(countryGeoJSON);
     mapObj.fitBounds(selectedCountry.getBounds());
 }
 
 // Dispaly all existing countries in the country list
-let existingCountries, countryToRemove;
+let existingCountries, countryToRemove, defaultCountry;
 let initCountryList = function() {
     $.ajax({
         type: "GET",
@@ -1438,7 +1475,7 @@ let initCountryList = function() {
                         data: JSON.stringify({"country": country}),
                         success: function(success) {
                             console.log(success);
-                            zoomInTo(allCountries[country].geometry);
+                            zoomInToCountry(allCountries[country].geometry);
                         },
                         error: function(error) {
                             console.log(error);
@@ -1448,14 +1485,14 @@ let initCountryList = function() {
 
                 // zoom in to the default country when loading the website
                 if (isDefault) {
-                    if (selectedCountry) {
-                        selectedCountry.clearLayers();
-                    } else {
+                    if (!selectedCountry) {
                         selectedCountry = L.geoJSON([], {
-                            style: {opacity: 0, fillOpacity: 0}
+                            style: {opacity: 1, fillOpacity: 0}
                         }).addTo(mapObj);
                     }
-                    selectedCountry.addData(allCountries[country].geometry);
+                    mapObj.removeLayer(subbasinLayer);
+                    geoglowsStreamflowLayer.setLayerDefs({0: `rivercountry = '${country}'`});
+                    zoomInToCountry(allCountries[country].geometry);
                 }
             }
 
@@ -1488,7 +1525,8 @@ let initCountryList = function() {
 
 
 $("#country-selector").on("change", function() {
-    zoomInTo(allCountries[$(this).val()].geometry);
+    zoomInToCountry(allCountries[$(this).val()].geometry);
+    mapObj.removeLayer(subbasinLayer);
     geoglowsStreamflowLayer.setLayerDefs(
         {0: `rivercountry = '${$(this).val()}'`}
     );
