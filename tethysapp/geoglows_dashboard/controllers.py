@@ -5,6 +5,7 @@ import ee
 import os
 import io
 import requests
+from datetime import datetime, timezone
 
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -130,19 +131,46 @@ def format_plot(plot):
     )
 
 
+def need_new_data(reach_id, current_date, plot_type='forecast'):
+    """
+    Check if need to clear the cached data and get data for a new date.
+    Return need_new_data and cached_data_path.
+
+    Args:
+        reach_id: river id
+        plot_type (str, optional): the type of the plot. Options are 'forecast' and 'retro'. Defaults to 'forecast'.
+    """
+    files = os.listdir(cache_dir_path)
+    for file in files:
+        if file.startswith(f'{plot_type}-{reach_id}'):
+            cache_file = file
+
+    new_data_needed = True
+    if cache_file:
+        cached_date = cache_file.split('-')[-1].split('.')[0]
+        new_data_needed = current_date != cached_date
+        cached_data_path = os.path.join(cache_dir_path, cache_file)
+        
+    return new_data_needed, cached_data_path
+
+
 @controller(name='get_forecast_plot', url='get_forecast_plot')
 def get_forecast_plot(request):
     reach_id = int(request.GET['reach_id'])
-    forecast_file_path = os.path.join(cache_dir_path, f'forecast-{reach_id}.csv')
-    if os.path.exists(forecast_file_path):
-        df_forecast = pd.read_csv(forecast_file_path, parse_dates=['datetime'], index_col=[0])
-    else:
+    current_date = datetime.now(timezone.utc).strftime('%Y%m%d')
+    plot_type = 'forecast'
+    new_data_needed, cached_data_path = need_new_data(reach_id, current_date, plot_type)
+    new_data_path = os.path.join(cache_dir_path, f'{plot_type}-{reach_id}-{current_date}.csv')
+    if new_data_needed:
         url = f'https://geoglows.ecmwf.int/api/v2/forecast/{reach_id}'
         response = requests.get(url)
         if response.status_code != 200:
             raise RuntimeError(f'Failed to fetch data for the river {reach_id}: ' + response.text)
         df_forecast = pd.read_csv(io.StringIO(response.text), index_col=[0])
-        df_forecast.to_csv(forecast_file_path)
+        df_forecast.to_csv(new_data_path)
+        os.remove(cached_data_path)
+    else:
+        df_forecast = pd.read_csv(cached_data_path, parse_dates=['datetime'], index_col=[0])
 
     plot = geoglows.plots.forecast(df=df_forecast)
     return JsonResponse(dict(forecast=format_plot(plot)))
@@ -152,15 +180,19 @@ def get_forecast_plot(request):
 def get_historical_plot(request):
     reach_id = int(request.GET['reach_id'])
     selected_year = int(request.GET['selected_year'])
-
-    retro_file_path = os.path.join(cache_dir_path, f'retro-{reach_id}.csv')
-    if os.path.exists(retro_file_path):
-        df_retro = pd.read_csv(retro_file_path, parse_dates=['time'], index_col=[0])
+    
+    current_date = datetime.now(timezone.utc).strftime('%Y%m%d')
+    plot_type = 'retro'
+    new_data_needed, cached_data_path = need_new_data(reach_id, current_date, plot_type)
+    if new_data_needed:
+        df_retro = geoglows.data.retrospective(reach_id)
+        new_data_path = os.path.join(cache_dir_path, f'{plot_type}-{reach_id}-{current_date}.csv')
+        df_retro.to_csv(new_data_path)
+        os.remove(cached_data_path)
+    else:
+        df_retro = pd.read_csv(cached_data_path, parse_dates=['time'], index_col=[0])
         df_retro.columns.name = 'rivid'
         df_retro.columns = df_retro.columns.astype('int64')
-    else:
-        df_retro = geoglows.data.retrospective(reach_id)
-        df_retro.to_csv(retro_file_path)
 
     historical_plot = geoglows.plots.retrospective(df=df_retro)
     flow_duration_plot = geoglows.plots.flow_duration_curve(df=df_retro)
@@ -175,8 +207,18 @@ def get_historical_plot(request):
 def update_flow_regime_plot(request):
     selected_year = int(request.GET['selected_year'])
     reach_id = int(request.GET['reach_id'])
-    df_retro = pd.read_csv(os.path.join(cache_dir_path, f"retro-{reach_id}.csv"), parse_dates=['time'], index_col=[0])
-    df_retro.columns = df_retro.columns.astype('int64')
+    current_date = datetime.now(timezone.utc).strftime('%Y%m%d')
+    
+    plot_type = 'retro'
+    new_data_needed, cached_data_path = need_new_data(reach_id, current_date, plot_type)
+    new_data_path = os.path.join(cache_dir_path, f'{plot_type}-{reach_id}-{current_date}.csv')
+    if new_data_needed:
+        df_retro = geoglows.data.retrospective(reach_id)
+        df_retro.to_csv(new_data_path)
+        os.remove(cached_data_path)
+    else:
+        df_retro = pd.read_csv(cached_data_path, parse_dates=['time'], index_col=[0])
+        df_retro.columns = df_retro.columns.astype('int64')
     return JsonResponse(dict(flow_regime=plot_flow_regime(df_retro, selected_year, reach_id)))
 
 

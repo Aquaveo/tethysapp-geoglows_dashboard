@@ -1,37 +1,39 @@
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
+import os
+
 import plotly.graph_objects as go
+from plotly.offline import plot as offline_plot
 import scipy.stats as stats
 import numpy as np
-from plotly.offline import plot as offline_plot
-import os
+import geoglows
+
 from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 from tethys_sdk.workspaces import get_app_workspace
 
 
-def get_retrospective_data(reach_id, start_date=None, end_date=None):
+def get_retrospective_data(reach_id):
     cache_dir_path = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
     if not os.path.exists(cache_dir_path):
         os.makedirs(cache_dir_path)
-    file_path = os.path.join(cache_dir_path, f'retro-{reach_id}.csv')
-    if os.path.exists(file_path):
-        return pd.read_csv(file_path, parse_dates=['time'], index_col=[0])
+    files = os.listdir(cache_dir_path)
+    
+    cache_file = None
+    for file in files:
+        if file.startswith(f'retro-{reach_id}'):
+            cache_file = file
+            
+    if cache_file:
+        cached_data_path = os.path.join(cache_dir_path, cache_file)
+        df_retro = pd.read_csv(cached_data_path, parse_dates=['time'], index_col=[0])
     else:
-        base_url = "https://geoglows.ecmwf.int/api/v2/retrospective/"
-        url = f"{base_url}{reach_id}?format=csv"
-        if start_date:
-            url += f"&start_date={start_date}"
-        if end_date:
-            url += f"&end_date={end_date}"
-
-        response = requests.get(url)
-        if response.status_code != 200:
-            raise RuntimeError(f'Failed to fetch data for the river {reach_id}: ' + response.text)
-
-        df_retro = pd.read_csv(StringIO(response.text))
-        return df_retro
+        df_retro = geoglows.data.retrospective(reach_id)
+        current_date = datetime.now(timezone.utc).strftime('%Y%m%d')
+        new_data_path = os.path.join(cache_dir_path, f'retro-{reach_id}-{current_date}.csv')
+        df_retro.to_csv(new_data_path)
+    return df_retro
 
 
 def get_SSI_data(df_retro):
