@@ -15,3 +15,4 @@ combined_all_data_*.nc
 global_streams_simplified.gpkg
 streamflow_plots_cache
 v2-master-table.parquet
+v2-countries-table.parquet

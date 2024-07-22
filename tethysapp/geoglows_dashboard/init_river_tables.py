@@ -75,7 +75,7 @@ class HydroSOSRiverDataInitializer:
             print(f"year {year} is inserted!")
                 
     def insert_all_data(self):
-        # self.insert_geometry_data()
+        self.insert_geometry_data()
         self.insert_hydrosos_data()
             
 
