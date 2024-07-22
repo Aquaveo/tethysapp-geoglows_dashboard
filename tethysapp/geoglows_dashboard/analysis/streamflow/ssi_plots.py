@@ -1,37 +1,14 @@
-import requests
-import pandas as pd
 from datetime import datetime
-from io import StringIO
-import plotly.graph_objects as go
 import scipy.stats as stats
+import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 from plotly.offline import plot as offline_plot
-import os
-from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
-from tethys_sdk.workspaces import get_app_workspace
+from ...controllers.helpers import get_newest_plot_data
 
 
-def get_retrospective_data(reach_id, start_date=None, end_date=None):
-    cache_dir_path = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
-    if not os.path.exists(cache_dir_path):
-        os.makedirs(cache_dir_path)
-    file_path = os.path.join(cache_dir_path, f'retro-{reach_id}.csv')
-    if os.path.exists(file_path):
-        return pd.read_csv(file_path, parse_dates=['time'], index_col=[0])
-    else:
-        base_url = "https://geoglows.ecmwf.int/api/v2/retrospective/"
-        url = f"{base_url}{reach_id}?format=csv"
-        if start_date:
-            url += f"&start_date={start_date}"
-        if end_date:
-            url += f"&end_date={end_date}"
-
-        response = requests.get(url)
-        if response.status_code != 200:
-            raise RuntimeError(f'Failed to fetch data for the river {reach_id}: ' + response.text)
-
-        df_retro = pd.read_csv(StringIO(response.text))
-        return df_retro
+def get_retrospective_data(reach_id):
+    return get_newest_plot_data(reach_id, 'retrospective')
 
 
 def get_SSI_data(df_retro):
