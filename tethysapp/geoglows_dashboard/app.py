@@ -43,9 +43,9 @@ class GeoglowsDashboard(TethysAppBase):
     def persistent_store_settings(self):
         ps_settings = (
             PersistentStoreDatabaseSetting(
-                name='country_db',
+                name='primary_db',
                 description='Country database for HydroSOS Layers of Geoglows Dashboard',
-                initializer='geoglows_dashboard.model.init_country_db',
+                initializer='geoglows_dashboard.model.init_primary_db',
                 required=True,
                 spatial=True
             ),
