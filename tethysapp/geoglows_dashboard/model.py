@@ -11,7 +11,7 @@ app_workspace_folder = os.path.join(os.path.dirname(__file__), "/workspaces/app_
 # DB Engine, sessionmaker, and base
 Base = declarative_base()
 
-db_name = 'country_db'
+db_name = 'primary_db'
 
 
 class Country(Base):
@@ -23,18 +23,16 @@ class Country(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    hydrosos = Column(JSON)
     default = Column(Boolean)
 
 
-def add_new_country(name, hydrosos_data, is_default):
+def add_new_country(name, is_default):
     """
     Persist new country.
     """
 
     new_country = Country(
         name=name,
-        hydrosos=hydrosos_data,
         default=is_default
     )
 
@@ -50,7 +48,7 @@ def add_new_country(name, hydrosos_data, is_default):
     session.close()
 
     if is_default:
-        update_default_country_db(name)
+        update_default_country_in_db(name)
 
 
 def get_country(name):
@@ -83,7 +81,7 @@ def remove_country(name):
     session.close()
 
 
-def update_default_country_db(name):
+def update_default_country_in_db(name):
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     old_default_country = session.query(Country).filter_by(default="true").first()
     old_default_country.default = False
@@ -149,7 +147,7 @@ def add_new_river_hydrosos_bulk(river_hydrosos_dict):
     session.close()
 
 
-def init_country_db(engine, first_time):
+def init_primary_db(engine, first_time):
     """
     Initializer for the country database.
     """
@@ -160,7 +158,10 @@ def init_country_db(engine, first_time):
     session = sessionmaker(bind=engine)()
     river_hydrosos_table = RiverHydroSOS.__table__
 
-    month_index = Index('river_hydrosos_month_idx', river_hydrosos_table.c.month, postgresql_using='hash')
-    month_index.create(engine)
-    session.commit()
-    session.close()
+    try:
+        month_index = Index('river_hydrosos_month_idx', river_hydrosos_table.c.month, postgresql_using='hash')
+        month_index.create(engine)
+        session.commit()
+        session.close()
+    except Exception as e:
+        print(f"Error: {e}")

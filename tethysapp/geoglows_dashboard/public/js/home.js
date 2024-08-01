@@ -1322,7 +1322,7 @@ let initAdminSettings = function() {
 
 let allCountries = {};
 let initAllCountries = function() {
-    fetch("/static/geoglows_dashboard/data/geojson/countries.geojson")
+    fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
         .then((response) => {
             if (!response.ok) {
                 throw new Error("countries.geojson was not ok");
@@ -1332,9 +1332,11 @@ let initAllCountries = function() {
         .then((data) => {
             data = JSON.parse(JSON.stringify(data));
             for (let country of data.features) {
-                let name = country.properties.ADMIN;
+                let name = country.properties.Name_label;
                 let geometry = country.geometry;
-                allCountries[name] = {"name": name, "geometry": geometry};
+                if (name) {
+                    allCountries[name] = {"name": name, "geometry": geometry};
+                }
             }
             initCountryList();
         })
@@ -1347,8 +1349,6 @@ let initAllCountries = function() {
 
 const newCountryData = {
     "geoJSON": null,
-    "precip": null,
-    "soil": null
 };
 
 
@@ -1364,8 +1364,6 @@ let addCountry = function() {
     let data = {
         country: $("#new-country-select").val(),
         geoJSON: newCountryData["geoJSON"],
-        precip: newCountryData["precip"],
-        soil: newCountryData["soil"],
         isDefault: $("#default-check").is(":checked")
     }
 
@@ -1426,6 +1424,7 @@ let zoomInToCountry = function(countryGeoJSON) {
 // Dispaly all existing countries in the country list
 let existingCountries, countryToRemove, defaultCountry;
 let initCountryList = function() {
+    console.log("iniCountryList is called!");
     $.ajax({
         type: "GET",
         url: URL_country,
@@ -1508,6 +1507,7 @@ let initCountryList = function() {
             ))
 
             // add non-existent countries to the country searchable select
+            $("#new-country-select").empty();
             for (country in allCountries) {
                 if (!(country in existingCountries)) {
                     $("#new-country-select").append($("<option>", {
