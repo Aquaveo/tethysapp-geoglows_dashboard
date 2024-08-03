@@ -208,7 +208,7 @@ let initMapCardHeader = function() {
                 if (selectedTab == otherTabID) {
                     addOtherTabLayers(date);
                 } else {
-                    updateHydroSOSStreamflowLayer(date);
+                    updateHydroSOSStreamflowLayer(date, $("#country-selector").val());
                 }
                 selectedYearMonth = date;
             }
@@ -246,7 +246,7 @@ let updateYearMonthPicker = function() {
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-let mapObj, resetButton, mapMarker, selectedStream, selectedCountry, selectedSubbasin;
+let mapObj, resetButton, mapMarker, selectedStream, selectedCountryLayer, selectedSubbasinLayer;
 const geoglowsStreamflowLayer = L.esri.dynamicMapLayer({
     url: "https://livefeeds3.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
     layers: [0],
@@ -323,8 +323,8 @@ let initHydroSOSLegend = function() {
 
 let getSelectedArea = function() {
     let area;
-    if (selectedCountry && selectedCountry.getLayers().length != 0) {
-        area = selectedCountry.toGeoJSON();
+    if (selectedCountryLayer && selectedCountryLayer.getLayers().length != 0) {
+        area = selectedCountryLayer.toGeoJSON();
     } else if(mapObj.hasLayer(subbasinLayer)) {
         area = subbasinLayer.toGeoJSON();
     }
@@ -358,11 +358,11 @@ let initMapCardBody = function() {
             let riverID = feature.properties['River ID'];
             layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
             layer.on('click', function() {
-                if (selectedSubbasin != null) {
-                    selectedSubbasin.setStyle({'color': '#3388ff'});
+                if (selectedSubbasinLayer != null) {
+                    selectedSubbasinLayer.setStyle({'color': '#3388ff'});
                 }
                 layer.setStyle({'color': 'red'});
-                selectedSubbasin = layer;
+                selectedSubbasinLayer = layer;
                 updateSelectedReachByID(riverID, isSubbasinOutlet=true);
             })
         }
@@ -426,7 +426,7 @@ let initMapCardBody = function() {
             hydroSOSLegend.remove();
         }
 
-        await updateHydroSOSStreamflowLayer($("#year-month-picker").val());
+        await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $("#country-selector").val());
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
@@ -522,7 +522,7 @@ let initMapCardBody = function() {
                 hydroSOSLegend.addTo(mapObj);
                 currentStreamflowLayer = hydroSOSStreamflowLayer;
             } else if (e.layer == subbasinLayer) {
-                selectedCountry.clearLayers();
+                selectedCountryLayer.clearLayers();
                 mapObj.fitBounds(subbasinLayer.getBounds());
                 geoglowsStreamflowLayer.setLayerDefs({0: 'vpu = 122'});
             } else if (e.layer == geeSPILayer) {
@@ -579,6 +579,19 @@ let initMapCardBody = function() {
                         })
                 }
             }        
+        })
+
+        // update the HydroSOS Streamflow layer every time zooming in/out
+        mapObj.on("zoomend", function() {
+            let date = $('#year-month-picker').val();
+            let newMinStreamOrder = getMinStreamOrder();
+            let is_vpu = mapObj.hasLayer(subbasinLayer) ? 'True' : 'False';
+            let country_value = $('#country-selector').val();
+            let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${is_vpu};country:${country_value}`;
+            if (newMinStreamOrder != minStreamOrder) {
+                minStreamOrder = newMinStreamOrder;
+                hydroSOSStreamflowLayer.setParams(vparams);
+            }
         })
     }
 
@@ -654,8 +667,8 @@ let initMapCardBody = function() {
         // other layer
         addOtherTabLayers($("#year-month-picker").val());
         // zoom in to the selected country
-        if (selectedCountry) {
-            mapObj.fitBounds(selectedCountry.getBounds());
+        if (selectedCountryLayer) {
+            mapObj.fitBounds(selectedCountryLayer.getBounds());
         }
     }
 };
@@ -708,41 +721,38 @@ let getGeoserverEndpoint = function() {
     
 }
 
-let minStreamOrder;
-let updateHydroSOSStreamflowLayer = async function(date) {
-    let getMinStreamOrder = function() {
-        let currentZoom = mapObj.getZoom();
-        if (currentZoom <= 2) {
-            return 8;
-        }
-        if (currentZoom >= 15) {
-            return 2;
-        }
-        return 7 - Math.floor((currentZoom - 3) / 2);
+let getMinStreamOrder = function() {
+    let currentZoom = mapObj.getZoom();
+    if (currentZoom <= 2) {
+        return 8;
     }
+    if (currentZoom >= 15) {
+        return 2;
+    }
+    return 7 - Math.floor((currentZoom - 3) / 2);
+}
+
+let minStreamOrder;
+let updateHydroSOSStreamflowLayer = async function(date, country) {
+
+    let is_vpu = country == null ? 'True' : 'False';
+    let country_value = is_vpu === 'True' ? '' : country;
+    let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${is_vpu};country:${country_value}`;
 
     if (!hydroSOSStreamflowLayer) {
         try {
-            await getGeoserverEndpoint()
+            await getGeoserverEndpoint();
             hydroSOSStreamflowLayer = L.tileLayer.wms(`${geoserverEndpoint}/geoglows_dashboard/wms`, {
                 layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
                 format: 'image/png',
                 transparent: true,
-                viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`
+                viewparams: vparams
             });
         } catch(error) {
             console.error("Error occurred while fetching Geoserver endpoint:", error);
         }
-        // update the layer every time we zoom in/out
-        mapObj.on("zoomend", function() {
-            let newMinStreamOrder = getMinStreamOrder();
-            if (newMinStreamOrder != minStreamOrder) {
-                minStreamOrder = newMinStreamOrder;
-                hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${$('#year-month-picker').val()};min_stream_order:${minStreamOrder}`});
-            }
-        })
     } else {
-        hydroSOSStreamflowLayer.setParams({viewparams: `selected_month:${date};min_stream_order:${getMinStreamOrder()}`})
+        hydroSOSStreamflowLayer.setParams(vparams);
     }
 }
 
@@ -1331,11 +1341,10 @@ let initAllCountries = function() {
         })
         .then((data) => {
             data = JSON.parse(JSON.stringify(data));
-            for (let country of data.features) {
-                let name = country.properties.Name_label;
-                let geometry = country.geometry;
+            for (let feature of data.features) {
+                let name = feature.properties.Name_label;
                 if (name) {
-                    allCountries[name] = {"name": name, "geometry": geometry};
+                    allCountries[name] = feature;
                 }
             }
             initCountryList();
@@ -1416,9 +1425,9 @@ let removeCountry = function() {
 
 // Zoom into the selectedCountry
 let zoomInToCountry = function(countryGeoJSON) {
-    selectedCountry.clearLayers();
-    selectedCountry.addData(countryGeoJSON);
-    mapObj.fitBounds(selectedCountry.getBounds());
+    selectedCountryLayer.clearLayers();
+    selectedCountryLayer.addData(countryGeoJSON);
+    mapObj.fitBounds(selectedCountryLayer.getBounds());
 }
 
 // Dispaly all existing countries in the country list
@@ -1484,8 +1493,8 @@ let initCountryList = function() {
 
                 // zoom in to the default country when loading the website
                 if (isDefault) {
-                    if (!selectedCountry) {
-                        selectedCountry = L.geoJSON([], {
+                    if (!selectedCountryLayer) {
+                        selectedCountryLayer = L.geoJSON([], {
                             style: {opacity: 1, fillOpacity: 0}
                         }).addTo(mapObj);
                     }
@@ -1525,11 +1534,13 @@ let initCountryList = function() {
 
 
 $("#country-selector").on("change", function() {
-    zoomInToCountry(allCountries[$(this).val()].geometry);
+    let country = $(this).val();
+    zoomInToCountry(allCountries[country].geometry);
     mapObj.removeLayer(subbasinLayer);
     geoglowsStreamflowLayer.setLayerDefs(
-        {0: `rivercountry = '${$(this).val()}'`}
+        {0: `rivercountry = '${country}'`}
     );
+    updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
 });
 
 

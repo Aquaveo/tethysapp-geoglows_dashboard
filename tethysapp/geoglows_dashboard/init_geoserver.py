@@ -12,6 +12,7 @@ store_name = 'hydrosos_streamflow'
 style_name = 'hydrosos_streamflow_style'
 try:
     gs_engine.create_workspace(workspace_id=workspace_name, uri='http:www.example.com/apps/geoglows-dashboard')
+    print(f"workspace ({workspace_name}) is created!")
 except Exception as e:
     print(e)
     
@@ -22,6 +23,7 @@ try:
         sqlalchemy_engine=sql_engine,
         docker=True
     )
+    print(f"workspace ({workspace_name}) is linked to store ({store_name})!")
 except Exception as e:
     print(e)
 
@@ -45,6 +47,7 @@ try:
         sld_context=context,
         overwrite=True
     )
+    print(f"Style ({workspace_name}:{style_name}) is created!")
 except Exception as e:
     print(e)
 
@@ -76,7 +79,18 @@ try:
                 'default_value': '8',
                 'regex_validator': '^[2-8]$'  # noqa: W605
             },
+            {
+                'name': 'is_vpu',
+                'default_value': 'False',
+                'regex_validator': '^(True|False)$'    
+            },
+            {
+                'name': 'country',
+                'default_value': 'Egypt',
+                'regex_validator': "^.{0,100}$"
+            }
         )
     )
+    print("SQL view layer (hydrosos_streamflow_layer) is created!")
 except Exception as e:
     print(e)

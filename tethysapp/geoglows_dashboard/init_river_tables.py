@@ -21,7 +21,8 @@ class HydroSOSRiverDataInitializer:
             rivers.append({
                 'id': rivid,
                 'stream_order': properties["strmOrder"],
-                'geometry': f"SRID=4326;{shape(river['geometry']).wkt}"
+                'geometry': f"SRID=4326;{shape(river['geometry']).wkt}",
+                'river_country': properties['RiverCountry']
             })
         add_new_river_bulk(rivers)
         print("all river geometry is inserted!")
@@ -82,7 +83,7 @@ class HydroSOSRiverDataInitializer:
 
     def insert_all_data(self):
         self.insert_geometry_data()
-        self.insert_hydrosos_data()
+        # self.insert_hydrosos_data()
 
 
 vpu = 122

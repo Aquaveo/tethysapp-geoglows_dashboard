@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, JSON, ForeignKey, DATE, insert, Index
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index, update
 from sqlalchemy.orm import sessionmaker
 from geoalchemy2 import Geometry
 import os
@@ -22,7 +22,7 @@ class Country(Base):
     __tablename__ = 'countries'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String(100))
     default = Column(Boolean)
 
 
@@ -97,6 +97,7 @@ class River(Base):
     id = Column(Integer, primary_key=True)
     stream_order = Column(Integer, index=True)
     geometry = Column(Geometry())
+    river_country = Column(String(100))
 
 
 def add_new_river(rivid, stream_order, geometry):
@@ -117,6 +118,21 @@ def add_new_river_bulk(river_dict):
     session.commit()
     session.close()
 
+
+def update_river_data(rivid, country):
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
+    session.query(River).filter(River.id == rivid).update({'river_country': country})
+    session.commit()
+    session.close()
+    
+
+# not working
+def update_river_data_bulk(river_dict):
+    session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
+    session.bulk_update_mappings(River, river_dict)
+    session.commit()
+    session.close()
+    
 
 class RiverHydroSOS(Base):
     __tablename__ = 'river_hydrosos'
