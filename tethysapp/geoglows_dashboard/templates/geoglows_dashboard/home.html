@@ -10,16 +10,6 @@
 {% endblock %}
 
 {% block app_content %}
-{% comment %} <div id="nav-div">
-  <ul class="nav">
-    <li class="nav-item">
-      <a class="nav-link active" aria-current="page" href="" id="stream-tab">Streamflow</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="" id="other-tab">Other</a>
-    </li>
-  </ul>
-</div> {% endcomment %}
 <div class="container-fluid" id="outer-container">
   <div class="row" style="height:100%">
     <div class="col-md-7">
@@ -239,6 +229,8 @@
 
 {% block scripts %}
   {{ block.super }}
+  <script src="{% static 'geoglows_dashboard/js/constants.js' %}" type="text/javascript"></script>
+  <script src="{% static 'geoglows_dashboard/js/plots.js' %}" type="text/javascript"></script>
   <script src="{% static 'geoglows_dashboard/js/home.js' %}" type="text/javascript"></script>
   <!-- Boostrap Datepicker-->
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.10.0/js/bootstrap-datepicker.min.js"></script>

@@ -1,168 +1,9 @@
-/************************************************************************
-*                       TAB DATA
-*************************************************************************/
-
-const streamTabID = "#stream-tab", otherTabID = "#other-tab";
-const forecastPlotID = "forecast", 
-    historicalPlotID = "historical", 
-    flowDurationPlotID = "flow-duration",
-    flowRegimePlotID = "flow-regime",
-    annualDischargePlotID = "annual-discharge",
-    SSIMonthlyPlotID = "ssi-monthly",
-    SSIOneMonthPlotID = "ssi-one-month",
-    GLDASPrecipSoilPlotID = "gldas-precip-soil",
-    GLDASSoilPlotID = "gldas-soil",
-    GLDASPrecipPlotID = "gldas-precip",
-    IMERGPrecipPlotID = "imerg-precip",
-    ERA5PrecipPlotID = "era5-precip",
-    GFSForecasePlotID = "gfs-forecast";
-
-const tabsData = {
-    [streamTabID]: {
-        "startDate": "1940-01",
-        "endDate": "2022-12",
-        "plots": {
-            [forecastPlotID]: {
-                "name": "Forecast",
-                "data": null,
-                "needYear": false,
-                "needMonth": false,
-                "needYearOption": false,
-            },
-            [historicalPlotID]: {
-                "name": "Historical",
-                "data": null,
-                "needYear": false,
-                "needMonth": false,
-                "needYearOption": false,
-            },
-            [flowDurationPlotID]: {
-                "name": "Flow Duration",
-                "data": null,
-                "needYear": false,
-                "needMonth": false,
-                "needYearOption": false,
-            },
-            [flowRegimePlotID]: {
-                "name": "Flow Regime",
-                "data": null,
-                "needYear": true,
-                "selectedYear": null,
-                "needMonth": false,
-                "needYearOption": false,
-            },
-            [annualDischargePlotID]: {
-                "name": "Annual Discharge",
-                "data": null,
-                "needYear": false,
-                "needMonth": false,
-                "needYearOption": false,
-            },
-            [SSIMonthlyPlotID]: {
-                "name": "SSI Monthly",
-                "data": null,
-                "needYear": false,
-                "needMonth": false,
-                "needYearOption": false,
-            },
-            [SSIOneMonthPlotID]: {
-                "name": "SSI One Month",
-                "data": null,
-                "needYear": false,
-                "needMonth": true,
-                "selectedMonth": null,
-                "needYearOption": false,
-            }
-        }
-    },
-    [otherTabID]: {
-        "startDate": "2001-01",
-        "endDate": "2023-05",
-        "plots": {
-            [GLDASPrecipSoilPlotID]: {
-                "name": "Average Precipitation and Soil Moisture",
-                "data": null,
-                "needYear": true,
-                "selectedYear": null,
-                "needMonth": false,
-                "needYearOption": true,
-            },
-            [GLDASSoilPlotID]: {
-                "name": "GLDAS Soil Moisture",
-                "data": null,
-                "needYear": true,
-                "selectedYear": null,
-                "needMonth": false,
-                "needYearOption": true,
-            },
-            [IMERGPrecipPlotID]: {
-                "name": "IMERG Precipitation",
-                "data": null,
-                "needYear": true,
-                "selectedYear": null,
-                "needMonth": false,
-                "needYearOption": true,
-            },
-            [ERA5PrecipPlotID]: {
-                "name": "ERA5 Precipitation",
-                "data": null,
-                "needYear": true,
-                "selectedYear": null,
-                "needMonth": false,
-                "needYearOption": true,
-            },
-            [GFSForecasePlotID]: {
-                "name": "GFS Forecast Precipitation",
-                "data": null,
-                "needYear": true,
-                "selectedYear": null,
-                "needMonth": false,
-                "needYearOption": true,
-            }
-        }
-    }
-}
-
-
-let selectedTab = streamTabID;
-let selectedReachID;
-
-
-/************************************************************************
-*                       INITIALIZE THE PAGE
-*************************************************************************/
-
 $(function() {
-    initTabs();
     initPlotCards();
     initAdminSettings();
-    initMapCard();
-})
-
-
-let initTabs = function() {
-    for (let tab in tabsData) {
-        $(tab).on('click', function(event) {
-            event.preventDefault();
-            if (selectedTab != tab) {
-                selectedTab = tab;
-                // highlight the selected tab
-                $('.nav-link').removeClass('active');
-                $(this).addClass('active');
-                
-                updateYearMonthPicker();
-                initPlotCards();
-                initMapCardBody();
-            }
-        })
-    }
-}
-
-let initMapCard = function() {
     initMapCardHeader();
     initMapCardBody();
-}
-
+})
 
 /************************************************************************
 *                       INITIALIZE MAP CARD HEADER
@@ -205,11 +46,7 @@ let initMapCardHeader = function() {
             $(this).datepicker('hide');
             let date = $(this).val();
             if (date != selectedYearMonth) {
-                if (selectedTab == otherTabID) {
-                    addOtherTabLayers(date);
-                } else {
-                    updateHydroSOSStreamflowLayer(date, $("#country-selector").val());
-                }
+                updateHydroSOSStreamflowLayer(date, $("#country-selector").val());
                 selectedYearMonth = date;
             }
         }) 
@@ -221,20 +58,11 @@ let initMapCardHeader = function() {
 
 
 let updateYearMonthPicker = function() {
-    if (selectedTab == streamTabID) {
-        $('#year-month-picker').datepicker('setStartDate', tabsData[streamTabID].startDate);
-        $('#year-month-picker').datepicker('setEndDate', tabsData[streamTabID].endDate);
+    if (selectedYearMonth > plotsData.endDate) {  // TODO check if this is possible
+        $('#year-month-picker').datepicker('update', plotsData.endDate);
     } else {
-        $('#year-month-picker').datepicker('setStartDate', tabsData[otherTabID].startDate);
-        $('#year-month-picker').datepicker('setEndDate', tabsData[otherTabID].endDate);
-    }
-
-    if (selectedTab == streamTabID && selectedYearMonth > tabsData[streamTabID].endDate) {
-        $('#year-month-picker').datepicker('update', tabsData[streamTabID].endDate);
-    }
-
-    if (selectedTab == otherTabID && selectedYearMonth < tabsData[otherTabID].startDate) {
-        $('#year-month-picker').datepicker('update', tabsData[otherTabID].startDate);
+        $('#year-month-picker').datepicker('setStartDate', plotsData.startDate);
+        $('#year-month-picker').datepicker('setEndDate', plotsData.endDate);
     }
 }
 
@@ -267,12 +95,11 @@ const basemaps = {
     "ESRI Grey": L.esri.basemapLayer('Gray'),
 }
 
-let layerControl, soilMoistureLayer, precipitationLayer, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer;
-let currentStreamflowLayer, currentHydroSOSLayer;
+// map layers
+let layerControl, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer;
+let currentStreamflowLayer;
 let geoglowsLegend, hydroSOSLegend, spiLegend;
-
-let drawControl, drawnFeatures, drawnType, drawnCoordinates;
-let isDrawing = false;
+let selectedReachID;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -418,14 +245,6 @@ let initMapCardBody = function() {
     }
 
     let addStreamTabLayers = async function() {
-        if (layerControl != null) {
-            layerControl.remove();
-        }
-        if (currentHydroSOSLayer) {
-            currentHydroSOSLayer.remove();
-            hydroSOSLegend.remove();
-        }
-
         await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $("#country-selector").val());
         layerControl = L.control.layers(
             basemaps,
@@ -440,57 +259,6 @@ let initMapCardBody = function() {
     let refreshGeoglowsStreamflowLayer = function() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
         geoglowsStreamflowLayer.setTimeRange(sliderTime, endDateTime);
-    }
-
-    let initDrawControl = function() {
-        // Initialize layer for drawn features
-        drawnFeatures = new L.FeatureGroup();
-        mapObj.addLayer(drawnFeatures);
-
-        // Initialize draw controls
-        drawControl = new L.Control.Draw({
-            draw: {
-                polyline: false,
-                // polygon: false,
-                circle: false,
-                rectangle: false,
-            }
-        });
-        mapObj.addControl(drawControl);
-
-        mapObj.on("draw:drawstart", function(e) {
-            isDrawing = true;
-        })
-
-        // Bind to draw event
-        mapObj.on("draw:created", function(e) {
-            drawnFeatures.clearLayers();
-            drawnFeatures.addLayer(e.layer);
-            isDrawing = false;
-            readAreaOfDrawnFeature();
-            initSelectedPlots();
-        });
-    };
-
-    // Read the area of the drawn feature
-    let readAreaOfDrawnFeature = function() {
-        if (drawnFeatures.getLayers().length === 0) {
-            console.log("No features drawn.");
-            return;
-        }
-
-        const drawnFeature = drawnFeatures.getLayers()[0]; // Assuming there's only one drawn feature
-
-        if (drawnFeature instanceof L.Polygon) {
-            drawnType = "polygone";
-            drawnCoordinates = drawnFeature.getLatLngs();
-            console.log("Polygon coordinates:", drawnCoordinates);
-        } 
-        else if (drawnFeature instanceof L.Marker) {
-            drawnType = "point";
-            drawnCoordinates = drawnFeature.getLatLng();
-            console.log("Marker coordinates:", drawnCoordinates);
-        }
     }
 
     // init map object
@@ -527,18 +295,6 @@ let initMapCardBody = function() {
                 geoglowsStreamflowLayer.setLayerDefs({0: 'vpu = 122'});
             } else if (e.layer == geeSPILayer) {
                 spiLegend.addTo(mapObj);
-            } else if (e.layer == soilMoistureLayer) {
-                if (currentHydroSOSLayer == precipitationLayer) {
-                    removeWithTimeout(currentHydroSOSLayer);
-                }
-                setTimeout(() => hydroSOSLegend.addTo(mapObj), 10);
-                currentHydroSOSLayer = soilMoistureLayer;
-            } else if (e.layer == precipitationLayer) {
-                if (currentHydroSOSLayer == soilMoistureLayer) {
-                    removeWithTimeout(currentHydroSOSLayer);
-                }
-                setTimeout(() => hydroSOSLegend.addTo(mapObj), 10);
-                currentHydroSOSLayer = precipitationLayer;
             }
         })
 
@@ -550,19 +306,14 @@ let initMapCardBody = function() {
                 $('#year-month-picker-div').css('display', 'none')
             } else if (e.layer == geeSPILayer) {
                 spiLegend.remove();
-            } else if (e.layer == precipitationLayer || e.layer == soilMoistureLayer) {
-                hydroSOSLegend.remove();
             }
             if (currentStreamflowLayer == e.layer) {
                 currentStreamflowLayer = null;
-            } else if (currentHydroSOSLayer == e.layer) {
-                currentHydroSOSLayer = null;
             }
         })
 
         mapObj.on('click', function(event) {
-            if (!isDrawing) {
-                let point = turf.point([event.latlng.lng, event.latlng.lat]);
+            let point = turf.point([event.latlng.lng, event.latlng.lat]);
                 if (isPointInSelectedArea(point)) {
                     removeMapMarker();
                     if (selectedStream) {
@@ -577,100 +328,54 @@ let initMapCardBody = function() {
                             alert(error);
                             showPlotContainerMessages();
                         })
-                }
-            }        
+                }       
         })
 
         // update the HydroSOS Streamflow layer every time zooming in/out
         mapObj.on("zoomend", function() {
             let date = $('#year-month-picker').val();
             let newMinStreamOrder = getMinStreamOrder();
-            let is_vpu = mapObj.hasLayer(subbasinLayer) ? 'True' : 'False';
-            let country_value = $('#country-selector').val();
-            let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${is_vpu};country:${country_value}`;
+            let isVPU = mapObj.hasLayer(subbasinLayer) ? 'True' : 'False';
+            let countryValue = $('#country-selector').val();
+            let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${countryValue}`;
             if (newMinStreamOrder != minStreamOrder) {
                 minStreamOrder = newMinStreamOrder;
-                hydroSOSStreamflowLayer.setParams(vparams);
+                hydroSOSStreamflowLayer.setParams({viewparams: vparams});
             }
         })
     }
 
     if (resetButton == null) {
         resetButton = L.easyButton('fa-home', function(){
-            // Set the map view to its original area
             mapObj.setView([0, 0], 3);
         }, 'Reset Map');
         resetButton.addTo(mapObj);
     }
 
-    // init time control and drawing control
-    if (selectedTab == streamTabID) {
-        mapObj.timeDimension = L.timeDimension({
-            timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
-            period: "PT3H",
-            currentTime: startDateTime
-        });
-    
-        mapObj.timeDimensionControl = L.control.timeDimension({
-            autoPlay: false,
-                loopButton: true,
-                timeSteps: 1,
-                limitSliders: true,
-                playerOptions: {
-                    buffer: 0,
-                    transitionTime: 500,
-                }
-        }).addTo(mapObj);
-    
-        mapObj.timeDimension.on('timeload', refreshGeoglowsStreamflowLayer);
-        $('.timecontrol-play').on('click', refreshGeoglowsStreamflowLayer);
+    // init time control
+    mapObj.timeDimension = L.timeDimension({
+        timeInterval: startDateTime.toString() + "/" + endDateTime.toString(),
+        period: "PT3H",
+        currentTime: startDateTime
+    });
 
-        if (drawControl != null) {
-            mapObj.removeControl(drawControl);
-        }
-    } else {
-        if (drawControl == null) {
-            initDrawControl();
-        } else {
-            mapObj.addControl(drawControl);
-        }
-    }
+    mapObj.timeDimensionControl = L.control.timeDimension({
+        autoPlay: false,
+            loopButton: true,
+            timeSteps: 1,
+            limitSliders: true,
+            playerOptions: {
+                buffer: 0,
+                transitionTime: 500,
+            }
+    }).addTo(mapObj);
+
+    mapObj.timeDimension.on('timeload', refreshGeoglowsStreamflowLayer);
+    $('.timecontrol-play').on('click', refreshGeoglowsStreamflowLayer);
 
     // init map layers
     basemaps["Open Street Map"].addTo(mapObj);
-    // init map markers & layers for different tabs
-    if (selectedTab == streamTabID) {
-        // remove markers from other tab
-        if (drawnFeatures) {
-            mapObj.removeLayer(drawnFeatures);
-        }
-        if (mapMarker != null) {
-            mapMarker.addTo(mapObj);
-        }
-        // add markers to this tab
-        if (selectedStream != null) {
-            selectedStream.addTo(mapObj);
-        }
-        addStreamTabLayers();
-    } else {
-        // remove markers from streamflow tab
-        if (mapMarker) {
-            mapObj.removeLayer(mapMarker);
-        }
-        if (selectedStream) {
-            mapObj.removeLayer(selectedStream);
-        }
-        // add markers for this tab
-        if (drawnFeatures != null) {
-            drawnFeatures.addTo(mapObj);
-        }
-        // other layer
-        addOtherTabLayers($("#year-month-picker").val());
-        // zoom in to the selected country
-        if (selectedCountryLayer) {
-            mapObj.fitBounds(selectedCountryLayer.getBounds());
-        }
-    }
+    addStreamTabLayers();
 };
 
 ///// HydroSOS Layers /////
@@ -752,7 +457,7 @@ let updateHydroSOSStreamflowLayer = async function(date, country) {
             console.error("Error occurred while fetching Geoserver endpoint:", error);
         }
     } else {
-        hydroSOSStreamflowLayer.setParams(vparams);
+        hydroSOSStreamflowLayer.setParams({viewparams: vparams});
     }
 }
 
@@ -760,101 +465,8 @@ let removeWithTimeout = function(layer) {
     setTimeout(() => mapObj.removeLayer(layer), 10);
 }
 
-let addOtherTabLayers = function(date) { // yyyy-mm-01
-    let getSoilMoistureLayer = function(date) {
-        return new Promise(function (resolve, reject) {
-            $.ajax({
-                type: "GET",
-                async: true,
-                url: URL_getCountryDryLevel + L.Util.getParamString({
-                    date: date,
-                    type: "soil",
-                    country: $("#country-selector").val()
-                }),
-                success: function(response) {
-                    if (soilMoistureLayer == null) {
-                        soilMoistureLayer = L.geoJSON(JSON.parse(response), {style: getHydroSOSCountryDryLevelStyle});
-                    } else {
-                        soilMoistureLayer.clearLayers();
-                        soilMoistureLayer.addData(JSON.parse(response));
-                    }
-                    resolve("success in getting HydroSOS Soil Moisture layer data");
-                },
-                error: function() {
-                    reject("fail to get HydroSOS Soil Moisture layer dat");
-                }
-            })
-        })
-    }
-
-    let getPrecipitationLayer = function(date) {
-        return new Promise(function (resolve, reject) {
-            $.ajax({
-                type: "GET",
-                async: true,
-                url: URL_getCountryDryLevel + L.Util.getParamString({
-                    date: date,
-                    type: "precip",
-                    country:  $("#country-selector").val()
-                }),
-                success: function(response) {
-                    if (precipitationLayer == null) {
-                        precipitationLayer = L.geoJSON(JSON.parse(response), {style: getHydroSOSCountryDryLevelStyle});
-                    } else {
-                        // update hydroSOSLayer data
-                        precipitationLayer.clearLayers();
-                        precipitationLayer.addData(JSON.parse(response));
-                    }
-                    resolve("success in getting HydroSOS Precipitation layer data");
-                },
-                error: function() {
-                    reject("fail to get the HydroSOS Precipitation layer data");
-                }
-            })
-        })
-    }
-
-    // remove all previous layers
-    if (geoglowsStreamflowLayer != null) {
-        mapObj.removeLayer(geoglowsStreamflowLayer);
-    }
-    if (hydroSOSStreamflowLayer != null) {
-        mapObj.removeLayer(hydroSOSStreamflowLayer);
-    }
-    if (geeSPILayer != null) {
-        mapObj.removeLayer(geeSPILayer);
-    }
-
-    if (layerControl != null) {
-        layerControl.remove();
-    }
-    mapObj.removeControl(mapObj.timeDimension);
-    mapObj.removeControl(mapObj.timeDimensionControl);
-
-    getSoilMoistureLayer(date)
-        .then(function() {
-            return getPrecipitationLayer(date);
-        })
-        .then(function() {
-            overlayMaps = {
-                "HydroSOS Soil Moisture": soilMoistureLayer,
-                "HydroSOS Precipitation": precipitationLayer,
-            };
-            layerControl = L.control.layers(basemaps, overlayMaps, {
-                collapsed: false,
-            }).addTo(mapObj);
-
-            soilMoistureLayer.addTo(mapObj);
-            currentHydroSOSLayer = soilMoistureLayer;
-        })
-}
-
 let hasReachId = function() {
-    return selectedTab == streamTabID && selectedReachID != null;
-}
-
-let hasDrawnArea = function() {
-    return selectedTab == otherTabID && drawnFeatures != null && drawnFeatures.getLayers().length !== 0;
+    return selectedReachID != null;
 }
 
 
@@ -869,17 +481,17 @@ let initPlotCards = function() {
     let initSelectorsForPlot = function(plotCard) {
         let plotSelect = $(plotCard).find(".plot-select");
         let plotID = $(plotSelect).val();
-        if (tabsData[selectedTab].plots[plotID].needYear) {
+        if (plotsData.plots[plotID].needYear) {
             $(plotCard).find('.year-picker-div').removeClass('d-none').addClass('d-flex');
         } else {
             $(plotCard).find('.year-picker-div').addClass('d-none');
         }
-        if (tabsData[selectedTab].plots[plotID].needMonth) {
+        if (plotsData.plots[plotID].needMonth) {
             $(plotCard).find('.month-picker-div').removeClass('d-none').addClass('d-flex');
         } else {
             $(plotCard).find('.month-picker-div').addClass('d-none');
         }
-        if (tabsData[selectedTab].plots[plotID].needYearOption) {
+        if (plotsData.plots[plotID].needYearOption) {
             $(plotCard).find('.year-option-select-div').removeClass('d-none').addClass('d-flex');
         } else {
             $(plotCard).find('.year-option-select-div').addClass('d-none');
@@ -890,7 +502,7 @@ let initPlotCards = function() {
     // add options to the plot-select
     $(".plot-select").each(function(tabIndex) {
         $(this).empty();
-        let plots = tabsData[selectedTab].plots;
+        let plots = plotsData.plots;
         let plotIndex = 0;
         for (let plotID in plots) {
             let plot = plots[plotID];
@@ -951,7 +563,7 @@ let initPlotCards = function() {
     })
 
     //////////// init the plot div ////////////
-    if (!hasReachId() && !hasDrawnArea()) {
+    if (!hasReachId()) {
         showPlotContainerMessages();
     } else {
         initSelectedPlots();
@@ -997,7 +609,6 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
     let selectedYear = Number($(plotCard).find(".year-picker").val());
     let selectedMonth = monthToNumber[$(plotCard).find(".month-picker").val()];
 
-    let startDate, endDate;
     if (yearOption == "calendar-year") {
         startDate = `${selectedYear}-01-01`;
         endDate = `${selectedYear + 1}-01-01`;
@@ -1012,67 +623,46 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
 
     if (isNewArea) { // new area
         showSpinner(plotContainer, spinner);
-        requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
+        requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
+            plotsData.plots[plotID].data = data;
             drawPlot(plotCard);
         })
     } else if (isNewYear) { // new year
-        let needYear =  tabsData[selectedTab].plots[plotID].needYear;
-        let oldYear = tabsData[selectedTab].plots[plotID].selectedYear;
-        if (needYear && oldYear != selectedYear && (hasReachId() || hasDrawnArea())) {
-            tabsData[selectedTab].plots[plotID].selectedYear = selectedYear;
+        let needYear =  plotsData.plots[plotID].needYear;
+        let oldYear = plotsData.plots[plotID].selectedYear;
+        if (needYear && oldYear != selectedYear && hasReachId()) {
+            plotsData.plots[plotID].selectedYear = selectedYear;
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
+            requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
+                plotsData.plots[plotID].data = data;
                 drawPlot(plotCard);
             })
         }
     } else if (isNewMonth) {  // new month
-        let needMonth = tabsData[selectedTab].plots[plotID].needMonth;
-        let oldMonth = tabsData[selectedTab].plots[plotID].selectedMonth;
-        if (needMonth && oldMonth != selectedMonth && (hasReachId() || hasDrawnArea())) {
-            tabsData[selectedTab].plots[plotID].selectedMonth = selectedMonth;
+        let needMonth = plotsData.plots[plotID].needMonth;
+        let oldMonth = plotsData.plots[plotID].selectedMonth;
+        if (needMonth && oldMonth != selectedMonth && hasReachId()) {
+            plotsData.plots[plotID].selectedMonth = selectedMonth;
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
+            requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
+                plotsData.plots[plotID].data = data;
                 drawPlot(plotCard);
             })
         }
     } else { // new plot selection
-        let plotData = tabsData[selectedTab].plots[plotID].data;
+        let plotData = plotsData.plots[plotID].data;
         if (plotData != null) {
             drawPlot(plotCard);
-        } else if (hasReachId() || hasDrawnArea()) {
+        } else if (hasReachId()) {
             showSpinner(plotContainer, spinner);
-            requestPlotData(plotID, selectedYear, selectedMonth, startDate, endDate).then(function() {
+            requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
+                plotsData.plots[plotID].data = data;
                 drawPlot(plotCard);
             })
         }
     }
 }
 
-
-let requestPlotData = function(plotID, selectedYear, selectedMonth, startDate, endDate) {
-    console.log("sending a request for " + plotID + " plot");
-    switch (plotID) {
-        case forecastPlotID:
-            return getForecastPlot(selectedReachID);
-        case historicalPlotID:
-            return getHistoricalPlot(selectedYear, selectedReachID);
-        case flowDurationPlotID:
-            return getHistoricalPlot(selectedYear, selectedReachID);
-        case flowRegimePlotID:
-            if (tabsData[selectedTab].plots[plotID].data == null) {
-                return getHistoricalPlot(selectedYear, selectedReachID);
-            }
-            return updateFlowRegimePlot(selectedYear, selectedReachID);
-        case annualDischargePlotID:
-            return getAnnualDischargePlot(selectedReachID);
-        case SSIMonthlyPlotID:
-            return getSSIPlot(selectedReachID, -1)
-        case SSIOneMonthPlotID:
-            return getSSIPlot(selectedReachID, selectedMonth);
-        default:
-            return getGeePlot(plotID, startDate, endDate);
-    }
-}
 
 // resize the plot div
 const cardBodyInitialHeight = $(".plot-div").height();
@@ -1091,7 +681,7 @@ let drawPlot = function(plotCard) {
     let plotSelect = $(plotCard).find(".plot-select");
     let plotContainer = $(plotCard).find(".plot-div");
     let spinner = $(plotCard).find(".spinner");
-    let plotData = tabsData[selectedTab].plots[plotSelect.val()].data;
+    let plotData = plotsData.plots[plotSelect.val()].data;
     showPlot(plotContainer, spinner);
     plotContainer.html(plotData);
     resize();
@@ -1128,11 +718,7 @@ let showSpinner = function(plotContainer, spinner) {
 let showPlotContainerMessages = function() {
     showPlots();
     $(".plot-card").each(function(index, card) {
-        if (selectedTab == streamTabID) {
-            $(card).find(".plot-div").html("Please select a stream");
-        } else {
-            $(card).find(".plot-div").html("Please draw an area on the map");
-        }
+        $(card).find(".plot-div").html("Please select a stream");
     })
 }
 
@@ -1184,139 +770,6 @@ let findReachIDByLatLon = function(event) {
                 reject(new Error("Fail to find the reach_id"));
             },
 
-        })
-    })
-}
-
-
-let getForecastPlot = function(reachID) {
-    return new Promise(function(resolve, reject) {  // get forecast date first TODO
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getForecastPlot + L.Util.getParamString({
-                reach_id: reachID
-            }),
-            success: function(response) {
-                tabsData[streamTabID].plots[forecastPlotID].data = response["forecast"];
-                resolve("success in getting forecast data!")
-            },
-            error: function() {
-                reject("fail to get forecast data");
-            }
-        })
-    })
-}
-
-
-let getHistoricalPlot = function(year, reachID) {
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getHistoricalPlot + L.Util.getParamString({
-                reach_id: reachID,
-                selected_year: year
-            }),
-            success: function(response) {
-                tabsData[streamTabID].plots[historicalPlotID].data = response["historical"];
-                tabsData[streamTabID].plots[flowDurationPlotID].data = response["flow_duration"];
-                tabsData[streamTabID].plots[flowRegimePlotID].data = response["flow_regime"];
-                resolve("success in getting historical data!");
-            },
-            error: function() {
-                reject("fail to get historical data")
-            }
-        })
-    })
-}
-
-
-let getAnnualDischargePlot = function(reachID) {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getAnnualDischargePlot + L.Util.getParamString({
-                reach_id: reachID
-            }),
-            success: function(response) {
-                tabsData[streamTabID].plots[annualDischargePlotID].data = response["plot"];
-                resolve("success in getting annual discharge!");
-            },
-            error: function() {
-                reject("fail to get annual discharge!")
-            }
-        })
-    })
-}
-
-
-let getSSIPlot = function(reachID, month) {
-    let plotID = month < 0 ? SSIMonthlyPlotID: SSIOneMonthPlotID;
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: true,
-            url: URL_getSSIPlot + L.Util.getParamString({
-                reach_id: reachID,
-                month: month
-            }),
-            success: function(response) {
-                tabsData[streamTabID].plots[plotID].data = response["plot"];
-                resolve(`success in getting ${plotID}!`);
-            },
-            error: function() {
-                reject(`fail to get ${plotID}!`)
-            }
-        })
-    })
-}
-
-
-let updateFlowRegimePlot = function(year, reachID) {
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "GET",
-            async: false,
-            url: URL_updateFlowRegimePlot + L.Util.getParamString({
-                selected_year: year,
-                reach_id: reachID
-            }),
-            success: function(response) {
-                tabsData[streamTabID].plots[flowRegimePlotID].data = response["flow_regime"];
-                resolve("success in drawing new flow regime plot")
-            },
-            error: function() {
-                reject("fail to draw new flow regime plot");
-            }
-        })
-    })
-}
-
-
-let getGeePlot = function(plotID, startDate, endDate) {
-    console.log("Get GEE plot: " + plotID + " " + startDate + " " + endDate);
-    let data = {
-        areaType: drawnType,
-        coordinates: drawnCoordinates,
-        startDate: startDate,
-        endDate: endDate,
-        plotName: plotID
-    }
-    return new Promise(function (resolve, reject) {
-        $.ajax({
-            type: "POST",
-            url: URL_getGEEPlot,
-            data: JSON.stringify(data),
-            dataType: "json",
-            success: function(response) {
-                tabsData[otherTabID].plots[plotID].data = response["plot"];
-                resolve("success in getting GEE plot: " + plotID);
-            },
-            error: function() {
-                reject("fail to draw GEE plot: " + plotID);
-            }
         })
     })
 }

@@ -76,7 +76,7 @@ try:
             },
             {
                 'name': 'min_stream_order',
-                'default_value': '8',
+                'default_value': '2',
                 'regex_validator': '^[2-8]$'  # noqa: W605
             },
             {
