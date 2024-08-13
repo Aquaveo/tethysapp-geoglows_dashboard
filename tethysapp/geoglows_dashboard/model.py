@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index, update
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index
 from sqlalchemy.orm import sessionmaker
 from geoalchemy2 import Geometry
 import os
@@ -124,7 +124,7 @@ def update_river_data(rivid, country):
     session.query(River).filter(River.id == rivid).update({'river_country': country})
     session.commit()
     session.close()
-    
+
 
 # not working
 def update_river_data_bulk(river_dict):
@@ -132,7 +132,7 @@ def update_river_data_bulk(river_dict):
     session.bulk_update_mappings(River, river_dict)
     session.commit()
     session.close()
-    
+
 
 class RiverHydroSOS(Base):
     __tablename__ = 'river_hydrosos'

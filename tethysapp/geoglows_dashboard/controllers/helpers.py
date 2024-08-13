@@ -1,7 +1,5 @@
 import os
 import io
-import ee
-import ast
 import json
 import requests
 import geoglows
@@ -81,17 +79,6 @@ def get_newest_plot_data(reach_id, plot_type='forecast'):
             os.remove(cached_data_path)
 
     return df
-
-
-def parse_coordinates_string(area_type, coordinate_string):
-    coordinates = ast.literal_eval(coordinate_string)
-    if (area_type == "point"):
-        return ee.Geometry.Point([coordinates['lng'], coordinates['lat']])
-    else:
-        result = [[]]
-        for point in coordinates[0]:
-            result[0].append([point['lng'], point['lat']])
-        return ee.Geometry.Polygon(result)
 
 
 def parse_hydrosos_data(geojson, precip, soil):

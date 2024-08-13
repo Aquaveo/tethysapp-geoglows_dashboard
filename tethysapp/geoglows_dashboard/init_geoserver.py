@@ -15,7 +15,7 @@ try:
     print(f"workspace ({workspace_name}) is created!")
 except Exception as e:
     print(e)
-    
+
 # connect the GeoServer to the PostgreSQL database
 try:
     gs_engine.link_sqlalchemy_db_to_geoserver(
@@ -82,7 +82,7 @@ try:
             {
                 'name': 'is_vpu',
                 'default_value': 'False',
-                'regex_validator': '^(True|False)$'    
+                'regex_validator': '^(True|False)$'
             },
             {
                 'name': 'country',
