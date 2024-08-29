@@ -99,7 +99,7 @@ const basemaps = {
 let layerControl, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer, currentStreamflowLayer;
 let geoglowsLegend, hydroSOSLegend, spiLegend;
 let selectedReachID;
-const MIN_QUERY_ZOOM = 11;
+const MIN_QUERY_ZOOM = 15;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
