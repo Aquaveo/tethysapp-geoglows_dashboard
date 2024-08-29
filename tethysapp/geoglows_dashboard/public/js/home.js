@@ -96,10 +96,10 @@ const basemaps = {
 }
 
 // map layers
-let layerControl, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer;
-let currentStreamflowLayer;
+let layerControl, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer, currentStreamflowLayer;
 let geoglowsLegend, hydroSOSLegend, spiLegend;
 let selectedReachID;
+const MIN_QUERY_ZOOM = 15;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -314,21 +314,23 @@ let initMapCardBody = function() {
 
         mapObj.on('click', function(event) {
             let point = turf.point([event.latlng.lng, event.latlng.lat]);
-                if (isPointInSelectedArea(point)) {
+            if (isPointInSelectedArea(point)) {
+                let zoom = mapObj.getZoom();
+                if (zoom < MIN_QUERY_ZOOM) {
+                    mapObj.setView(event.latlng, MIN_QUERY_ZOOM)
+                } else {
                     removeMapMarker();
-                    if (selectedStream) {
-                        selectedStream.clearLayers();
-                    }
                     mapMarker = L.marker(event.latlng).addTo(mapObj);
-                    mapObj.flyTo(event.latlng, 10);
+                    mapObj.flyTo(event.latlng, MIN_QUERY_ZOOM);
                     showSpinners();
-                    findReachIDByLatLon(event)
+                    findReachIDByLatLng(event.latlng.lat, event.latlng.lng)
                         .then(initSelectedPlots)
                         .catch(error => {
                             alert(error);
                             showPlotContainerMessages();
                         })
-                }       
+                }    
+            } 
         })
 
         // update the HydroSOS Streamflow layer every time zooming in/out
@@ -343,6 +345,8 @@ let initMapCardBody = function() {
                 hydroSOSStreamflowLayer.setParams({viewparams: vparams});
             }
         })
+
+        selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
     }
 
     if (resetButton == null) {
@@ -427,14 +431,14 @@ let getGeoserverEndpoint = function() {
 }
 
 let getMinStreamOrder = function() {
-    let currentZoom = mapObj.getZoom();
-    if (currentZoom <= 2) {
+    let zoom = mapObj.getZoom();
+    if (zoom <= 2) {
         return 8;
     }
-    if (currentZoom >= 15) {
+    if (zoom >= 15) {
         return 2;
     }
-    return 7 - Math.floor((currentZoom - 3) / 2);
+    return 7 - Math.floor((zoom - 3) / 2);
 }
 
 let minStreamOrder;
@@ -755,21 +759,27 @@ let findLatLonByReachID = function(reachID, isSubbasinOutlet=false) {
     })
 }
 
-
-let findReachIDByLatLon = function(event) {
+let findReachIDByLatLng = function(lat, lng) {
     return new Promise(function(resolve, reject) {
-        $.get({
-            url: 'https://geoglows.ecmwf.int/api/v2/getriverid',
-            data: {'lat': event.latlng['lat'], 'lon': event.latlng['lng']},
-            success: function(response) {
-                selectedReachID = response.river_id;
-                $('#reach-id-input').val(selectedReachID);
-                resolve("success in getting the reach id!");
-            },
-            error: function() {
-                reject(new Error("Fail to find the reach_id"));
-            },
+        L.esri.identifyFeatures({
+            url: "https://livefeeds3.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer"
+        })
+        .on(mapObj)
+        .at([lat, lng])
+        .run(function(error, featureCollection) {
+            const ERROR_RIVER_NOT_FOUND = "River not found. Try to zoom in and be precise when clicking the stream";
+            if (error || featureCollection.features.length === 0) {
+                reject(error || ERROR_RIVER_NOT_FOUND);
+                return;
+            }
 
+            let feature = featureCollection.features[0];
+            selectedReachID = feature.properties["TDX Hydro Link Number"];
+            $('#reach-id-input').val(selectedReachID);
+            selectedStream.clearLayers();
+            selectedStream.addData(feature.geometry);
+
+            resolve("Find river_id " + selectedReachID);
         })
     })
 }

@@ -38,7 +38,7 @@ categories = [
 ]
 context = {
     "categories": categories,
-    "stream_orders": [i for i in range(2, 9)]
+    "stream_orders": [i for i in range(2, 10)]
 }
 try:
     gs_engine.create_style(
