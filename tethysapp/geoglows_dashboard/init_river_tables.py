@@ -83,7 +83,7 @@ class HydroSOSRiverDataInitializer:
 
     def insert_all_data(self):
         self.insert_geometry_data()
-        # self.insert_hydrosos_data()
+        self.insert_hydrosos_data()
 
 
 vpu = 122
