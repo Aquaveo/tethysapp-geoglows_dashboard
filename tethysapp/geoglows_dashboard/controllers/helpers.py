@@ -56,11 +56,7 @@ def get_newest_plot_data(reach_id, plot_type='forecast'):
 
     if plot_type == 'forecast':
         if need_new_data:
-            url = f'https://geoglows.ecmwf.int/api/v2/forecast/{reach_id}'
-            response = requests.get(url)
-            if response.status_code != 200:
-                raise RuntimeError(f'Failed to fetch data for the river {reach_id}: ' + response.text)
-            df = pd.read_csv(io.StringIO(response.text), index_col=[0])
+            df = geoglows.data.forecast(reach_id)
         else:
             df = pd.read_csv(cached_data_path, parse_dates=['datetime'], index_col=[0])
     elif plot_type == 'retrospective':
