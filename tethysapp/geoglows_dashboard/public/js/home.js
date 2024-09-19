@@ -992,23 +992,9 @@ let showAddCountryForm = function() {
 
 ///// add new country /////
 
-const newCountryData = {
-    "geoJSON": null,
-};
-
-
-let readFile = function(file, type) {
-    const reader = new FileReader();
-    reader.onload = (e) => newCountryData[type] = e.target.result;
-    reader.readAsText(file);
-}
-
-
 let addCountry = function() {
-    // TODO validate the content of each field
     let data = {
         country: $("#new-country-select").val(),
-        geoJSON: newCountryData["geoJSON"],
         isDefault: $("#default-check").is(":checked")
     }
 
