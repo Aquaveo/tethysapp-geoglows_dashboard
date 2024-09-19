@@ -16,9 +16,11 @@
         <div class="card h-100">
         <div class="card-header">
             <div class="row">
-              <div class="col-md-4 option-div" id="country-select">
+              <div class="col-md-5 option-div">
                   <label>Country: </label>
-                  <select id="country-selector"></select>
+                  <select id="country-select">
+                    <option value="">-- Select a Country --</option>
+                  </select>
               </div>
               <div class="col-md-4 option-div">
                 <label>Reach ID: </label>
@@ -29,7 +31,7 @@
                   </span>
                 </div>
               </div>
-              <div class="col-md-4 option-div" id="year-month-picker-div" style="display: none">
+              <div class="col-md-3 option-div" id="year-month-picker-div" style="display: none">
                 <label>Month: </label>
                 <input class="date-own form-control" id="year-month-picker" type="text" value="2022-12-01">
               </div>

@@ -1,3 +1,25 @@
+/************************************************************************
+*                        Elements & Constants
+*************************************************************************/
+
+///// elements /////
+
+const $yearMonthPicker = $("#year-month-picker");
+const $countrySelect = $("#country-select");
+
+///// constants /////
+
+// map
+const MIN_QUERY_ZOOM = 15;
+
+// countries
+const ALL_COUNTRIES_OPTION_VALUE = "All Countries";
+const SELECT_A_COUNTRY_OPTION_VALUE = "";
+
+/************************************************************************
+*                             LOAD THE APP
+*************************************************************************/
+
 $(function() {
     initPlotCards();
     initAdminSettings();
@@ -20,7 +42,7 @@ let updateSelectedReachByID = function(reachID, isSubbasinOutlet=false) {
 }
 
 
-let selectedYearMonth = $('#year-month-picker').val();
+let selectedYearMonth = $yearMonthPicker.val();
 let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
         $('#search-addon').click(function() {
@@ -35,18 +57,18 @@ let initMapCardHeader = function() {
     }
     
     let initYearMonthPicker = function() {
-        $('#year-month-picker').datepicker({
+        $yearMonthPicker.datepicker({
             minViewMode: 1,
             format: 'yyyy-mm-01',
             startDate: '1940-01',
             endDate: '2022-12'
         });
     
-        $('#year-month-picker').on('changeDate', function() {
+        $yearMonthPicker.on('changeDate', function() {
             $(this).datepicker('hide');
             let date = $(this).val();
             if (date != selectedYearMonth) {
-                updateHydroSOSStreamflowLayer(date, $("#country-selector").val());
+                updateHydroSOSStreamflowLayer(date, $countrySelect.val());
                 selectedYearMonth = date;
             }
         }) 
@@ -59,10 +81,10 @@ let initMapCardHeader = function() {
 
 let updateYearMonthPicker = function() {
     if (selectedYearMonth > plotsData.endDate) {  // TODO check if this is possible
-        $('#year-month-picker').datepicker('update', plotsData.endDate);
+        $yearMonthPicker.datepicker('update', plotsData.endDate);
     } else {
-        $('#year-month-picker').datepicker('setStartDate', plotsData.startDate);
-        $('#year-month-picker').datepicker('setEndDate', plotsData.endDate);
+        $yearMonthPicker.datepicker('setStartDate', plotsData.startDate);
+        $yearMonthPicker.datepicker('setEndDate', plotsData.endDate);
     }
 }
 
@@ -99,7 +121,6 @@ const basemaps = {
 let layerControl, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer, currentStreamflowLayer;
 let geoglowsLegend, hydroSOSLegend, spiLegend;
 let selectedReachID;
-const MIN_QUERY_ZOOM = 15;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -245,7 +266,7 @@ let initMapCardBody = function() {
     }
 
     let addStreamTabLayers = async function() {
-        await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $("#country-selector").val());
+        await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $countrySelect.val());
         layerControl = L.control.layers(
             basemaps,
             {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
@@ -285,6 +306,7 @@ let initMapCardBody = function() {
             } else if (e.layer == hydroSOSStreamflowLayer) {
                 if (currentStreamflowLayer == geoglowsStreamflowLayer) {
                     removeWithTimeout(currentStreamflowLayer);
+                    // TODO also remove the time slider
                 }
                 $('#year-month-picker-div').css('display', 'flex')
                 hydroSOSLegend.addTo(mapObj);
@@ -293,6 +315,7 @@ let initMapCardBody = function() {
                 selectedCountryLayer.clearLayers();
                 mapObj.fitBounds(subbasinLayer.getBounds());
                 geoglowsStreamflowLayer.setLayerDefs({0: 'vpu = 122'});
+                $countrySelect.val(SELECT_A_COUNTRY_OPTION_VALUE);
             } else if (e.layer == geeSPILayer) {
                 spiLegend.addTo(mapObj);
             }
@@ -335,11 +358,11 @@ let initMapCardBody = function() {
 
         // update the HydroSOS Streamflow layer every time zooming in/out
         mapObj.on("zoomend", function() {
-            let date = $('#year-month-picker').val();
+            let date = $yearMonthPicker.val();
             let newMinStreamOrder = getMinStreamOrder();
             let isVPU = mapObj.hasLayer(subbasinLayer) ? 'True' : 'False';
-            let countryValue = $('#country-selector').val();
-            let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${countryValue}`;
+            let country = $countrySelect.val();
+            let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
             if (newMinStreamOrder != minStreamOrder) {
                 minStreamOrder = newMinStreamOrder;
                 hydroSOSStreamflowLayer.setParams({viewparams: vparams});
@@ -443,8 +466,7 @@ let getMinStreamOrder = function() {
 
 let minStreamOrder;
 let updateHydroSOSStreamflowLayer = async function(date, country) {
-
-    let is_vpu = country == null ? 'True' : 'False';
+    let is_vpu = country == ALL_COUNTRIES_OPTION_VALUE ? 'True' : 'False';
     let country_value = is_vpu === 'True' ? '' : country;
     let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${is_vpu};country:${country_value}`;
 
@@ -789,11 +811,13 @@ let findReachIDByLatLng = function(lat, lng) {
 *                       ADMIN SETTINGS
 *************************************************************************/
 
+let allCountries, defaultCountry, existingCountries, countryToRemove;
+
 let initAdminSettings = function() {
     initAllCountries();
 }
 
-let allCountries = {};
+allCountries = {};
 let initAllCountries = function() {
     fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
         .then((response) => {
@@ -804,6 +828,7 @@ let initAllCountries = function() {
         })
         .then((data) => {
             data = JSON.parse(JSON.stringify(data));
+            allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
             for (let feature of data.features) {
                 let name = feature.properties.Name_label;
                 if (name) {
@@ -817,25 +842,159 @@ let initAllCountries = function() {
         });
 }
 
-///// add new country /////
+///// Get all countries /////
 
-const newCountryData = {
-    "geoJSON": null,
+// Dispaly all existing countries in the country list
+let initCountryList = function() {
+    $.ajax({
+        type: "GET",
+        url: URL_country,
+        success: function(response) {
+            existingCountries = JSON.parse(response["data"]);
+            // add existing countries to the country-list and country-select
+            $("#country-list-ul").empty(); 
+            $countrySelect.empty();
+            $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
+
+            for (let country in existingCountries) {
+                let isDefault = existingCountries[country]["default"];
+                let newListItem = $(
+                    `<li class="list-group-item" id="${country}-li">
+                    <div class="row option-div">
+                      <div class="col-md-6">${country}</div>
+                      <div class="col-md-4 default-btn">
+                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
+                        <label for="${country}-radio">Default</label>
+                      </div>
+                      <div class="col-md-2">
+                        <button class="remove-btn"><span>&times;</span></button>
+                      </div>
+                    </div>
+                  </li>`
+                )
+                $("#country-list-ul").append(newListItem);
+
+                // show conformation modal once the remove button is clicked
+                newListItem.find(".remove-btn").on("click", function() {
+                    countryToRemove = country;
+                    $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
+                    $("#remove-confirmation-modal").modal("show");
+                    $("#admin-modal").modal("hide");
+                })
+
+                // put existing countries in the country selector
+                $countrySelect.append($("<option>", {
+                    value: country,
+                    text: country,
+                    selected: isDefault ? true : false
+                }));
+
+                // update default country in the database when default radio button is clicked
+                newListItem.find("input[type='radio']").on("click", function() {
+                    $.ajax({
+                        type: "POST",
+                        url: URL_updateDefaultCountry,
+                        data: JSON.stringify({"country": country}),
+                        success: function(success) {
+                            console.log(success);
+                            zoomInToCountry(country);
+                        },
+                        error: function(error) {
+                            console.log(error);
+                        }
+                    })
+                })
+
+                // zoom in to the default country when loading the website
+                if (isDefault) {
+                    if (!selectedCountryLayer) {
+                        selectedCountryLayer = L.geoJSON([], {
+                            style: {opacity: 1, fillOpacity: 0}
+                        }).addTo(mapObj);
+                    }
+                    mapObj.removeLayer(subbasinLayer);
+                    geoglowsStreamflowLayer.setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
+                    zoomInToCountry(country);
+                }
+            }
+            
+            $("#country-list-ul").append($(
+                `<li class="list-group-item">
+                <div class="row option-div">
+                  <div class="col-md-10">Add New Country</div>
+                  <div class="col-md-2">
+                    <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
+                  </div>
+                </div>
+              </li>`
+            ))
+
+            // add non-existent countries to the country searchable select
+            $("#new-country-select").empty();
+            for (country in allCountries) {
+                if (!(country in existingCountries)) {
+                    $("#new-country-select").append($("<option>", {
+                        value: country,
+                        text: country
+                    }))
+                }
+            }
+        },
+        error: function(error) {
+            console.log(error);
+        }
+    })
 };
 
 
-let readFile = function(file, type) {
-    const reader = new FileReader();
-    reader.onload = (e) => newCountryData[type] = e.target.result;
-    reader.readAsText(file);
+$countrySelect.on("change", function() {
+    let country = $(this).val();
+    if (country) {
+        zoomInToCountry(country);
+        mapObj.removeLayer(subbasinLayer);
+        geoglowsStreamflowLayer.setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
+        updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
+    }
+});
+
+
+// Zoom into the selectedCountry
+let zoomInToCountry = function(country) {
+    if (country == ALL_COUNTRIES_OPTION_VALUE) {
+        countryGeoJSON = allCountries[country];
+    } else {
+        countryGeoJSON = allCountries[country].geometry
+    }
+    selectedCountryLayer.clearLayers();
+    selectedCountryLayer.addData(countryGeoJSON);
+    mapObj.fitBounds(selectedCountryLayer.getBounds());
 }
 
 
+// switch between "country list" row and "add new country" row
+
+let showCountryList = function() {
+    $("#remove-confirmation-modal").hide();
+    $("#admin-modal").show();    
+    initCountryList(); // refresh the country list
+    $("#country-list-div").css("display", "flex");
+    $("#add-country-form").css("display", "none");
+    
+}
+
+let showAddCountryForm = function() {
+    $("#remove-confirmation-modal").hide();
+    $("#admin-modal").show();
+    initCountryList();
+    $("#country-list-div").css("display", "none");
+    $("#add-country-form").css("display", "flex");
+}
+
+///// add new country /////
+
 let addCountry = function() {
-    // TODO validate the content of each field
     let data = {
         country: $("#new-country-select").val(),
-        geoJSON: newCountryData["geoJSON"],
         isDefault: $("#default-check").is(":checked")
     }
 
@@ -882,146 +1041,4 @@ let removeCountry = function() {
             console.log(error);
         },
     })
-}
-
-///// Get all countries /////
-
-// Zoom into the selectedCountry
-let zoomInToCountry = function(countryGeoJSON) {
-    selectedCountryLayer.clearLayers();
-    selectedCountryLayer.addData(countryGeoJSON);
-    mapObj.fitBounds(selectedCountryLayer.getBounds());
-}
-
-// Dispaly all existing countries in the country list
-let existingCountries, countryToRemove, defaultCountry;
-let initCountryList = function() {
-    console.log("iniCountryList is called!");
-    $.ajax({
-        type: "GET",
-        url: URL_country,
-        success: function(response) {
-            existingCountries = JSON.parse(response["data"]);
-            // add existing countries to the country list
-            $("#country-list-ul").empty(); 
-            $("#country-selector").empty()
-            for (let country in existingCountries) {
-                let isDefault = existingCountries[country]["default"];
-                let newListItem = $(
-                    `<li class="list-group-item" id="${country}-li">
-                    <div class="row option-div">
-                      <div class="col-md-6">${country}</div>
-                      <div class="col-md-4 default-btn">
-                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
-                        <label for="${country}-radio">Default</label>
-                      </div>
-                      <div class="col-md-2">
-                        <button class="remove-btn"><span>&times;</span></button>
-                      </div>
-                    </div>
-                  </li>`
-                )
-                $("#country-list-ul").append(newListItem);
-
-                // show conformation modal once the remove button is clicked
-                newListItem.find(".remove-btn").on("click", function() {
-                    countryToRemove = country;
-                    $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
-                    $("#remove-confirmation-modal").modal("show");
-                    $("#admin-modal").modal("hide");
-                })
-
-                // put existing countries in the country selector
-                $("#country-selector").append($("<option>", {
-                    value: country,
-                    text: country,
-                    selected: isDefault ? true : false
-                }));
-
-                // update default country in the database
-                newListItem.find("input[type='radio']").on("click", function() {
-                    $.ajax({
-                        type: "POST",
-                        url: URL_updateDefaultCountry,
-                        data: JSON.stringify({"country": country}),
-                        success: function(success) {
-                            console.log(success);
-                            zoomInToCountry(allCountries[country].geometry);
-                        },
-                        error: function(error) {
-                            console.log(error);
-                        }
-                    })
-                })
-
-                // zoom in to the default country when loading the website
-                if (isDefault) {
-                    if (!selectedCountryLayer) {
-                        selectedCountryLayer = L.geoJSON([], {
-                            style: {opacity: 1, fillOpacity: 0}
-                        }).addTo(mapObj);
-                    }
-                    mapObj.removeLayer(subbasinLayer);
-                    geoglowsStreamflowLayer.setLayerDefs({0: `rivercountry = '${country}'`});
-                    zoomInToCountry(allCountries[country].geometry);
-                }
-            }
-
-            $("#country-list-ul").append($(
-                `<li class="list-group-item">
-                <div class="row option-div">
-                  <div class="col-md-10">Add New Country</div>
-                  <div class="col-md-2">
-                    <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
-                  </div>
-                </div>
-              </li>`
-            ))
-
-            // add non-existent countries to the country searchable select
-            $("#new-country-select").empty();
-            for (country in allCountries) {
-                if (!(country in existingCountries)) {
-                    $("#new-country-select").append($("<option>", {
-                        value: country,
-                        text: country
-                    }))
-                }
-            }
-        },
-        error: function(error) {
-            console.log(error);
-        }
-    })
-};
-
-
-$("#country-selector").on("change", function() {
-    let country = $(this).val();
-    zoomInToCountry(allCountries[country].geometry);
-    mapObj.removeLayer(subbasinLayer);
-    geoglowsStreamflowLayer.setLayerDefs(
-        {0: `rivercountry = '${country}'`}
-    );
-    updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
-});
-
-
-// switch between "country list" row and "add new country" row
-
-let showCountryList = function() {
-    $("#remove-confirmation-modal").hide();
-    $("#admin-modal").show();    
-    initCountryList(); // refresh the country list
-    $("#country-list-div").css("display", "flex");
-    $("#add-country-form").css("display", "none");
-    
-}
-
-let showAddCountryForm = function() {
-    $("#remove-confirmation-modal").hide();
-    $("#admin-modal").show();
-    initCountryList();
-    $("#country-list-div").css("display", "none");
-    $("#add-country-form").css("display", "flex");
 }

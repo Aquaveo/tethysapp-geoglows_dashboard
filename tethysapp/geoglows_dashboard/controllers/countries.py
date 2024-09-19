@@ -18,7 +18,7 @@ def get_country_dry_level(request):
 
 
 @controller(name="country", url="country")
-def add_country(request):
+def add_country(request):  # TODO this function also do remove country and get all countries. The function name is confusing
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
         country = data["country"]
