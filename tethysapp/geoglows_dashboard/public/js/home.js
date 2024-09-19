@@ -6,6 +6,7 @@
 
 const $yearMonthPicker = $("#year-month-picker");
 const $countrySelect = $("#country-select");
+const $countryListUl = $("#country-list-ul");
 
 ///// constants /////
 
@@ -852,7 +853,7 @@ let initCountryList = function() {
         success: function(response) {
             existingCountries = JSON.parse(response["data"]);
             // add existing countries to the country-list and country-select
-            $("#country-list-ul").empty(); 
+            $countryListUl.empty(); 
             $countrySelect.empty();
             $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
 
@@ -872,7 +873,7 @@ let initCountryList = function() {
                     </div>
                   </li>`
                 )
-                $("#country-list-ul").append(newListItem);
+                $countryListUl.append(newListItem);
 
                 // show conformation modal once the remove button is clicked
                 newListItem.find(".remove-btn").on("click", function() {
@@ -918,7 +919,7 @@ let initCountryList = function() {
                 }
             }
             
-            $("#country-list-ul").append($(
+            $countryListUl.append($(
                 `<li class="list-group-item">
                 <div class="row option-div">
                   <div class="col-md-10">Add New Country</div>
@@ -974,17 +975,16 @@ let zoomInToCountry = function(country) {
 // switch between "country list" row and "add new country" row
 
 let showCountryList = function() {
-    $("#remove-confirmation-modal").hide();
-    $("#admin-modal").show();    
+    $("#remove-confirmation-modal").modal('hide');
+    $("#admin-modal").modal('show');    
     initCountryList(); // refresh the country list
     $("#country-list-div").css("display", "flex");
     $("#add-country-form").css("display", "none");
-    
 }
 
 let showAddCountryForm = function() {
-    $("#remove-confirmation-modal").hide();
-    $("#admin-modal").show();
+    $("#remove-confirmation-modal").modal('hide');
+    $("#admin-modal").modal('show');
     initCountryList();
     $("#country-list-div").css("display", "none");
     $("#add-country-form").css("display", "flex");
