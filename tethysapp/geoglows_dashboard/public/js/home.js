@@ -10,8 +10,23 @@ const $countryListUl = $("#country-list-ul");
 
 ///// constants /////
 
-// map
+// map settings
 const MIN_QUERY_ZOOM = 15;
+
+// map layers
+const HYDROSOS_STREAMFLOW_LAYER_NAME = "HydroSOS Streamflow";
+const GEOGLOWS_STREAMFLOW_LAYER_NAME = "Geoglows Streamflow";
+const NILE_SUBBASIN_LAYER_NAME = "Nile Subbasins";
+const KENYA_SUBBASIN_LAYER_NAME = "Kenya Subbasins";
+const KENYA_HYDRO_STATIONS_LAYER_NAME = "Kenya Hydro Stations";
+
+const MAP_LAYERS = {
+    [GEOGLOWS_STREAMFLOW_LAYER_NAME]: null,
+    [HYDROSOS_STREAMFLOW_LAYER_NAME]: null,
+    [NILE_SUBBASIN_LAYER_NAME]: null,
+    [KENYA_SUBBASIN_LAYER_NAME]: null,
+    [KENYA_HYDRO_STATIONS_LAYER_NAME]: null,   
+}
 
 // countries
 const ALL_COUNTRIES_OPTION_VALUE = "All Countries";
@@ -97,8 +112,8 @@ let updateYearMonthPicker = function() {
 const startDateTime = new Date(new Date().setUTCHours(0, 0, 0, 0));
 const endDateTime = new Date(startDateTime);
 endDateTime.setDate(endDateTime.getDate() + 5);
-let mapObj, resetButton, mapMarker, selectedStream, selectedCountryLayer, selectedSubbasinLayer;
-const geoglowsStreamflowLayer = L.esri.dynamicMapLayer({
+let mapObj, resetButton, mapMarker;
+MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME] = L.esri.dynamicMapLayer({
     url: "https://livefeeds3.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer",
     layers: [0],
     layerDefs: {0: "vpu = 122"},
@@ -119,9 +134,9 @@ const basemaps = {
 }
 
 // map layers
-let layerControl, hydroSOSStreamflowLayer, subbasinLayer, geeSPILayer, currentStreamflowLayer;
+let layerControl, geeSPILayer;
 let geoglowsLegend, hydroSOSLegend, spiLegend;
-let selectedReachID;
+let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedSubbasinLayer;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -170,12 +185,72 @@ let initHydroSOSLegend = function() {
     }
 }
 
+let addLayerToMapAndLayerControl = function(layer, name) {
+    layer.addTo(mapObj);
+    mapObj.fitBounds(layer.getBounds());
+    layerControl.addOverlay(layer, name);
+}
+
+let removeLayerFromMapAndlayerControl = function(layer) {
+    if (layer) {
+        mapObj.removeLayer(layer);
+        layerControl.removeLayer(layer);   
+    }
+}
+
+let addGeoJSONLayerFomFile = function(layerName, filePath, style={}, onEachFeature=null) {
+    layer = MAP_LAYERS[layerName];
+    if (!layer) {
+        return fetch(filePath)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`${filePath} was not ok`);
+                }
+                return response.json()
+            })
+            .then((data) => {
+                data = JSON.parse(JSON.stringify(data));
+                layer = MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
+                addLayerToMapAndLayerControl(layer, layerName);
+                return layer
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+    } else {
+        addLayerToMapAndLayerControl(layer, layerName);
+        return layer
+    }
+}
+
+let addKenyaSubbasinLayer = function() {
+    style = {
+        "color": "#3388ff",
+        "weight": 2,
+        "opacity": 1,
+        "fillOpacity": 0
+    };
+    addGeoJSONLayerFomFile(
+        layerName=KENYA_SUBBASIN_LAYER_NAME,
+        filePath="/static/geoglows_dashboard/data/geojson/Kenya_sub_basins.geojson",
+        style=style
+    );
+}
+
+let addKenyaHydroStationLayer = function() {
+    addGeoJSONLayerFomFile(
+        layerName=KENYA_HYDRO_STATIONS_LAYER_NAME,
+        path="/static/geoglows_dashboard/data/geojson/Kenya_hydro_stations.geojson",
+
+    );
+}
+
 let getSelectedArea = function() {
     let area;
     if (selectedCountryLayer && selectedCountryLayer.getLayers().length != 0) {
         area = selectedCountryLayer.toGeoJSON();
-    } else if(mapObj.hasLayer(subbasinLayer)) {
-        area = subbasinLayer.toGeoJSON();
+    } else if(mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME])) {
+        area = MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME].toGeoJSON();
     }
     return area;
 }
@@ -202,7 +277,7 @@ let removeMapMarker = function() {
 }
 
 let initMapCardBody = function() {
-    let addSubbasinLayer = function() {
+    let addNileSubbasinLayer = function() {
         function onEachFeature(feature, layer) {
             let riverID = feature.properties['River ID'];
             layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
@@ -216,35 +291,17 @@ let initMapCardBody = function() {
             })
         }
 
-        if (subbasinLayer == null) {
-            fetch("/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson")
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("nile_sub_basins was not ok");
-                }
-                return response.json()
-            })
-            .then((data) => {
-                data = JSON.parse(JSON.stringify(data));
-                subbasinLayer = L.geoJSON(data, {
-                    style: {
-                        "color": "#3388ff",
-                        "weight": 2,
-                        "opacity": 1,
-                        "fillOpacity": 0
-                    },
-                    onEachFeature: onEachFeature
-                });
-                subbasinLayer.addTo(mapObj);
-                mapObj.fitBounds(subbasinLayer.getBounds());
-                layerControl.addOverlay(subbasinLayer, "Subbasins");
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-            });
-        } else {
-            layerControl.addOverlay(subbasinLayer, "Subbasins");
-        }
+        addGeoJSONLayerFomFile(
+            layerName=NILE_SUBBASIN_LAYER_NAME,
+            filePath="/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson",
+            style={
+                "color": "#3388ff",
+                "weight": 2,
+                "opacity": 1,
+                "fillOpacity": 0
+            },
+            onEachFeature=onEachFeature
+        )
     }
 
     let addGEESPILayer = function() {
@@ -266,21 +323,21 @@ let initMapCardBody = function() {
         }
     }
 
-    let addStreamTabLayers = async function() {
+    let addMapLayers = async function() {
         await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $countrySelect.val());
         layerControl = L.control.layers(
             basemaps,
-            {"Geoglows Streamflow": geoglowsStreamflowLayer, "HydroSOS Streamflow": hydroSOSStreamflowLayer} ,
+            {"Geoglows Streamflow": MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME], "HydroSOS Streamflow": MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]},
             {collapsed: true, position: 'topleft'}
         ).addTo(mapObj);
-        geoglowsStreamflowLayer.addTo(mapObj);
-        addSubbasinLayer(); 
+        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
+        addNileSubbasinLayer(); 
         addGEESPILayer();
     }
 
     let refreshGeoglowsStreamflowLayer = function() {
         let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-        geoglowsStreamflowLayer.setTimeRange(sliderTime, endDateTime);
+        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setTimeRange(sliderTime, endDateTime);
     }
 
     // init map object
@@ -297,42 +354,44 @@ let initMapCardBody = function() {
 
         mapObj.on("overlayadd", function(e) {
             // make geoglows and hydrosos streamflow mutually exclusive
-            if (e.layer == geoglowsStreamflowLayer) {
-                if (currentStreamflowLayer == hydroSOSStreamflowLayer) {
-                    removeWithTimeout(currentStreamflowLayer);
+            if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
+                if (selectedStreamflowLayer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
+                    removeWithTimeout(selectedStreamflowLayer);
                 }
                 $('#year-month-picker-div').css('display', 'none');
                 geoglowsLegend.addTo(mapObj);
-                currentStreamflowLayer = geoglowsStreamflowLayer;
-            } else if (e.layer == hydroSOSStreamflowLayer) {
-                if (currentStreamflowLayer == geoglowsStreamflowLayer) {
-                    removeWithTimeout(currentStreamflowLayer);
+                selectedStreamflowLayer = MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME];
+            } else if (e.layer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
+                if (selectedStreamflowLayer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
+                    removeWithTimeout(selectedStreamflowLayer);
                     // TODO also remove the time slider
                 }
                 $('#year-month-picker-div').css('display', 'flex')
                 hydroSOSLegend.addTo(mapObj);
-                currentStreamflowLayer = hydroSOSStreamflowLayer;
-            } else if (e.layer == subbasinLayer) {
+                selectedStreamflowLayer = MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME];
+            } else if (e.layer == MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
                 selectedCountryLayer.clearLayers();
-                mapObj.fitBounds(subbasinLayer.getBounds());
-                geoglowsStreamflowLayer.setLayerDefs({0: 'vpu = 122'});
+                mapObj.fitBounds(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME].getBounds());
+                MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs({0: 'vpu = 122'});
                 $countrySelect.val(SELECT_A_COUNTRY_OPTION_VALUE);
+                removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
+                removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
             } else if (e.layer == geeSPILayer) {
                 spiLegend.addTo(mapObj);
             }
         })
 
         mapObj.on("overlayremove", function(e) {
-            if (e.layer == geoglowsStreamflowLayer) {
+            if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
                 geoglowsLegend.remove();
-            } else if (e.layer == hydroSOSStreamflowLayer) {
+            } else if (e.layer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
                 hydroSOSLegend.remove();
                 $('#year-month-picker-div').css('display', 'none')
             } else if (e.layer == geeSPILayer) {
                 spiLegend.remove();
             }
-            if (currentStreamflowLayer == e.layer) {
-                currentStreamflowLayer = null;
+            if (selectedStreamflowLayer == e.layer) {
+                selectedStreamflowLayer = null;
             }
         })
 
@@ -361,12 +420,12 @@ let initMapCardBody = function() {
         mapObj.on("zoomend", function() {
             let date = $yearMonthPicker.val();
             let newMinStreamOrder = getMinStreamOrder();
-            let isVPU = mapObj.hasLayer(subbasinLayer) ? 'True' : 'False';
+            let isVPU = mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) ? 'True' : 'False';
             let country = $countrySelect.val();
             let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
             if (newMinStreamOrder != minStreamOrder) {
                 minStreamOrder = newMinStreamOrder;
-                hydroSOSStreamflowLayer.setParams({viewparams: vparams});
+                MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME].setParams({viewparams: vparams});
             }
         })
 
@@ -403,7 +462,7 @@ let initMapCardBody = function() {
 
     // init map layers
     basemaps["Open Street Map"].addTo(mapObj);
-    addStreamTabLayers();
+    addMapLayers();
 };
 
 ///// HydroSOS Layers /////
@@ -422,7 +481,6 @@ let getColor = function(dryLevel) {
             return "#2C7DCD";
     }
 }
-
 
 let getHydroSOSCountryDryLevelStyle = function(feature) {
     return {
@@ -467,14 +525,14 @@ let getMinStreamOrder = function() {
 
 let minStreamOrder;
 let updateHydroSOSStreamflowLayer = async function(date, country) {
-    let is_vpu = country == ALL_COUNTRIES_OPTION_VALUE ? 'True' : 'False';
-    let country_value = is_vpu === 'True' ? '' : country;
-    let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${is_vpu};country:${country_value}`;
+    let isVPU = country == ALL_COUNTRIES_OPTION_VALUE ? 'True' : 'False';
+    let countryValue = isVPU === 'True' ? '' : country;
+    let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${countryValue}`;
 
-    if (!hydroSOSStreamflowLayer) {
+    if (!MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
         try {
             await getGeoserverEndpoint();
-            hydroSOSStreamflowLayer = L.tileLayer.wms(`${geoserverEndpoint}/geoglows_dashboard/wms`, {
+            MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME] = L.tileLayer.wms(`${geoserverEndpoint}/geoglows_dashboard/wms`, {
                 layers: 'geoglows_dashboard:hydrosos_streamflow_layer',
                 format: 'image/png',
                 transparent: true,
@@ -484,7 +542,7 @@ let updateHydroSOSStreamflowLayer = async function(date, country) {
             console.error("Error occurred while fetching Geoserver endpoint:", error);
         }
     } else {
-        hydroSOSStreamflowLayer.setParams({viewparams: vparams});
+        MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME].setParams({viewparams: vparams});
     }
 }
 
@@ -913,9 +971,13 @@ let initCountryList = function() {
                             style: {opacity: 1, fillOpacity: 0}
                         }).addTo(mapObj);
                     }
-                    mapObj.removeLayer(subbasinLayer);
-                    geoglowsStreamflowLayer.setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
+                    mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
+                    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
                     zoomInToCountry(country);
+                    if (country == "Kenya") {
+                        addKenyaSubbasinLayer();
+                        addKenyaHydroStationLayer();
+                    }
                 }
             }
             
@@ -947,17 +1009,22 @@ let initCountryList = function() {
     })
 };
 
-
 $countrySelect.on("change", function() {
     let country = $(this).val();
     if (country) {
         zoomInToCountry(country);
-        mapObj.removeLayer(subbasinLayer);
-        geoglowsStreamflowLayer.setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
+        mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
+        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
         updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
+        if (country == "Kenya") {
+            addKenyaSubbasinLayer();
+            addKenyaHydroStationLayer();
+        } else {
+            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
+            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
+        }
     }
 });
-
 
 // Zoom into the selectedCountry
 let zoomInToCountry = function(country) {
