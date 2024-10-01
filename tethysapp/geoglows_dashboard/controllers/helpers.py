@@ -1,10 +1,8 @@
 import os
 import io
 import json
-import requests
 import geoglows
 from datetime import datetime, timezone
-
 import pandas as pd
 from plotly.offline import plot as offline_plot
 

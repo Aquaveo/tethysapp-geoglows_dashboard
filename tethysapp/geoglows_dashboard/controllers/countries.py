@@ -17,8 +17,9 @@ def get_country_dry_level(request):
     return JsonResponse(compute_country_dry_level(country, int(year), int(month), type), safe=False)
 
 
+# TODO this function also do remove country and get all countries. The function name is confusing
 @controller(name="country", url="country")
-def add_country(request):  # TODO this function also do remove country and get all countries. The function name is confusing
+def add_country(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
         country = data["country"]

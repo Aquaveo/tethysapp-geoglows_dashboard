@@ -80,7 +80,7 @@ class HydroSOSRiverDataInitializer:
             print(f"inserting year {year} ...")
             add_new_river_hydrosos_bulk(df_hydrosos_data.to_dict(orient='records'))
             print(f"year {year} is inserted!")
-            
+
     def insert_default_country(self):
         add_new_country("All Countries", True)
         print("Set 'All Countries' as default")
