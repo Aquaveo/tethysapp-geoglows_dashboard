@@ -18,28 +18,6 @@ class GeoglowsDashboard(TethysAppBase):
     enable_feedback = False
     feedback_emails = []
 
-    def custom_settings(self):
-        """
-        Custom settings.
-        """
-        custom_settings = (
-            CustomSetting(
-                name='service_account_email',
-                type=CustomSetting.TYPE_STRING,
-                description='Email associated with the service account.',
-                default='',
-                required=False,
-            ),
-            CustomSetting(
-                name='private_key_file',
-                type=CustomSetting.TYPE_STRING,
-                description='Path to service account JSON file containing the private key.',
-                default='',
-                required=False,
-            ),
-        )
-        return custom_settings
-
     def persistent_store_settings(self):
         ps_settings = (
             PersistentStoreDatabaseSetting(

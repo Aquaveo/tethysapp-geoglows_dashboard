@@ -315,13 +315,12 @@ let initMapCardBody = async function() {
         fullscreenControl: true,
         timeDimension: true
     });
+    initHydroSOSLegend();
+    initGeoglowsStreamflowLegend();
 
     // init map layers
     basemaps["ESRI Grey"].addTo(mapObj);
     await addMapLayers();
-
-    initHydroSOSLegend();
-    initGeoglowsStreamflowLegend();
 
     mapObj.on("overlayadd", function(e) {
         // make geoglows and hydrosos streamflow mutually exclusive
