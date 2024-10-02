@@ -329,11 +329,8 @@ let initMapCardBody = async function() {
     initHydroSOSLegend();
     initGeoglowsStreamflowLegend();
 
-    // init map layers
-    basemaps["ESRI Grey"].addTo(mapObj);
-    await addMapLayers();
-
     mapObj.on("overlayadd", function(e) {
+        console.log("overlay is added!");
         // make geoglows and hydrosos streamflow mutually exclusive
         if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
             if (selectedStreamflowLayer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
@@ -435,6 +432,10 @@ let initMapCardBody = async function() {
 
     mapObj.timeDimension.on('timeload', refreshGeoglowsStreamflowLayer);
     $('.timecontrol-play').on('click', refreshGeoglowsStreamflowLayer);
+
+    // init map layers
+    basemaps["ESRI Grey"].addTo(mapObj);
+    await addMapLayers();
 };
 
 ///// HydroSOS Layers /////
