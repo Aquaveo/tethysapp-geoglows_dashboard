@@ -2,13 +2,13 @@
 *                        Elements & Constants
 *************************************************************************/
 
-///// elements /////
+///// Elements /////
 
 const $yearMonthPicker = $("#year-month-picker");
 const $countrySelect = $("#country-select");
 const $countryListUl = $("#country-list-ul");
 
-///// constants /////
+///// Constants /////
 
 // map settings
 const MIN_QUERY_ZOOM = 15;
@@ -36,11 +36,11 @@ const SELECT_A_COUNTRY_OPTION_VALUE = "";
 *                             LOAD THE APP
 *************************************************************************/
 
-$(function() {
+$(async function() {
     initPlotCards();
-    initAdminSettings();
     initMapCardHeader();
-    initMapCardBody();
+    await initMapCardBody();
+    initAdminSettings();
 })
 
 /************************************************************************
@@ -121,6 +121,10 @@ MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME] = L.esri.dynamicMapLayer({
     to: endDateTime,
     opacity: 0.7
 });
+let refreshGeoglowsStreamflowLayer = function() {
+    let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
+    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setTimeRange(sliderTime, endDateTime);
+}
 const basemaps = {
     "Open Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -134,8 +138,8 @@ const basemaps = {
 }
 
 // map layers
-let layerControl, geeSPILayer;
-let geoglowsLegend, hydroSOSLegend, spiLegend;
+let $layerControl;
+let geoglowsLegend, hydroSOSLegend;
 let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedSubbasinLayer;
 
 let initGeoglowsStreamflowLegend = function() {
@@ -158,17 +162,6 @@ let initGeoglowsStreamflowLegend = function() {
     }
 }
 
-let initSPILegend = function() {
-    spiLegend = L.control({position: 'bottomright'});
-    spiLegend.onAdd = function() {
-        let div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = 
-            '<div class="legend-title">SPI 16 Day Legend</div>' + 
-            '<img src="/static/geoglows_dashboard/images/spi-legend.jpg" style="height:40px; width:auto">';
-        return div;
-    }
-}
-
 let initHydroSOSLegend = function() {
     hydroSOSLegend = L.control({position: 'bottomright'});
     hydroSOSLegend.onAdd = function() {
@@ -185,16 +178,27 @@ let initHydroSOSLegend = function() {
     }
 }
 
+let layerIsInLayerControl = function(layerControl, layer) {
+    for (let i of layerControl._layers) {
+        if (i.layer === layer) {
+            return true;
+        }
+    }
+    return false;
+}
+
 let addLayerToMapAndLayerControl = function(layer, name) {
-    layer.addTo(mapObj);
-    mapObj.fitBounds(layer.getBounds());
-    layerControl.addOverlay(layer, name);
+    if (!layerIsInLayerControl($layerControl, layer)) {
+        layer.addTo(mapObj);
+        mapObj.fitBounds(layer.getBounds());
+        $layerControl.addOverlay(layer, name);
+    }
 }
 
 let removeLayerFromMapAndlayerControl = function(layer) {
     if (layer) {
         mapObj.removeLayer(layer);
-        layerControl.removeLayer(layer);   
+        $layerControl.removeLayer(layer);   
     }
 }
 
@@ -210,9 +214,9 @@ let addGeoJSONLayerFomFile = function(layerName, filePath, style={}, onEachFeatu
             })
             .then((data) => {
                 data = JSON.parse(JSON.stringify(data));
-                layer = MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
-                addLayerToMapAndLayerControl(layer, layerName);
-                return layer
+                MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
+                addLayerToMapAndLayerControl(MAP_LAYERS[layerName], layerName);
+                return MAP_LAYERS[layerName]
             })
             .catch((error) => {
                 console.error("Error:", error);
@@ -243,6 +247,44 @@ let addKenyaHydroStationLayer = function() {
         path="/static/geoglows_dashboard/data/geojson/Kenya_hydro_stations.geojson",
 
     );
+}
+
+let addNileSubbasinLayer = function() {
+    function onEachFeature(feature, layer) {
+        let riverID = feature.properties['River ID'];
+        layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
+        layer.on('click', function() {
+            if (selectedSubbasinLayer != null) {
+                selectedSubbasinLayer.setStyle({'color': '#3388ff'});
+            }
+            layer.setStyle({'color': 'red'});
+            selectedSubbasinLayer = layer;
+            updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+        })
+    }
+
+    addGeoJSONLayerFomFile(
+        layerName=NILE_SUBBASIN_LAYER_NAME,
+        filePath="/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson",
+        style={
+            "color": "#3388ff",
+            "weight": 2,
+            "opacity": 1,
+            "fillOpacity": 0
+        },
+        onEachFeature=onEachFeature
+    )
+}
+
+let addMapLayers = async function() {
+    await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $countrySelect.val());
+    $layerControl = L.control.layers(
+        basemaps,
+        {"Geoglows Streamflow": MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME], "HydroSOS Streamflow": MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]},
+        {collapsed: true, position: 'topleft'}
+    ).addTo(mapObj);
+    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
+    addNileSubbasinLayer();
 }
 
 let getSelectedArea = function() {
@@ -276,161 +318,92 @@ let removeMapMarker = function() {
     }
 }
 
-let initMapCardBody = function() {
-    let addNileSubbasinLayer = function() {
-        function onEachFeature(feature, layer) {
-            let riverID = feature.properties['River ID'];
-            layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
-            layer.on('click', function() {
-                if (selectedSubbasinLayer != null) {
-                    selectedSubbasinLayer.setStyle({'color': '#3388ff'});
-                }
-                layer.setStyle({'color': 'red'});
-                selectedSubbasinLayer = layer;
-                updateSelectedReachByID(riverID, isSubbasinOutlet=true);
-            })
-        }
-
-        addGeoJSONLayerFomFile(
-            layerName=NILE_SUBBASIN_LAYER_NAME,
-            filePath="/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson",
-            style={
-                "color": "#3388ff",
-                "weight": 2,
-                "opacity": 1,
-                "fillOpacity": 0
-            },
-            onEachFeature=onEachFeature
-        )
-    }
-
-    let addGEESPILayer = function() {
-        if (geeSPILayer == null) {
-            $.ajax({
-                type: "GET",
-                async: true,
-                url: URL_getGEEMapLayer,
-                success: function(response) {
-                    geeSPILayer = L.tileLayer(response['url']);
-                    layerControl.addOverlay(geeSPILayer, "CHIRPS SPI");
-                },
-                error: function(error) {
-                    console.log(error)
-                }
-            })
-        } else {
-            layerControl.addOverlay(geeSPILayer, "CHIRPS SPI");
-        }
-    }
-
-    let addMapLayers = async function() {
-        await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $countrySelect.val());
-        layerControl = L.control.layers(
-            basemaps,
-            {"Geoglows Streamflow": MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME], "HydroSOS Streamflow": MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]},
-            {collapsed: true, position: 'topleft'}
-        ).addTo(mapObj);
-        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
-        addNileSubbasinLayer(); 
-        addGEESPILayer();
-    }
-
-    let refreshGeoglowsStreamflowLayer = function() {
-        let sliderTime = new Date(mapObj.timeDimension.getCurrentTime());
-        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setTimeRange(sliderTime, endDateTime);
-    }
-
+let initMapCardBody = async function() {
     // init map object
-    if (mapObj == null) {
-        mapObj = L.map('leaflet-map', {
-            zoom: 3,
-            center: [0, 0],
-            fullscreenControl: true,
-            timeDimension: true
-        });
-        initHydroSOSLegend();
-        initGeoglowsStreamflowLegend();
-        initSPILegend();
+    mapObj = L.map('leaflet-map', {
+        zoom: 3,
+        center: [0, 0],
+        fullscreenControl: true,
+        timeDimension: true
+    });
+    initHydroSOSLegend();
+    initGeoglowsStreamflowLegend();
 
-        mapObj.on("overlayadd", function(e) {
-            // make geoglows and hydrosos streamflow mutually exclusive
-            if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
-                if (selectedStreamflowLayer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
-                    removeWithTimeout(selectedStreamflowLayer);
-                }
-                $('#year-month-picker-div').css('display', 'none');
-                geoglowsLegend.addTo(mapObj);
-                selectedStreamflowLayer = MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME];
-            } else if (e.layer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
-                if (selectedStreamflowLayer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
-                    removeWithTimeout(selectedStreamflowLayer);
-                    // TODO also remove the time slider
-                }
-                $('#year-month-picker-div').css('display', 'flex')
-                hydroSOSLegend.addTo(mapObj);
-                selectedStreamflowLayer = MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME];
-            } else if (e.layer == MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
-                selectedCountryLayer.clearLayers();
-                mapObj.fitBounds(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME].getBounds());
-                MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs({0: 'vpu = 122'});
-                $countrySelect.val(SELECT_A_COUNTRY_OPTION_VALUE);
-                removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
-                removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
-            } else if (e.layer == geeSPILayer) {
-                spiLegend.addTo(mapObj);
+    mapObj.on("overlayadd", function(e) {
+        console.log("overlay is added!");
+        // make geoglows and hydrosos streamflow mutually exclusive
+        if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
+            if (selectedStreamflowLayer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
+                removeWithTimeout(selectedStreamflowLayer);
             }
-        })
-
-        mapObj.on("overlayremove", function(e) {
-            if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
-                geoglowsLegend.remove();
-            } else if (e.layer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
-                hydroSOSLegend.remove();
-                $('#year-month-picker-div').css('display', 'none')
-            } else if (e.layer == geeSPILayer) {
-                spiLegend.remove();
+            $('#year-month-picker-div').css('display', 'none');
+            geoglowsLegend.addTo(mapObj);
+            selectedStreamflowLayer = MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME];
+        } else if (e.layer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
+            if (selectedStreamflowLayer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
+                removeWithTimeout(selectedStreamflowLayer);
+                // TODO also remove the time slider
             }
-            if (selectedStreamflowLayer == e.layer) {
-                selectedStreamflowLayer = null;
-            }
-        })
+            $('#year-month-picker-div').css('display', 'flex')
+            hydroSOSLegend.addTo(mapObj);
+            selectedStreamflowLayer = MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME];
+        } else if (e.layer == MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
+            selectedCountryLayer.clearLayers();
+            mapObj.fitBounds(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME].getBounds());
+            MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs({0: 'vpu = 122'});
+            $countrySelect.val(SELECT_A_COUNTRY_OPTION_VALUE);
+            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
+            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
+        }
+    })
 
-        mapObj.on('click', function(event) {
-            let point = turf.point([event.latlng.lng, event.latlng.lat]);
-            if (isPointInSelectedArea(point)) {
-                let zoom = mapObj.getZoom();
-                if (zoom < MIN_QUERY_ZOOM) {
-                    mapObj.setView(event.latlng, MIN_QUERY_ZOOM)
-                } else {
-                    removeMapMarker();
-                    mapMarker = L.marker(event.latlng).addTo(mapObj);
-                    mapObj.flyTo(event.latlng, MIN_QUERY_ZOOM);
-                    showSpinners();
-                    findReachIDByLatLng(event.latlng.lat, event.latlng.lng)
-                        .then(initSelectedPlots)
-                        .catch(error => {
-                            alert(error);
-                            showPlotContainerMessages();
-                        })
-                }    
-            } 
-        })
+    mapObj.on("overlayremove", function(e) {
+        if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
+            geoglowsLegend.remove();
+        } else if (e.layer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
+            hydroSOSLegend.remove();
+            $('#year-month-picker-div').css('display', 'none')
+        }
+        if (selectedStreamflowLayer == e.layer) {
+            selectedStreamflowLayer = null;
+        }
+    })
 
-        // update the HydroSOS Streamflow layer every time zooming in/out
-        mapObj.on("zoomend", function() {
-            let date = $yearMonthPicker.val();
-            let newMinStreamOrder = getMinStreamOrder();
-            let isVPU = mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) ? 'True' : 'False';
-            let country = $countrySelect.val();
-            let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
-            if (newMinStreamOrder != minStreamOrder) {
-                minStreamOrder = newMinStreamOrder;
-                MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME].setParams({viewparams: vparams});
-            }
-        })
+    mapObj.on('click', function(event) {
+        let point = turf.point([event.latlng.lng, event.latlng.lat]);
+        if (isPointInSelectedArea(point)) {
+            let zoom = mapObj.getZoom();
+            if (zoom < MIN_QUERY_ZOOM) {
+                mapObj.setView(event.latlng, MIN_QUERY_ZOOM)
+            } else {
+                removeMapMarker();
+                mapMarker = L.marker(event.latlng).addTo(mapObj);
+                mapObj.flyTo(event.latlng, MIN_QUERY_ZOOM);
+                showSpinners();
+                findReachIDByLatLng(event.latlng.lat, event.latlng.lng)
+                    .then(initSelectedPlots)
+                    .catch(error => {
+                        alert(error);
+                        showPlotContainerMessages();
+                    })
+            }    
+        } 
+    })
 
-        selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
-    }
+    // update the HydroSOS Streamflow layer every time zooming in/out
+    mapObj.on("zoomend", function() {
+        let date = $yearMonthPicker.val();
+        let newMinStreamOrder = getMinStreamOrder();
+        let isVPU = mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) ? 'True' : 'False';
+        let country = $countrySelect.val();
+        let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
+        if (newMinStreamOrder != minStreamOrder) {
+            minStreamOrder = newMinStreamOrder;
+            MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME].setParams({viewparams: vparams});
+        }
+    })
+
+    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
 
     if (resetButton == null) {
         resetButton = L.easyButton('fa-home', function(){
@@ -461,8 +434,8 @@ let initMapCardBody = function() {
     $('.timecontrol-play').on('click', refreshGeoglowsStreamflowLayer);
 
     // init map layers
-    basemaps["Open Street Map"].addTo(mapObj);
-    addMapLayers();
+    basemaps["ESRI Grey"].addTo(mapObj);
+    await addMapLayers();
 };
 
 ///// HydroSOS Layers /////
@@ -872,170 +845,180 @@ let findReachIDByLatLng = function(lat, lng) {
 
 let allCountries, defaultCountry, existingCountries, countryToRemove;
 
-let initAdminSettings = function() {
-    initAllCountries();
+let initAdminSettings = async function() {
+    await initAllCountries();
+    await initCountryList();
+    zoomInToCountry(defaultCountry); // zoom in to the default country
 }
 
 allCountries = {};
 let initAllCountries = function() {
-    fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("countries.geojson was not ok");
-            }
-            return response.json();
-        })
-        .then((data) => {
-            data = JSON.parse(JSON.stringify(data));
-            allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
-            for (let feature of data.features) {
-                let name = feature.properties.Name_label;
-                if (name) {
-                    allCountries[name] = feature;
+    return new Promise(function(resolve, reject) {
+        fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("countries.geojson was not ok");
                 }
-            }
-            initCountryList();
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
+                return response.json();
+            })
+            .then((data) => {
+                data = JSON.parse(JSON.stringify(data));
+                allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
+                for (let feature of data.features) {
+                    let name = feature.properties.Name_label;
+                    if (name) {
+                        allCountries[name] = feature;
+                    }
+                }
+                resolve();
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+                reject();
+            });
+    })
 }
 
 ///// Get all countries /////
 
 // Dispaly all existing countries in the country list
 let initCountryList = function() {
-    $.ajax({
-        type: "GET",
-        url: URL_country,
-        success: function(response) {
-            existingCountries = JSON.parse(response["data"]);
-            // add existing countries to the country-list and country-select
-            $countryListUl.empty(); 
-            $countrySelect.empty();
-            $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
-
-            for (let country in existingCountries) {
-                let isDefault = existingCountries[country]["default"];
-                let newListItem = $(
-                    `<li class="list-group-item" id="${country}-li">
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            type: "GET",
+            url: URL_country,
+            success: function(response) {
+                existingCountries = JSON.parse(response["data"]);
+                // add existing countries to the country-list and country-select
+                $countryListUl.empty(); 
+                $countrySelect.empty();
+                $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
+    
+                for (let country in existingCountries) {
+                    let isDefault = existingCountries[country]["default"];
+                    let newListItem = $(
+                        `<li class="list-group-item" id="${country}-li">
+                        <div class="row option-div">
+                          <div class="col-md-6">${country}</div>
+                          <div class="col-md-4 default-btn">
+                            <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
+                            <label for="${country}-radio">Default</label>
+                          </div>
+                          <div class="col-md-2">
+                            <button class="remove-btn"><span>&times;</span></button>
+                          </div>
+                        </div>
+                      </li>`
+                    )
+                    $countryListUl.append(newListItem);
+    
+                    // show conformation modal once the remove button is clicked
+                    newListItem.find(".remove-btn").on("click", function() {
+                        countryToRemove = country;
+                        $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
+                        $("#remove-confirmation-modal").modal("show");
+                        $("#admin-modal").modal("hide");
+                    })
+    
+                    // put existing countries in the country selector
+                    $countrySelect.append($("<option>", {
+                        value: country,
+                        text: country,
+                        selected: isDefault ? true : false
+                    }));
+    
+                    // update default country in the database when default radio button is clicked
+                    newListItem.find("input[type='radio']").on("click", function() {
+                        $.ajax({
+                            type: "POST",
+                            url: URL_updateDefaultCountry,
+                            data: JSON.stringify({"country": country}),
+                            success: function(success) {
+                                console.log(success);
+                                defaultCountry = country;
+                                zoomInToCountry(country);
+                            },
+                            error: function(error) {
+                                console.log(error);
+                            }
+                        })
+                    })
+    
+                    if (isDefault) {
+                        defaultCountry = country;
+                    }
+                }
+                
+                $countryListUl.append($(
+                    `<li class="list-group-item">
                     <div class="row option-div">
-                      <div class="col-md-6">${country}</div>
-                      <div class="col-md-4 default-btn">
-                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
-                        <label for="${country}-radio">Default</label>
-                      </div>
+                      <div class="col-md-10">Add New Country</div>
                       <div class="col-md-2">
-                        <button class="remove-btn"><span>&times;</span></button>
+                        <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
                       </div>
                     </div>
                   </li>`
-                )
-                $countryListUl.append(newListItem);
-
-                // show conformation modal once the remove button is clicked
-                newListItem.find(".remove-btn").on("click", function() {
-                    countryToRemove = country;
-                    $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
-                    $("#remove-confirmation-modal").modal("show");
-                    $("#admin-modal").modal("hide");
-                })
-
-                // put existing countries in the country selector
-                $countrySelect.append($("<option>", {
-                    value: country,
-                    text: country,
-                    selected: isDefault ? true : false
-                }));
-
-                // update default country in the database when default radio button is clicked
-                newListItem.find("input[type='radio']").on("click", function() {
-                    $.ajax({
-                        type: "POST",
-                        url: URL_updateDefaultCountry,
-                        data: JSON.stringify({"country": country}),
-                        success: function(success) {
-                            console.log(success);
-                            zoomInToCountry(country);
-                        },
-                        error: function(error) {
-                            console.log(error);
-                        }
-                    })
-                })
-
-                // zoom in to the default country when loading the website
-                if (isDefault) {
-                    if (!selectedCountryLayer) {
-                        selectedCountryLayer = L.geoJSON([], {
-                            style: {opacity: 1, fillOpacity: 0}
-                        }).addTo(mapObj);
-                    }
-                    mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
-                    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
-                    zoomInToCountry(country);
-                    if (country == "Kenya") {
-                        addKenyaSubbasinLayer();
-                        addKenyaHydroStationLayer();
+                ))
+    
+                // add non-existent countries to the country searchable select
+                $("#new-country-select").empty();
+                for (country in allCountries) {
+                    if (!(country in existingCountries)) {
+                        $("#new-country-select").append($("<option>", {
+                            value: country,
+                            text: country
+                        }))
                     }
                 }
+                resolve();
+            },
+            error: function(error) {
+                console.log(error);
+                reject(error);
             }
-            
-            $countryListUl.append($(
-                `<li class="list-group-item">
-                <div class="row option-div">
-                  <div class="col-md-10">Add New Country</div>
-                  <div class="col-md-2">
-                    <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
-                  </div>
-                </div>
-              </li>`
-            ))
-
-            // add non-existent countries to the country searchable select
-            $("#new-country-select").empty();
-            for (country in allCountries) {
-                if (!(country in existingCountries)) {
-                    $("#new-country-select").append($("<option>", {
-                        value: country,
-                        text: country
-                    }))
-                }
-            }
-        },
-        error: function(error) {
-            console.log(error);
-        }
+        })
     })
 };
 
 $countrySelect.on("change", function() {
-    let country = $(this).val();
-    if (country) {
-        zoomInToCountry(country);
-        mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
-        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
-        updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
-        if (country == "Kenya") {
-            addKenyaSubbasinLayer();
-            addKenyaHydroStationLayer();
-        } else {
-            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
-            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
-        }
-    }
+    zoomInToCountry($(this).val());
 });
 
 // Zoom into the selectedCountry
 let zoomInToCountry = function(country) {
+    if (!country) return;
     if (country == ALL_COUNTRIES_OPTION_VALUE) {
         countryGeoJSON = allCountries[country];
     } else {
-        countryGeoJSON = allCountries[country].geometry
+        countryGeoJSON = allCountries[country].geometry;
+    }
+
+    if (!selectedCountryLayer) {
+        selectedCountryLayer = L.geoJSON([], {
+            style: {opacity: 1, fillOpacity: 0}
+        }).addTo(mapObj);
     }
     selectedCountryLayer.clearLayers();
     selectedCountryLayer.addData(countryGeoJSON);
-    mapObj.fitBounds(selectedCountryLayer.getBounds());
+    mapObj.fitBounds(selectedCountryLayer.getBounds())
+
+    // clear NileSubbasin layer
+    if (MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
+        mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
+    }
+
+    // update streamflow layers
+    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
+    updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
+
+    // add or remove Kenya layers
+    if (country == "Kenya") {
+        addKenyaSubbasinLayer();
+        addKenyaHydroStationLayer();
+    } else {
+        removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
+        removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
+    }
 }
 
 
