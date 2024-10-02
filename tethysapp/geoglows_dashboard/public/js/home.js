@@ -2,13 +2,13 @@
 *                        Elements & Constants
 *************************************************************************/
 
-///// elements /////
+///// Elements /////
 
 const $yearMonthPicker = $("#year-month-picker");
 const $countrySelect = $("#country-select");
 const $countryListUl = $("#country-list-ul");
 
-///// constants /////
+///// Constants /////
 
 // map settings
 const MIN_QUERY_ZOOM = 15;
@@ -138,7 +138,7 @@ const basemaps = {
 }
 
 // map layers
-let layerControl;
+let $layerControl;
 let geoglowsLegend, hydroSOSLegend;
 let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedSubbasinLayer;
 
@@ -178,16 +178,27 @@ let initHydroSOSLegend = function() {
     }
 }
 
+let layerIsInLayerControl = function(layerControl, layer) {
+    for (let i of layerControl._layers) {
+        if (i.layer === layer) {
+            return true;
+        }
+    }
+    return false;
+}
+
 let addLayerToMapAndLayerControl = function(layer, name) {
-    layer.addTo(mapObj);
-    mapObj.fitBounds(layer.getBounds());
-    layerControl.addOverlay(layer, name);
+    if (!layerIsInLayerControl($layerControl, layer)) {
+        layer.addTo(mapObj);
+        mapObj.fitBounds(layer.getBounds());
+        $layerControl.addOverlay(layer, name);
+    }
 }
 
 let removeLayerFromMapAndlayerControl = function(layer) {
     if (layer) {
         mapObj.removeLayer(layer);
-        layerControl.removeLayer(layer);   
+        $layerControl.removeLayer(layer);   
     }
 }
 
@@ -267,13 +278,13 @@ let addNileSubbasinLayer = function() {
 
 let addMapLayers = async function() {
     await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $countrySelect.val());
-    layerControl = L.control.layers(
+    $layerControl = L.control.layers(
         basemaps,
         {"Geoglows Streamflow": MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME], "HydroSOS Streamflow": MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]},
         {collapsed: true, position: 'topleft'}
     ).addTo(mapObj);
     MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
-    addNileSubbasinLayer(); 
+    addNileSubbasinLayer();
 }
 
 let getSelectedArea = function() {
@@ -833,172 +844,180 @@ let findReachIDByLatLng = function(lat, lng) {
 
 let allCountries, defaultCountry, existingCountries, countryToRemove;
 
-let initAdminSettings = function() {
-    initAllCountries();
+let initAdminSettings = async function() {
+    await initAllCountries();
+    await initCountryList();
+    zoomInToCountry(defaultCountry); // zoom in to the default country
 }
 
 allCountries = {};
 let initAllCountries = function() {
-    fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("countries.geojson was not ok");
-            }
-            return response.json();
-        })
-        .then((data) => {
-            data = JSON.parse(JSON.stringify(data));
-            allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
-            for (let feature of data.features) {
-                let name = feature.properties.Name_label;
-                if (name) {
-                    allCountries[name] = feature;
+    return new Promise(function(resolve, reject) {
+        fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("countries.geojson was not ok");
                 }
-            }
-            initCountryList();
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
+                return response.json();
+            })
+            .then((data) => {
+                data = JSON.parse(JSON.stringify(data));
+                allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
+                for (let feature of data.features) {
+                    let name = feature.properties.Name_label;
+                    if (name) {
+                        allCountries[name] = feature;
+                    }
+                }
+                resolve();
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+                reject();
+            });
+    })
 }
 
 ///// Get all countries /////
 
 // Dispaly all existing countries in the country list
 let initCountryList = function() {
-    $.ajax({
-        type: "GET",
-        url: URL_country,
-        success: function(response) {
-            existingCountries = JSON.parse(response["data"]);
-            // add existing countries to the country-list and country-select
-            $countryListUl.empty(); 
-            $countrySelect.empty();
-            $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
-
-            for (let country in existingCountries) {
-                let isDefault = existingCountries[country]["default"];
-                let newListItem = $(
-                    `<li class="list-group-item" id="${country}-li">
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            type: "GET",
+            url: URL_country,
+            success: function(response) {
+                existingCountries = JSON.parse(response["data"]);
+                // add existing countries to the country-list and country-select
+                $countryListUl.empty(); 
+                $countrySelect.empty();
+                $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
+    
+                for (let country in existingCountries) {
+                    let isDefault = existingCountries[country]["default"];
+                    let newListItem = $(
+                        `<li class="list-group-item" id="${country}-li">
+                        <div class="row option-div">
+                          <div class="col-md-6">${country}</div>
+                          <div class="col-md-4 default-btn">
+                            <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
+                            <label for="${country}-radio">Default</label>
+                          </div>
+                          <div class="col-md-2">
+                            <button class="remove-btn"><span>&times;</span></button>
+                          </div>
+                        </div>
+                      </li>`
+                    )
+                    $countryListUl.append(newListItem);
+    
+                    // show conformation modal once the remove button is clicked
+                    newListItem.find(".remove-btn").on("click", function() {
+                        countryToRemove = country;
+                        $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
+                        $("#remove-confirmation-modal").modal("show");
+                        $("#admin-modal").modal("hide");
+                    })
+    
+                    // put existing countries in the country selector
+                    $countrySelect.append($("<option>", {
+                        value: country,
+                        text: country,
+                        selected: isDefault ? true : false
+                    }));
+    
+                    // update default country in the database when default radio button is clicked
+                    newListItem.find("input[type='radio']").on("click", function() {
+                        $.ajax({
+                            type: "POST",
+                            url: URL_updateDefaultCountry,
+                            data: JSON.stringify({"country": country}),
+                            success: function(success) {
+                                console.log(success);
+                                defaultCountry = country;
+                                zoomInToCountry(country);
+                            },
+                            error: function(error) {
+                                console.log(error);
+                            }
+                        })
+                    })
+    
+                    if (isDefault) {
+                        defaultCountry = country;
+                    }
+                }
+                
+                $countryListUl.append($(
+                    `<li class="list-group-item">
                     <div class="row option-div">
-                      <div class="col-md-6">${country}</div>
-                      <div class="col-md-4 default-btn">
-                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
-                        <label for="${country}-radio">Default</label>
-                      </div>
+                      <div class="col-md-10">Add New Country</div>
                       <div class="col-md-2">
-                        <button class="remove-btn"><span>&times;</span></button>
+                        <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
                       </div>
                     </div>
                   </li>`
-                )
-                $countryListUl.append(newListItem);
-
-                // show conformation modal once the remove button is clicked
-                newListItem.find(".remove-btn").on("click", function() {
-                    countryToRemove = country;
-                    $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
-                    $("#remove-confirmation-modal").modal("show");
-                    $("#admin-modal").modal("hide");
-                })
-
-                // put existing countries in the country selector
-                $countrySelect.append($("<option>", {
-                    value: country,
-                    text: country,
-                    selected: isDefault ? true : false
-                }));
-
-                // update default country in the database when default radio button is clicked
-                newListItem.find("input[type='radio']").on("click", function() {
-                    $.ajax({
-                        type: "POST",
-                        url: URL_updateDefaultCountry,
-                        data: JSON.stringify({"country": country}),
-                        success: function(success) {
-                            console.log(success);
-                            zoomInToCountry(country);
-                        },
-                        error: function(error) {
-                            console.log(error);
-                        }
-                    })
-                })
-
-                // zoom in to the default country when loading the website
-                if (isDefault) {
-                    if (!selectedCountryLayer) {
-                        selectedCountryLayer = L.geoJSON([], {
-                            style: {opacity: 1, fillOpacity: 0}
-                        }).addTo(mapObj);
-                    }
-                    if (MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
-                        mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
-                    }
-                    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
-                    zoomInToCountry(country);
-                    if (country == "Kenya") {
-                        addKenyaSubbasinLayer();
-                        addKenyaHydroStationLayer();
+                ))
+    
+                // add non-existent countries to the country searchable select
+                $("#new-country-select").empty();
+                for (country in allCountries) {
+                    if (!(country in existingCountries)) {
+                        $("#new-country-select").append($("<option>", {
+                            value: country,
+                            text: country
+                        }))
                     }
                 }
+                resolve();
+            },
+            error: function(error) {
+                console.log(error);
+                reject(error);
             }
-            
-            $countryListUl.append($(
-                `<li class="list-group-item">
-                <div class="row option-div">
-                  <div class="col-md-10">Add New Country</div>
-                  <div class="col-md-2">
-                    <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
-                  </div>
-                </div>
-              </li>`
-            ))
-
-            // add non-existent countries to the country searchable select
-            $("#new-country-select").empty();
-            for (country in allCountries) {
-                if (!(country in existingCountries)) {
-                    $("#new-country-select").append($("<option>", {
-                        value: country,
-                        text: country
-                    }))
-                }
-            }
-        },
-        error: function(error) {
-            console.log(error);
-        }
+        })
     })
 };
 
 $countrySelect.on("change", function() {
-    let country = $(this).val();
-    if (country) {
-        zoomInToCountry(country);
-        mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
-        MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
-        updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
-        if (country == "Kenya") {
-            addKenyaSubbasinLayer();
-            addKenyaHydroStationLayer();
-        } else {
-            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
-            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
-        }
-    }
+    zoomInToCountry($(this).val());
 });
 
 // Zoom into the selectedCountry
 let zoomInToCountry = function(country) {
+    if (!country) return;
     if (country == ALL_COUNTRIES_OPTION_VALUE) {
         countryGeoJSON = allCountries[country];
     } else {
-        countryGeoJSON = allCountries[country].geometry
+        countryGeoJSON = allCountries[country].geometry;
+    }
+
+    if (!selectedCountryLayer) {
+        selectedCountryLayer = L.geoJSON([], {
+            style: {opacity: 1, fillOpacity: 0}
+        }).addTo(mapObj);
     }
     selectedCountryLayer.clearLayers();
     selectedCountryLayer.addData(countryGeoJSON);
-    mapObj.fitBounds(selectedCountryLayer.getBounds());
+    mapObj.fitBounds(selectedCountryLayer.getBounds())
+
+    // clear NileSubbasin layer
+    if (MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
+        mapObj.removeLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
+    }
+
+    // update streamflow layers
+    MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
+    updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
+
+    // add or remove Kenya layers
+    if (country == "Kenya") {
+        addKenyaSubbasinLayer();
+        addKenyaHydroStationLayer();
+    } else {
+        removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
+        removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
+    }
 }
 
 
