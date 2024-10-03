@@ -187,10 +187,12 @@ let layerIsInLayerControl = function(layerControl, layer) {
     return false;
 }
 
-let addLayerToMapAndLayerControl = function(layer, name) {
+let addLayerToMapAndLayerControl = function(layer, name, showLayer=true) {
     if (!layerIsInLayerControl($layerControl, layer)) {
-        layer.addTo(mapObj);
-        mapObj.fitBounds(layer.getBounds());
+        if (showLayer) {
+            layer.addTo(mapObj);
+            mapObj.fitBounds(layer.getBounds());
+        }
         $layerControl.addOverlay(layer, name);
     }
 }
@@ -202,7 +204,7 @@ let removeLayerFromMapAndlayerControl = function(layer) {
     }
 }
 
-let addGeoJSONLayerFomFile = function(layerName, filePath, style={}, onEachFeature=null) {
+let addGeoJSONLayerFomFile = function(layerName, filePath, showLayer=true, style={}, onEachFeature=null) {
     layer = MAP_LAYERS[layerName];
     if (!layer) {
         return fetch(filePath)
@@ -215,14 +217,14 @@ let addGeoJSONLayerFomFile = function(layerName, filePath, style={}, onEachFeatu
             .then((data) => {
                 data = JSON.parse(JSON.stringify(data));
                 MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
-                addLayerToMapAndLayerControl(MAP_LAYERS[layerName], layerName);
+                addLayerToMapAndLayerControl(MAP_LAYERS[layerName], layerName, showLayer);
                 return MAP_LAYERS[layerName]
             })
             .catch((error) => {
                 console.error("Error:", error);
             });
     } else {
-        addLayerToMapAndLayerControl(layer, layerName);
+        addLayerToMapAndLayerControl(layer, layerName, showLayer);
         return layer
     }
 }
@@ -237,6 +239,7 @@ let addKenyaSubbasinLayer = function() {
     addGeoJSONLayerFomFile(
         layerName=KENYA_SUBBASIN_LAYER_NAME,
         filePath="/static/geoglows_dashboard/data/geojson/Kenya_sub_basins.geojson",
+        showLayer=true,
         style=style
     );
 }
@@ -245,7 +248,7 @@ let addKenyaHydroStationLayer = function() {
     addGeoJSONLayerFomFile(
         layerName=KENYA_HYDRO_STATIONS_LAYER_NAME,
         path="/static/geoglows_dashboard/data/geojson/Kenya_hydro_stations.geojson",
-
+        showLayer=true
     );
 }
 
@@ -266,6 +269,7 @@ let addNileSubbasinLayer = function() {
     addGeoJSONLayerFomFile(
         layerName=NILE_SUBBASIN_LAYER_NAME,
         filePath="/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson",
+        showLayer=false,
         style={
             "color": "#3388ff",
             "weight": 2,
@@ -330,7 +334,6 @@ let initMapCardBody = async function() {
     initGeoglowsStreamflowLegend();
 
     mapObj.on("overlayadd", function(e) {
-        console.log("overlay is added!");
         // make geoglows and hydrosos streamflow mutually exclusive
         if (e.layer == MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME]) {
             if (selectedStreamflowLayer == MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
@@ -843,140 +846,130 @@ let findReachIDByLatLng = function(lat, lng) {
 *                       ADMIN SETTINGS
 *************************************************************************/
 
-let allCountries, defaultCountry, existingCountries, countryToRemove;
+let allCountries, existingCountries, countryToRemove;
 
-let initAdminSettings = async function() {
-    await initAllCountries();
-    await initCountryList();
-    zoomInToCountry(defaultCountry); // zoom in to the default country
+let initAdminSettings = function() {
+    initAllCountries();
 }
 
 allCountries = {};
 let initAllCountries = function() {
-    return new Promise(function(resolve, reject) {
-        fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("countries.geojson was not ok");
+    fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("countries.geojson was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            data = JSON.parse(JSON.stringify(data));
+            allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
+            for (let feature of data.features) {
+                let name = feature.properties.Name_label;
+                if (name) {
+                    allCountries[name] = feature;
                 }
-                return response.json();
-            })
-            .then((data) => {
-                data = JSON.parse(JSON.stringify(data));
-                allCountries[ALL_COUNTRIES_OPTION_VALUE] = data.features;
-                for (let feature of data.features) {
-                    let name = feature.properties.Name_label;
-                    if (name) {
-                        allCountries[name] = feature;
-                    }
-                }
-                resolve();
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-                reject();
-            });
-    })
+            }
+            initCountryList()
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
 }
 
 ///// Get all countries /////
 
 // Dispaly all existing countries in the country list
 let initCountryList = function() {
-    return new Promise((resolve, reject) => {
-        $.ajax({
-            type: "GET",
-            url: URL_country,
-            success: function(response) {
-                existingCountries = JSON.parse(response["data"]);
-                // add existing countries to the country-list and country-select
-                $countryListUl.empty(); 
-                $countrySelect.empty();
-                $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
-    
-                for (let country in existingCountries) {
-                    let isDefault = existingCountries[country]["default"];
-                    let newListItem = $(
-                        `<li class="list-group-item" id="${country}-li">
-                        <div class="row option-div">
-                          <div class="col-md-6">${country}</div>
-                          <div class="col-md-4 default-btn">
-                            <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
-                            <label for="${country}-radio">Default</label>
-                          </div>
-                          <div class="col-md-2">
-                            <button class="remove-btn"><span>&times;</span></button>
-                          </div>
-                        </div>
-                      </li>`
-                    )
-                    $countryListUl.append(newListItem);
-    
-                    // show conformation modal once the remove button is clicked
-                    newListItem.find(".remove-btn").on("click", function() {
-                        countryToRemove = country;
-                        $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
-                        $("#remove-confirmation-modal").modal("show");
-                        $("#admin-modal").modal("hide");
-                    })
-    
-                    // put existing countries in the country selector
-                    $countrySelect.append($("<option>", {
-                        value: country,
-                        text: country,
-                        selected: isDefault ? true : false
-                    }));
-    
-                    // update default country in the database when default radio button is clicked
-                    newListItem.find("input[type='radio']").on("click", function() {
-                        $.ajax({
-                            type: "POST",
-                            url: URL_updateDefaultCountry,
-                            data: JSON.stringify({"country": country}),
-                            success: function(success) {
-                                console.log(success);
-                                defaultCountry = country;
-                                zoomInToCountry(country);
-                            },
-                            error: function(error) {
-                                console.log(error);
-                            }
-                        })
-                    })
-    
-                    if (isDefault) {
-                        defaultCountry = country;
-                    }
-                }
-                
-                $countryListUl.append($(
-                    `<li class="list-group-item">
+    $.ajax({
+        type: "GET",
+        url: URL_country,
+        success: function(response) {
+            existingCountries = JSON.parse(response["data"]);
+            // add existing countries to the country-list and country-select
+            $countryListUl.empty(); 
+            $countrySelect.empty();
+            $countrySelect.append(new Option("-- Select a Country --", SELECT_A_COUNTRY_OPTION_VALUE));
+
+            for (let country in existingCountries) {
+                let isDefault = existingCountries[country]["default"];
+                let newListItem = $(
+                    `<li class="list-group-item" id="${country}-li">
                     <div class="row option-div">
-                      <div class="col-md-10">Add New Country</div>
+                      <div class="col-md-6">${country}</div>
+                      <div class="col-md-4 default-btn">
+                        <input type="radio" id="${country}-radio" name="default-country" value="${country}" ${isDefault ? "checked": ""}>
+                        <label for="${country}-radio">Default</label>
+                      </div>
                       <div class="col-md-2">
-                        <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
+                        <button class="remove-btn"><span>&times;</span></button>
                       </div>
                     </div>
                   </li>`
-                ))
-    
-                // add non-existent countries to the country searchable select
-                $("#new-country-select").empty();
-                for (country in allCountries) {
-                    if (!(country in existingCountries)) {
-                        $("#new-country-select").append($("<option>", {
-                            value: country,
-                            text: country
-                        }))
-                    }
+                )
+                $countryListUl.append(newListItem);
+
+                // show conformation modal once the remove button is clicked
+                newListItem.find(".remove-btn").on("click", function() {
+                    countryToRemove = country;
+                    $("#remove-confirmation-message").html(`Are you sure you want to remove ${country}?`);
+                    $("#remove-confirmation-modal").modal("show");
+                    $("#admin-modal").modal("hide");
+                })
+
+                // put existing countries in the country selector
+                $countrySelect.append($("<option>", {
+                    value: country,
+                    text: country,
+                    selected: isDefault ? true : false
+                }));
+
+                // update default country in the database when default radio button is clicked
+                newListItem.find("input[type='radio']").on("click", function() {
+                    $.ajax({
+                        type: "POST",
+                        url: URL_updateDefaultCountry,
+                        data: JSON.stringify({"country": country}),
+                        success: function(success) {
+                            console.log(success);
+                            zoomInToCountry(country);
+                        },
+                        error: function(error) {
+                            console.log(error);
+                        }
+                    })
+                })
+
+                if (isDefault) {
+                    zoomInToCountry(country);
                 }
-                resolve();
-            },
-            error: function(error) {
-                console.log(error);
-                reject(error);
             }
-        })
+            
+            $countryListUl.append($(
+                `<li class="list-group-item">
+                <div class="row option-div">
+                  <div class="col-md-10">Add New Country</div>
+                  <div class="col-md-2">
+                    <button id="add-country-btn" onclick="showAddCountryForm()"><span>+</span></button>
+                  </div>
+                </div>
+              </li>`
+            ))
+
+            // add non-existent countries to the country searchable select
+            $("#new-country-select").empty();
+            for (country in allCountries) {
+                if (!(country in existingCountries)) {
+                    $("#new-country-select").append($("<option>", {
+                        value: country,
+                        text: country
+                    }))
+                }
+            }
+        },
+        error: function(error) {
+            console.log(error);
+        }
     })
 };
 
