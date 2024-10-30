@@ -421,10 +421,10 @@ let initMapCardBody = async function() {
 
     mapObj.on('click', function(event) {
         let point = turf.point([event.latlng.lng, event.latlng.lat]);
-        if (isPointInSelectedArea(point)) {
+        if (!mapObj.hasLayer(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]) && isPointInSelectedArea(point)) {
             let zoom = mapObj.getZoom();
             if (zoom < MIN_QUERY_ZOOM) {
-                mapObj.setView(event.latlng, MIN_QUERY_ZOOM)
+                mapObj.setView(event.latlng, MIN_QUERY_ZOOM);
             } else {
                 if (mapMarker) {
                     mapObj.removeLayer(mapMarker);

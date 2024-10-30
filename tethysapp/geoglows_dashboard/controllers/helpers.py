@@ -44,12 +44,15 @@ def get_newest_plot_data(reach_id, plot_type='forecast'):
         if file.startswith(f'{plot_type}-{reach_id}'):
             cache_file = file
 
+    # Check if we can use the cached data, if not, delete it 
     current_date = datetime.now(timezone.utc).strftime('%Y%m%d')
     need_new_data, cached_data_path = True, None
     if cache_file:
         cached_date = cache_file.split('-')[-1].split('.')[0]
         need_new_data = current_date != cached_date
         cached_data_path = os.path.join(cache_dir_path, cache_file)
+    if need_new_data and cached_data_path:
+        os.remove(cached_data_path)
     new_data_path = os.path.join(cache_dir_path, f'{plot_type}-{reach_id}-{current_date}.csv')
 
     if plot_type == 'forecast':
