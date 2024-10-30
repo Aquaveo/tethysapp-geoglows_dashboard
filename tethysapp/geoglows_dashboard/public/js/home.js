@@ -216,7 +216,16 @@ let addGeoJSONLayerFomFile = function(layerName, filePath, showLayer=true, style
             })
             .then((data) => {
                 data = JSON.parse(JSON.stringify(data));
-                MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
+                if (layerName == KENYA_HYDRO_STATIONS_LAYER_NAME) {
+                    MAP_LAYERS[layerName] = L.geoJSON(data, {
+                        onEachFeature: onEachFeature,
+                        pointToLayer: function(feature, latlng) {
+                            return L.circleMarker(latlng, style);
+                        }
+                    })
+                } else {
+                    MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
+                }
                 addLayerToMapAndLayerControl(MAP_LAYERS[layerName], layerName, showLayer);
                 return MAP_LAYERS[layerName]
             })
@@ -230,25 +239,69 @@ let addGeoJSONLayerFomFile = function(layerName, filePath, showLayer=true, style
 }
 
 let addKenyaSubbasinLayer = function() {
+    function onEachFeature(feature, layer) {
+        let riverID = feature.properties['LINKNO'];
+        layer.on('click', function() {
+            layer.setStyle({'color': 'red'});
+            updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+        })
+    };
+
     style = {
         "color": "#3388ff",
         "weight": 2,
         "opacity": 1,
         "fillOpacity": 0
     };
+
     addGeoJSONLayerFomFile(
         layerName=KENYA_SUBBASIN_LAYER_NAME,
-        filePath="/static/geoglows_dashboard/data/geojson/Kenya_sub_basins.geojson",
+        filePath="/static/geoglows_dashboard/data/geojson/kenya_sub_basins.geojson",
         showLayer=true,
-        style=style
+        style=style,
+        onEachFeature=onEachFeature
     );
 }
 
 let addKenyaHydroStationLayer = function() {
+    function onEachFeature(feature, layer) {
+        let riverID = feature.properties['LINKNO'];
+        let popupContent = `
+            <table class="popup-table">
+                <tr><td><b>Water Body</b></td><td>${feature.properties['Water Body']}</td></tr>
+                <tr><td><b>Sub Region</b></td><td>${feature.properties['Sub-Region']}</td></tr>
+            </table>
+            <div style="text-align: center; margin-top: 5px">
+                <button type="button" class="btn btn-primary btn-sm popup-btn" id="popup-btn-${feature.properties.NAT_ID}">Show Plot</button>
+            </div>
+        `;
+        layer.bindPopup(popupContent);
+        layer.on('click', function() {
+            layer.setStyle({'fillColor': '#ff7800'});
+        });
+        layer.on('popupopen', function() {
+            const $button = $(`#popup-btn-${feature.properties.NAT_ID}`);
+            if ($button) {
+                $button.on('click', function() {
+                    updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+                })
+            }
+        });
+    };
+
     addGeoJSONLayerFomFile(
         layerName=KENYA_HYDRO_STATIONS_LAYER_NAME,
-        path="/static/geoglows_dashboard/data/geojson/Kenya_hydro_stations.geojson",
-        showLayer=true
+        filePath="/static/geoglows_dashboard/data/geojson/kenya_stations.geojson",
+        showLayer=true,
+        style={
+            radius: 6,
+            fillColor: "#3388ff",
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        },
+        onEachFeature=onEachFeature
     );
 }
 
@@ -316,12 +369,6 @@ let isPointInSelectedArea = function(point) {
     return inside;
 }
 
-let removeMapMarker = function() {
-    if (mapMarker) {
-        mapObj.removeLayer(mapMarker);
-    }
-}
-
 let initMapCardBody = async function() {
     // init map object
     mapObj = L.map('leaflet-map', {
@@ -379,7 +426,9 @@ let initMapCardBody = async function() {
             if (zoom < MIN_QUERY_ZOOM) {
                 mapObj.setView(event.latlng, MIN_QUERY_ZOOM)
             } else {
-                removeMapMarker();
+                if (mapMarker) {
+                    mapObj.removeLayer(mapMarker);
+                }
                 mapMarker = L.marker(event.latlng).addTo(mapObj);
                 mapObj.flyTo(event.latlng, MIN_QUERY_ZOOM);
                 showSpinners();
@@ -387,6 +436,7 @@ let initMapCardBody = async function() {
                     .then(initSelectedPlots)
                     .catch(error => {
                         alert(error);
+                        mapObj.removeLayer(mapMarker);
                         showPlotContainerMessages();
                     })
             }    
