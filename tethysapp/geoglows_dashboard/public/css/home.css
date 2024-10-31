@@ -56,7 +56,7 @@ select {
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 5px;
-    margin: 0 0 0 10px;
+    margin-left: 10px !important;
     background-color: #f7f7f7; /* Set background color */
     color: #333;
 }
