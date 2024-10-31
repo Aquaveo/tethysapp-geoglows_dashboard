@@ -12,6 +12,8 @@ const $countryListUl = $("#country-list-ul");
 
 // map settings
 const MIN_QUERY_ZOOM = 15;
+const COLOR_BLUE = "#3388ff";
+const COLOR_ORANGE = "#ff7800"
 
 // map layers
 const HYDROSOS_STREAMFLOW_LAYER_NAME = "HydroSOS Streamflow";
@@ -139,7 +141,7 @@ const basemaps = {
 // map layers
 let $layerControl;
 let geoglowsLegend, hydroSOSLegend;
-let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedSubbasinLayer;
+let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedNileSubbasinLayer, selectedKenyaSubbasinLayer;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -240,16 +242,22 @@ let addGeoJSONLayerFomFile = function(layerName, filePath, showLayer=true, style
 let addKenyaSubbasinLayer = function() {
     function onEachFeature(feature, layer) {
         let riverID = feature.properties['LINKNO'];
+
         layer.on('click', function() {
-            layer.setStyle({'color': 'red'});
+            if (selectedKenyaSubbasinLayer) {
+                selectedKenyaSubbasinLayer.setStyle({'fillOpacity': 0});
+            }
+            layer.setStyle({'fillOpacity': 0.1});
+            selectedKenyaSubbasinLayer = layer;
             updateSelectedReachByID(riverID, isSubbasinOutlet=true);
         })
     };
 
     style = {
-        "color": "#3388ff",
+        "color": COLOR_BLUE,
         "weight": 2,
         "opacity": 1,
+        "fillColor": COLOR_BLUE,
         "fillOpacity": 0
     };
 
@@ -276,7 +284,7 @@ let addKenyaHydroStationLayer = function() {
         `;
         layer.bindPopup(popupContent);
         layer.on('click', function() {
-            layer.setStyle({'fillColor': '#ff7800'});
+            layer.setStyle({'fillColor': COLOR_ORANGE});
         });
         layer.on('popupopen', function() {
             const $button = $(`#popup-btn-${feature.properties.NAT_ID}`);
@@ -294,7 +302,7 @@ let addKenyaHydroStationLayer = function() {
         showLayer=true,
         style={
             radius: 6,
-            fillColor: "#3388ff",
+            fillColor: COLOR_BLUE,
             color: "#000",
             weight: 1,
             opacity: 1,
@@ -309,11 +317,11 @@ let addNileSubbasinLayer = function() {
         let riverID = feature.properties['River ID'];
         layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
         layer.on('click', function() {
-            if (selectedSubbasinLayer != null) {
-                selectedSubbasinLayer.setStyle({'color': '#3388ff'});
+            if (selectedNileSubbasinLayer) {
+                selectedNileSubbasinLayer.setStyle({'fillOpacity': 0});
             }
-            layer.setStyle({'color': 'red'});
-            selectedSubbasinLayer = layer;
+            layer.setStyle({'fillOpacity': 0.1});
+            selectedNileSubbasinLayer = layer;
             updateSelectedReachByID(riverID, isSubbasinOutlet=true);
         })
     }
@@ -323,9 +331,10 @@ let addNileSubbasinLayer = function() {
         filePath="/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson",
         showLayer=false,
         style={
-            "color": "#3388ff",
+            "color": COLOR_BLUE,
             "weight": 2,
             "opacity": 1,
+            "fillColor": COLOR_BLUE,
             "fillOpacity": 0
         },
         onEachFeature=onEachFeature
@@ -454,7 +463,7 @@ let initMapCardBody = async function() {
         }
     })
 
-    selectedStream = L.geoJSON(false, {weight: 5, color: '#00008b'}).addTo(mapObj);
+    selectedStream = L.geoJSON(false, {weight: 5, color: COLOR_BLUE}).addTo(mapObj);
 
     if (resetButton == null) {
         resetButton = L.easyButton('fa-home', function(){
@@ -504,17 +513,6 @@ let getColor = function(dryLevel) {
         case "extremely wet":
             return "#2C7DCD";
     }
-}
-
-let getHydroSOSCountryDryLevelStyle = function(feature) {
-    return {
-        fillColor: getColor(feature.properties.classification),
-        weight: 1.5,
-        opacity: 1,
-        color: "#808080",
-        dashArray: '3',
-        fillOpacity: 0.7
-    };
 }
 
 let geoserverEndpoint;
