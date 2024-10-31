@@ -28,6 +28,24 @@ def format_plot(plot):
     )
 
 
+def correct_historical(reach_id, simulated_historical_data):
+    path_name = os.path.join(get_app_workspace(app).path, 'kenya_observed_discharge', f'{reach_id}.csv')
+    observed_historical = pd.read_csv(path_name, index_col=0)
+    observed_historical[observed_historical < 0] = 0
+    observed_historical.index = pd.to_datetime(observed_historical.index)
+    observed_historical.index = observed_historical.index.to_series().dt.strftime("%Y-%m-%d")
+    observed_historical.index = pd.to_datetime(observed_historical.index)
+    simulated_historical_data.index = pd.to_datetime(simulated_historical_data.index)
+    simulated_historical_data[simulated_historical_data < 0] = 0
+    simulated_historical_data.index = simulated_historical_data.index.to_series().dt.strftime("%Y-%m-%d")
+    simulated_historical_data.index = pd.to_datetime(simulated_historical_data.index)
+    corrected_historical = geoglows.bias.correct_historical(simulated_historical_data, observed_historical)
+    corrected_historical.index = pd.to_datetime(corrected_historical.index)
+    corrected_historical.index = corrected_historical.index.to_series().dt.strftime("%Y-%m-%d")
+    corrected_historical.index = pd.to_datetime(corrected_historical.index)
+    return corrected_historical
+
+
 def get_newest_plot_data(reach_id, plot_type='forecast'):
     """Get newest forecast or retrospective data.
 
@@ -38,13 +56,6 @@ def get_newest_plot_data(reach_id, plot_type='forecast'):
     Returns:
         df: the dataframe of the newest plot data
     """
-    if reach_id in [160215979, 160221792, 160183236] and plot_type == 'retrospective':
-        cached_data_path = os.path.join(CACHE_DIR_PATH, f'{plot_type}-{reach_id}.csv')
-        df = pd.read_csv(cached_data_path, parse_dates=['time'], index_col=[0])
-        df.columns.name = 'rivid'
-        df.columns = df.columns.astype('int64')
-        return df
-
     files = os.listdir(CACHE_DIR_PATH)
     cache_file = None
     for file in files:
@@ -79,6 +90,13 @@ def get_newest_plot_data(reach_id, plot_type='forecast'):
         df.to_csv(new_data_path)
         if cached_data_path:
             os.remove(cached_data_path)
+
+    # Use bias corrected data for the following rivers
+    if reach_id in [160215979, 160221792, 160183236] and plot_type == 'retrospective':
+        df = correct_historical(reach_id, df)
+        df.columns = [reach_id]
+        df.columns.name = 'rivid'
+        df.index.name = 'time'
 
     return df
 
