@@ -10,9 +10,9 @@ from tethys_sdk.workspaces import get_app_workspace
 from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 
 
-cache_dir_path = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
-if not os.path.exists(cache_dir_path):
-    os.makedirs(cache_dir_path)
+CACHE_DIR_PATH = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
+if not os.path.exists(CACHE_DIR_PATH):
+    os.makedirs(CACHE_DIR_PATH)
 
 
 def format_plot(plot):
@@ -38,28 +38,33 @@ def get_newest_plot_data(reach_id, plot_type='forecast'):
     Returns:
         df: the dataframe of the newest plot data
     """
-    files = os.listdir(cache_dir_path)
+    if reach_id in [160215979, 160221792, 160183236] and plot_type == 'retrospective':
+        cached_data_path = os.path.join(CACHE_DIR_PATH, f'{plot_type}-{reach_id}.csv')
+        df = pd.read_csv(cached_data_path, parse_dates=['time'], index_col=[0])
+        df.columns.name = 'rivid'
+        df.columns = df.columns.astype('int64')
+        return df
+
+    files = os.listdir(CACHE_DIR_PATH)
     cache_file = None
     for file in files:
         if file.startswith(f'{plot_type}-{reach_id}'):
             cache_file = file
 
-    # Check if we can use the cached data, if not, delete it 
+    # Check if we can use the cached data, if not, delete it
     current_date = datetime.now(timezone.utc).strftime('%Y%m%d')
     need_new_data, cached_data_path = True, None
     if cache_file:
         cached_date = cache_file.split('-')[-1].split('.')[0]
         need_new_data = current_date != cached_date
-        cached_data_path = os.path.join(cache_dir_path, cache_file)
-    if need_new_data and cached_data_path:
-        os.remove(cached_data_path)
-    new_data_path = os.path.join(cache_dir_path, f'{plot_type}-{reach_id}-{current_date}.csv')
+        cached_data_path = os.path.join(CACHE_DIR_PATH, cache_file)
+    new_data_path = os.path.join(CACHE_DIR_PATH, f'{plot_type}-{reach_id}-{current_date}.csv')
 
     if plot_type == 'forecast':
         if need_new_data:
             df = geoglows.data.forecast(reach_id)
         else:
-            df = pd.read_csv(cached_data_path, parse_dates=['datetime'], index_col=[0])
+            df = pd.read_csv(cached_data_path, parse_dates=['time'], index_col=[0])
     elif plot_type == 'retrospective':
         if need_new_data:
             df = geoglows.data.retrospective(reach_id)

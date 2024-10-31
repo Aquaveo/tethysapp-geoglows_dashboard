@@ -31,7 +31,7 @@ def plot_flow_regime(hist, selected_year, reach_id):
 
     Args:
         reach_id (string): stream id
-        desired_year (string): desired year
+        selected_year (string): desired year
         hist (csv):the csv response from historic_simulation
     """
 
@@ -46,14 +46,13 @@ def plot_flow_regime(hist, selected_year, reach_id):
     below_normal = []
 
     for i in range(1, 13):
-        filtered_month = hist[hist.index.month == i]
+        filtered_month = hist[hist.index.month == i].dropna()
         filtered_month_mean = filtered_month.groupby(filtered_month.index.year).mean()
         avg = hdf.groupby(hdf.index.month).mean()
         filtered_month_mean["ratio"] = filtered_month_mean["streamflow_m^3/s"] / avg['streamflow_m^3/s'][i]
         filtered_month_mean["rank"] = filtered_month_mean["ratio"].rank()
         filtered_month_mean["percentile"] = filtered_month_mean["rank"] / (len(filtered_month_mean["rank"]) + 1)
         filtered_month_mean.sort_values(by='percentile', inplace=True)
-
         highflow.append(stream_estimate(filtered_month_mean, 0.87))
         above_normal.append(stream_estimate(filtered_month_mean, 0.72))
         normal.append(stream_estimate(filtered_month_mean, 0.28))
