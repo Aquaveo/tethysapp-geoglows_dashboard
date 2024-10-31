@@ -1,5 +1,5 @@
 from tethys_sdk.base import TethysAppBase
-from tethys_sdk.app_settings import CustomSetting, PersistentStoreDatabaseSetting, SpatialDatasetServiceSetting
+from tethys_sdk.app_settings import PersistentStoreDatabaseSetting, SpatialDatasetServiceSetting
 
 
 class GeoglowsDashboard(TethysAppBase):

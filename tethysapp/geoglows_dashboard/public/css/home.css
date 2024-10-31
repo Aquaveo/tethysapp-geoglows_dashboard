@@ -183,3 +183,20 @@ button {
 #add-country-form input, select {
     margin-left: 0px;
 }
+
+/* Popup */
+
+.popup-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.popup-table td {
+    padding: 8px 5px;
+    border-bottom: 1px solid #ddd;
+}
+
+.popup-btn {
+    width: 100%;
+}

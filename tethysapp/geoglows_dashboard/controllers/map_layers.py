@@ -1,4 +1,3 @@
-import ee
 from tethys_sdk.routing import controller
 from django.http import JsonResponse
 from ..analysis.hydrosos.hydrosos_streamflow import compute_hydrosos_streamflow_layer
