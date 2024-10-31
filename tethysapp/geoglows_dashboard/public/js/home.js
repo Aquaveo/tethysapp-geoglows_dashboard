@@ -139,7 +139,7 @@ const basemaps = {
 // map layers
 let $layerControl;
 let geoglowsLegend, hydroSOSLegend;
-let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedSubbasinLayer;
+let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedNileSubbasinLayer, selectedKenyaSubbasinLayer;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -240,8 +240,13 @@ let addGeoJSONLayerFomFile = function(layerName, filePath, showLayer=true, style
 let addKenyaSubbasinLayer = function() {
     function onEachFeature(feature, layer) {
         let riverID = feature.properties['LINKNO'];
+
         layer.on('click', function() {
-            layer.setStyle({'color': 'red'});
+            if (selectedKenyaSubbasinLayer) {
+                selectedKenyaSubbasinLayer.setStyle({'fillOpacity': 0});
+            }
+            layer.setStyle({'fillOpacity': 0.1});
+            selectedKenyaSubbasinLayer = layer;
             updateSelectedReachByID(riverID, isSubbasinOutlet=true);
         })
     };
@@ -250,6 +255,7 @@ let addKenyaSubbasinLayer = function() {
         "color": "#3388ff",
         "weight": 2,
         "opacity": 1,
+        "fillColor": "#3388ff",
         "fillOpacity": 0
     };
 
@@ -309,11 +315,11 @@ let addNileSubbasinLayer = function() {
         let riverID = feature.properties['River ID'];
         layer.bindPopup('<b>Name:</b> ' + feature.properties.Name);
         layer.on('click', function() {
-            if (selectedSubbasinLayer != null) {
-                selectedSubbasinLayer.setStyle({'color': '#3388ff'});
+            if (selectedNileSubbasinLayer) {
+                selectedNileSubbasinLayer.setStyle({'fillOpacity': 0});
             }
-            layer.setStyle({'color': 'red'});
-            selectedSubbasinLayer = layer;
+            layer.setStyle({'fillOpacity': 0.1});
+            selectedNileSubbasinLayer = layer;
             updateSelectedReachByID(riverID, isSubbasinOutlet=true);
         })
     }
@@ -326,6 +332,7 @@ let addNileSubbasinLayer = function() {
             "color": "#3388ff",
             "weight": 2,
             "opacity": 1,
+            "fillColor": "#3388ff",
             "fillOpacity": 0
         },
         onEachFeature=onEachFeature
