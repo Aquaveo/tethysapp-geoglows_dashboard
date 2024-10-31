@@ -66,7 +66,6 @@ let initMapCardHeader = function() {
         });
         $('#reach-id-input').keydown(event => {
             if (event.keyCode === 13) {
-                showSpinners();
                 updateSelectedReachByID($('#reach-id-input').val(), isSubbasinOutlet=false);
             }
         })
@@ -431,7 +430,6 @@ let initMapCardBody = async function() {
                 }
                 mapMarker = L.marker(event.latlng).addTo(mapObj);
                 mapObj.flyTo(event.latlng, MIN_QUERY_ZOOM);
-                showSpinners();
                 findReachIDByLatLng(event.latlng.lat, event.latlng.lng)
                     .then(initSelectedPlots)
                     .catch(error => {
@@ -814,6 +812,7 @@ let showPlotContainerMessages = function() {
 
 
 let findLatLonByReachID = function(reachID, isSubbasinOutlet=false) {
+    showSpinners();
     return new Promise(function (resolve, reject) {
         $.ajax({
             type: "GET",
