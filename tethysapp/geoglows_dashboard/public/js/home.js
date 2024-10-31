@@ -710,13 +710,13 @@ const monthToNumber = {
     'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
 };
 let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNewMonth=false) {
-    let plotSelect = $(plotCard).find(".plot-select");
-    let yearSelect = $(plotCard).find(".year-option-select");
-    let plotContainer = $(plotCard).find(".plot-div");
-    let spinner =  $(plotCard).find(".spinner");
+    let $plotSelect = $(plotCard).find(".plot-select");
+    let $yearOptionSelect = $(plotCard).find(".year-option-select");
+    let $plotDiv = $(plotCard).find(".plot-div");
+    let $spinner =  $(plotCard).find(".spinner");
 
-    let plotID = plotSelect.val();
-    let yearOption = yearSelect.val();
+    let plotID = $plotSelect.val();
+    let yearOption = $yearOptionSelect.val();
     let selectedYear = Number($(plotCard).find(".year-picker").val());
     let selectedMonth = monthToNumber[$(plotCard).find(".month-picker").val()];
 
@@ -733,7 +733,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
     }
 
     if (isNewArea) { // new area
-        showSpinner(plotContainer, spinner);
+        showSpinner($plotDiv, $spinner);
         requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
             plotsData.plots[plotID].data = data;
             drawPlot(plotCard);
@@ -743,7 +743,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
         let oldYear = plotsData.plots[plotID].selectedYear;
         if (needYear && oldYear != selectedYear && hasReachId()) {
             plotsData.plots[plotID].selectedYear = selectedYear;
-            showSpinner(plotContainer, spinner);
+            showSpinner($plotDiv, $spinner);
             requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
                 plotsData.plots[plotID].data = data;
                 drawPlot(plotCard);
@@ -754,7 +754,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
         let oldMonth = plotsData.plots[plotID].selectedMonth;
         if (needMonth && oldMonth != selectedMonth && hasReachId()) {
             plotsData.plots[plotID].selectedMonth = selectedMonth;
-            showSpinner(plotContainer, spinner);
+            showSpinner($plotDiv, $spinner);
             requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
                 plotsData.plots[plotID].data = data;
                 drawPlot(plotCard);
@@ -765,7 +765,7 @@ let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNew
         if (plotData != null) {
             drawPlot(plotCard);
         } else if (hasReachId()) {
-            showSpinner(plotContainer, spinner);
+            showSpinner($plotDiv, $spinner);
             requestPlotData(plotID, selectedReachID, selectedYear, selectedMonth).then(function(data) {
                 plotsData.plots[plotID].data = data;
                 drawPlot(plotCard);
