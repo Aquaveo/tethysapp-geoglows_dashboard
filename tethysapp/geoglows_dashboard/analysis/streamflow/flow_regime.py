@@ -46,7 +46,7 @@ def plot_flow_regime(hist, selected_year, reach_id):
     below_normal = []
 
     for i in range(1, 13):
-        filtered_month = hist[hist.index.month == i].dropna()
+        filtered_month = hist[hist.index.month == i]
         filtered_month_mean = filtered_month.groupby(filtered_month.index.year).mean()
         avg = hdf.groupby(hdf.index.month).mean()
         filtered_month_mean["ratio"] = filtered_month_mean["streamflow_m^3/s"] / avg['streamflow_m^3/s'][i]
