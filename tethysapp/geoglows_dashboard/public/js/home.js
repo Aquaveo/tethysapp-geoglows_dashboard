@@ -589,7 +589,7 @@ let hasReachId = function() {
 let yearPickerValues = [$(".year-picker:eq(0)").val(), $(".year-picker:eq(1)").val()];
 let monthPickerValues = [$(".month-picker:eq(0)").val(), $(".month-picker:eq(1)").val()];
 let initPlotCards = function() {
-    let initSelectorsForPlot = function(plotCard) {
+    let initPlotSelects = function(plotCard) {
         let plotSelect = $(plotCard).find(".plot-select");
         let plotID = $(plotSelect).val();
         if (plotsData.plots[plotID].needYear) {
@@ -601,11 +601,6 @@ let initPlotCards = function() {
             $(plotCard).find('.month-picker-div').removeClass('d-none').addClass('d-flex');
         } else {
             $(plotCard).find('.month-picker-div').addClass('d-none');
-        }
-        if (plotsData.plots[plotID].needYearOption) {
-            $(plotCard).find('.year-option-select-div').removeClass('d-none').addClass('d-flex');
-        } else {
-            $(plotCard).find('.year-option-select-div').addClass('d-none');
         }
     }
 
@@ -644,9 +639,9 @@ let initPlotCards = function() {
 
     // init selects
     $(".plot-card").each(function(index, card) {
-        initSelectorsForPlot(card);
+        initPlotSelects(card);
 
-        // update the plot once the year/month/year-option changes
+        // update the plot once the year/month changes
         let yearPicker = $(card).find(".year-picker");
         yearPicker.on('changeDate', function() {
             let newYearValue = yearPicker.val();
@@ -666,11 +661,6 @@ let initPlotCards = function() {
                 $('month-picker').datepicker('hide');
             }
         })
-
-        let yearOptionSelect = $(card).find(".year-option-select");
-        yearOptionSelect.on("change", function() {
-            getSelectedPlot(card, isNewArea=false, isNewYear=true, isNewMonth=false);
-        })
     })
 
     //////////// init the plot div ////////////
@@ -684,7 +674,7 @@ let initPlotCards = function() {
     $(".plot-card").each(function(_index, card) {
         let plotSelect = $(card).find(".plot-select");
         plotSelect.on("change", function() {
-            initSelectorsForPlot(card);
+            initPlotSelects(card);
             getSelectedPlot(card);
             // disable the option in the other select
             let plotID = $(this).val();
@@ -711,26 +701,12 @@ const monthToNumber = {
 };
 let getSelectedPlot = function(plotCard, isNewArea=false, isNewYear=false, isNewMonth=false) {
     let $plotSelect = $(plotCard).find(".plot-select");
-    let $yearOptionSelect = $(plotCard).find(".year-option-select");
     let $plotDiv = $(plotCard).find(".plot-div");
     let $spinner =  $(plotCard).find(".spinner");
 
     let plotID = $plotSelect.val();
-    let yearOption = $yearOptionSelect.val();
     let selectedYear = Number($(plotCard).find(".year-picker").val());
     let selectedMonth = monthToNumber[$(plotCard).find(".month-picker").val()];
-
-    if (yearOption == "calendar-year") {
-        startDate = `${selectedYear}-01-01`;
-        endDate = `${selectedYear + 1}-01-01`;
-    } else if (yearOption == "water-year") {
-        startDate = `${selectedYear - 1}-10-01`;
-        endDate = `${selectedYear}-09-30`;
-    } else {
-        let date = new Date();
-        startDate = `${date.getFullYear() - 1}-${date.getMonth() + 1}-${date.getDate()}`;
-        endDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-    }
 
     if (isNewArea) { // new area
         showSpinner($plotDiv, $spinner);
