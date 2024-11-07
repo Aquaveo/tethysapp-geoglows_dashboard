@@ -141,7 +141,8 @@ const basemaps = {
 // map layers
 let $layerControl;
 let geoglowsLegend, hydroSOSLegend;
-let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer, selectedNileSubbasinLayer, selectedKenyaSubbasinLayer;
+let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer,
+    selectedNileSubbasinLayer, selectedKenyaSubbasinLayer, selectedStationLayer;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -284,7 +285,11 @@ let addKenyaHydroStationLayer = function() {
         `;
         layer.bindPopup(popupContent);
         layer.on('click', function() {
+            if (selectedStationLayer) {
+                selectedStationLayer.setStyle({'fillColor': COLOR_BLUE});
+            }
             layer.setStyle({'fillColor': COLOR_ORANGE});
+            selectedStationLayer = layer;
         });
         layer.on('popupopen', function() {
             const $button = $(`#popup-btn-${feature.properties.NAT_ID}`);
