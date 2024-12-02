@@ -120,7 +120,7 @@ select {
     opacity: 0.7;
 }
 
-/* Admin Settings Modal*/
+/* Modal */
 
 .modal-tab {
     border: 1px solid rgba(0, 0, 0, 0.125);
@@ -129,6 +129,11 @@ select {
     justify-content: center;
     align-items: center;
     font-size: 17px;
+}
+
+.modal-body {
+    text-align: justify;
+    line-height: 1.5;
 }
 
 /* Admin Settings - Country List */

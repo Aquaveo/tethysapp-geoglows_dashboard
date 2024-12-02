@@ -7,13 +7,23 @@ class GeoglowsDashboard(TethysAppBase):
     Tethys app class for Geoglows Dashboard.
     """
 
-    name = 'Nile River Basin Regional Monitoring and Forecasting System with GEOGLOWS'
+    name = 'Kenya River Basin Monitoring and Forecasting System'
     description = ''
     package = 'geoglows_dashboard'  # WARNING: Do not change this value
     index = 'home'
     icon = f'{package}/images/icon.png'
     root_url = 'geoglows-dashboard'
     color = '#435334'
+    description = (
+        'This is a river basin monitoring forecasting and application system that supports water resources assessment, '
+        'planning and management decisions in Kenya. The System leverages on GEOGLOWS cyberinfrastructure and in-situ '
+        'river flow information to generate over 80 years historical river flow data and flow regime hence key for '
+        'water resources assessment as well as 15 days river flow forecast – key for flood early warning information '
+        'and disaster risk reduction. The system has been developed through a collaborative effort Bringham Young '
+        'University (BYU), the Ministry of Water, Sanitation and Irrigation, Water Resources Authority (WRA), Kenya '
+        'Meteorological Department (KMD) Kenya Space Agency (KSA) and Nile Basin initiative through NASA SERVIR Eastern '
+        'and Southern Africa or PREPARED.'
+    )
     tags = ''
     enable_feedback = False
     feedback_emails = []
