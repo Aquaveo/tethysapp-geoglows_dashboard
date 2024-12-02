@@ -2,6 +2,9 @@
 {% load tethys_gizmos static %}
 
 {% block header_buttons %}
+  <div class="header-button" id="about-btn" data-bs-toggle="modal" data-bs-target="#about-modal">
+    <a href="javascript:void(0);" data-bs-toggle="tooltip" data-bs-placement="bottom" title="About"><i class="bi bi-info-lg"></i></a>
+  </div>
   {% if request.user.is_staff %}
   <div class="header-button" id="admin-btn" data-bs-toggle="modal" data-bs-target="#admin-modal" onclick="showCountryList()">
     <a href="javascript:void(0);" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Admin Settings"><i class="bi bi-person-gear"></i></a>
@@ -103,6 +106,26 @@
 {% endblock %}
 
 {% block after_app_content %}
+<div class="modal" id="about-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">About</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p style="padding: 10px 20px;">This is a river basin monitoring forecasting and application system that supports water resources assessment, 
+          planning and management decisions in Kenya. The System leverages on GEOGLOWS cyberinfrastructure and in-situ river 
+          flow information to generate over 80 years historical river flow data and flow regime hence key for water resources 
+          assessment as well as 15 days river flow forecast – key for flood early warning information and disaster risk reduction. 
+          The system has been developed through a collaborative effort Bringham Young University (BYU), the Mi nistry of Water, 
+          Sanitation and Irrigation, Water Resources Authority (WRA), Kenya Meteorological Department (KMD) Kenya Space Agency 
+          (KSA) and Nile Basin initiative through NASA SERVIR Eastern and Southern Africa or PREPARED'</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="admin-modal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
