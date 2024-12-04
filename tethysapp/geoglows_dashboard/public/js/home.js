@@ -434,7 +434,8 @@ let initMapCardBody = async function() {
 
     mapObj.on('click', function(event) {
         let point = turf.point([event.latlng.lng, event.latlng.lat]);
-        if (!mapObj.hasLayer(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]) && isPointInSelectedArea(point)) {
+        // If kenya_subbasin_layer is on, don't find the reach id
+        if (isPointInSelectedArea(point) && (!MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME] || !mapObj.hasLayer(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]))) {
             let zoom = mapObj.getZoom();
             if (zoom < MIN_QUERY_ZOOM) {
                 mapObj.setView(event.latlng, MIN_QUERY_ZOOM);
