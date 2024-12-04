@@ -84,7 +84,8 @@ def remove_country(name):
 def update_default_country_in_db(name):
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     old_default_country = session.query(Country).filter_by(default="true").first()
-    old_default_country.default = False
+    if old_default_country:
+        old_default_country.default = False   
     new_default_country = session.query(Country).filter_by(name=name).first()
     new_default_country.default = True
     session.commit()
