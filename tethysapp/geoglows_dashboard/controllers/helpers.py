@@ -13,6 +13,7 @@ from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 CACHE_DIR_PATH = os.path.join(get_app_workspace(app).path, "streamflow_plots_cache/")
 if not os.path.exists(CACHE_DIR_PATH):
     os.makedirs(CACHE_DIR_PATH)
+    os.chmod(CACHE_DIR_PATH, 0o777)
 
 
 def format_plot(plot):
