@@ -1,0 +1,68 @@
+services:
+  tethys_app:
+    image: geoglows-dashboard
+    environment:
+      TETHYS_DB_HOST: tethys_postgis
+      TETHYS_DB_PORT: 5432
+      TETHYS_DB_SUPERUSER: "tethys_super"
+      TETHYS_DB_SUPERUSER_PASS: "pass"
+      CLIENT_MAX_BODY_SIZE: "75M"
+      POSTGRES_PASSWORD: mysecretpassword
+      PORTAL_SUPERUSER_name: admin
+      PORTAL_SUPERUSER_PASSWORD: please_dont_use_default_passwords
+      TETHYS_DB_USERNAME: tethys_default
+      TETHYS_DB_PASS: pass
+    depends_on:
+      - tethys_postgis
+      - geoserver
+    ports:
+      - "80:80"
+    networks:
+      - "internal"
+      - "external"
+    volumes:
+      - tethys_persist:/var/lib/tethys_persist
+      - tethys_logs:/var/log/tethys
+      - ./combined_all_data_122.nc:/var/www/tethys/apps/tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard/workspaces/app_workspace/hydrosos/streamflow/vpu_122/combined_all_data_122.nc
+
+  tethys_postgis:
+    image: postgis/postgis:12-2.5
+    environment:
+        POSTGRES_PASSWORD: mysecretpassword
+    networks:
+      - "internal"
+      - "external"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_config_tethys_data:/var/lib/postgresql/data
+
+  geoserver:
+    image: tethysplatform/geoserver
+    ports:
+      - "8181:8181"
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+      - "8084:8084"
+    networks:
+      - 'internal'
+      - 'external'
+    environment:
+      ENABLED_NODES: "4"
+      REST_NODES: "1"
+      MAX_MEMORY: "1024"
+      MIN_MEMORY: "512"
+      NUM_CORES: "4"
+      MAX_TIMEOUT: "60"
+
+networks:
+  internal:
+    internal: true
+  external:
+
+volumes:
+  postgresql_config_tethys_data: # tethys data
+  tethys_persist: # volume for tethys persist data
+  tethys_logs: # volume for tethys logs
+
