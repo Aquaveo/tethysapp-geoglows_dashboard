@@ -1,0 +1,207 @@
+#inner-app-content {
+    height: calc(100vh - 50px);
+    padding: 0;
+}
+
+#outer-container {
+    height: calc(100vh - 60px); /* 50 header + 40 tab + 10 margin-top + 10 margin-bottom*/
+    color:white;
+    padding: 12px;
+}
+
+/* #nav-div {
+    margin-bottom: 10px; 
+    border-top: white 1px solid;
+}
+
+.nav {
+    background-color: #435334;
+}
+
+.nav-item {
+    width: 130px;
+    text-align: center;
+}
+
+a.nav-link {
+    color: white;
+}
+
+a.nav-link:hover {
+    color: white;
+}
+
+.nav-link.active {
+    background-color: #9EB384;
+    color: white;
+} */
+
+.card-header {
+    background-color: #9EB384;
+    text-align: center;
+}
+
+.option-div {
+    display: flex;
+    align-items: center;
+}
+
+input {
+    margin: 0 0 0 10px;
+}
+
+select {
+    width: 60%;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px;
+    margin-left: 10px !important;
+    background-color: #f7f7f7; /* Set background color */
+    color: #333;
+}
+
+.input-group {
+    width: 70%;
+}
+
+#leaflet-map {
+    height: 100%;
+}
+
+.leaflet-control-layers-toggle {
+    width: 30px !important;
+    height: 30px !important;
+    background-size: 50%;
+}
+
+.spinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.plot-div {
+    color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.year-picker, #month-picker {
+    width: 60%;
+    display: inline-block;
+}
+
+.legend {
+    padding: 6px 8px;
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: white;
+    background: rgba(255,255,255,0.8);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    line-height: 18px;
+    color: #555;
+}
+
+.legend-title {
+    padding: 3px;
+    font-weight: 550;
+    text-align:center;
+}
+
+.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+
+/* Modal */
+
+.modal-tab {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+}
+
+.modal-body {
+    text-align: justify;
+    line-height: 1.5;
+}
+
+/* Admin Settings - Country List */
+
+.default-btn input[type="radio"] {
+    margin-right: 5px;
+}
+
+.remove-btn {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 30px;
+    color: red;
+}
+
+.close {
+    font-size: 35px;
+    font-weight: 600;
+    line-height: 30px;
+    color: gray;
+}
+
+#add-country-btn {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 30px;
+    color: green;
+}
+
+button {
+    border: none;
+    background: none;
+}
+
+#remove-confirmation-modal div{
+    text-align: center;
+    padding: 10px;
+}
+
+/* Admin Settings - Add Country Form */
+
+#add-country-form {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 5px;
+    padding: 10px;
+}
+
+#add-country-form div {
+    padding-top: 10px;
+}
+
+#add-country-form input, select {
+    margin-left: 0px;
+}
+
+/* Popup */
+
+.popup-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.popup-table td {
+    padding: 8px 5px;
+    border-bottom: 1px solid #ddd;
+}
+
+.popup-btn {
+    width: 100%;
+}
