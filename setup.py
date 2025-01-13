@@ -1,5 +1,5 @@
 from setuptools import setup, find_namespace_packages
-from tethys_apps.app_installation import find_all_resource_files
+from tethys_apps.app_installation import find_all_resource_files, find_resource_files_of_type
 from tethys_apps.base.app_base import TethysAppBase
 
 # -- Apps Definition -- #
@@ -11,7 +11,7 @@ dependencies = []
 
 # -- Get Resource File -- #
 resource_files = find_all_resource_files(app_package, TethysAppBase.package_namespace)
-
+resource_files += find_resource_files_of_type("resources", app_package, TethysAppBase.package_namespace)
 
 setup(
     name=release_package,
