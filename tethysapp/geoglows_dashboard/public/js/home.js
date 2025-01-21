@@ -30,9 +30,22 @@ const MAP_LAYERS = {
     [KENYA_HYDRO_STATIONS_LAYER_NAME]: null,   
 }
 
+// region
+const REGION_NILE_BASIN = "Nile Basin";
+const REGION_CENTRAL_AMERICA = "Central America";
+
+let region = $('#region-data').data('region').toLowerCase();
+if (region.includes('america')) {
+    region = REGION_CENTRAL_AMERICA;
+} else {
+    region = REGION_NILE_BASIN;
+}
+
 // countries
+
 const ALL_COUNTRIES_OPTION_VALUE = "All Countries";
 const SELECT_A_COUNTRY_OPTION_VALUE = "";
+
 
 /************************************************************************
 *                             LOAD THE APP
@@ -354,7 +367,9 @@ let addMapLayers = async function() {
         {collapsed: true, position: 'topleft'}
     ).addTo(mapObj);
     MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
-    addNileSubbasinLayer();
+    if (region == REGION_NILE_BASIN) {
+        addNileSubbasinLayer();
+    }
 }
 
 let getSelectedArea = function() {
@@ -460,7 +475,7 @@ let initMapCardBody = async function() {
     mapObj.on("zoomend", function() {
         let date = $yearMonthPicker.val();
         let newMinStreamOrder = getMinStreamOrder();
-        let isVPU = mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) ? 'True' : 'False';
+        let isVPU = MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME] && mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
         let country = $countrySelect.val();
         let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
         if (newMinStreamOrder != minStreamOrder) {
@@ -883,7 +898,11 @@ let initAdminSettings = function() {
 
 allCountries = {};
 let initAllCountries = function() {
-    fetch("/static/geoglows_dashboard/data/geojson/nb_countries.geojson")
+    filename = 'nb_countries.geojson';
+    if (region === REGION_CENTRAL_AMERICA) {
+        filename = 'central_america_countries.geojson'
+    }
+    fetch(`/static/geoglows_dashboard/data/geojson/${filename}`)
         .then((response) => {
             if (!response.ok) {
                 throw new Error("countries.geojson was not ok");
@@ -899,7 +918,7 @@ let initAllCountries = function() {
                     allCountries[name] = feature;
                 }
             }
-            initCountryList()
+            initCountryList();
         })
         .catch((error) => {
             console.error("Error:", error);
@@ -912,7 +931,7 @@ let initAllCountries = function() {
 let initCountryList = function() {
     $.ajax({
         type: "GET",
-        url: URL_country,
+        url: URL_country + L.Util.getParamString({region: region}),
         success: function(response) {
             existingCountries = JSON.parse(response["data"]);
             // add existing countries to the country-list and country-select
@@ -1067,6 +1086,7 @@ let showAddCountryForm = function() {
 let addCountry = function() {
     let data = {
         country: $("#new-country-select").val(),
+        region: region,
         isDefault: $("#default-check").is(":checked")
     }
 

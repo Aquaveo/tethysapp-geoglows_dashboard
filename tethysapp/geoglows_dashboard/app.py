@@ -1,5 +1,5 @@
 from tethys_sdk.base import TethysAppBase
-from tethys_sdk.app_settings import PersistentStoreDatabaseSetting, SpatialDatasetServiceSetting
+from tethys_sdk.app_settings import PersistentStoreDatabaseSetting, SpatialDatasetServiceSetting, CustomSetting
 
 
 class GeoglowsDashboard(TethysAppBase):
@@ -21,8 +21,8 @@ class GeoglowsDashboard(TethysAppBase):
         'water resources assessment as well as 15 days river flow forecast – key for flood early warning information '
         'and disaster risk reduction. The system has been developed through a collaborative effort Bringham Young '
         'University (BYU), the Ministry of Water, Sanitation and Irrigation, Water Resources Authority (WRA), Kenya '
-        'Meteorological Department (KMD) Kenya Space Agency (KSA) and Nile Basin initiative through NASA SERVIR Eastern '
-        'and Southern Africa or PREPARED.'
+        'Meteorological Department (KMD) Kenya Space Agency (KSA) and Nile Basin initiative through NASA SERVIR '
+        'Eastern and Southern Africa or PREPARED.'
     )
     tags = ''
     enable_feedback = False
@@ -50,3 +50,14 @@ class GeoglowsDashboard(TethysAppBase):
             ),
         )
         return sds_settings
+
+    def custom_settings(self):
+        return (
+            CustomSetting(
+                name='region',
+                type=CustomSetting.TYPE_STRING,
+                description='Central America or Nile Basin',
+                required=True,
+                default='Nile Basin'
+            ),
+        )

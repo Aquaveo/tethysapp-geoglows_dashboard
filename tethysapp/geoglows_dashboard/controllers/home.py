@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from tethys_sdk.routing import controller
 from tethys_sdk.gizmos import Button
+from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 
 
 @controller
@@ -69,7 +70,8 @@ def home(request):
         'edit_button': edit_button,
         'remove_button': remove_button,
         'previous_button': previous_button,
-        'next_button': next_button
+        'next_button': next_button,
+        'region': app.get_custom_setting('region')
     }
 
     return render(request, 'geoglows_dashboard/home.html', context)

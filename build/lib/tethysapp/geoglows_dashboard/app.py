@@ -21,8 +21,8 @@ class GeoglowsDashboard(TethysAppBase):
         'water resources assessment as well as 15 days river flow forecast – key for flood early warning information '
         'and disaster risk reduction. The system has been developed through a collaborative effort Bringham Young '
         'University (BYU), the Ministry of Water, Sanitation and Irrigation, Water Resources Authority (WRA), Kenya '
-        'Meteorological Department (KMD) Kenya Space Agency (KSA) and Nile Basin initiative through NASA SERVIR Eastern '
-        'and Southern Africa or PREPARED.'
+        'Meteorological Department (KMD) Kenya Space Agency (KSA) and Nile Basin initiative through NASA SERVIR '
+        'Eastern and Southern Africa or PREPARED.'
     )
     tags = ''
     enable_feedback = False
