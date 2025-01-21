@@ -1,6 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index, Enum
 from sqlalchemy.orm import sessionmaker
+import enum
 from geoalchemy2 import Geometry
 import os
 
@@ -14,6 +15,11 @@ Base = declarative_base()
 db_name = 'primary_db'
 
 
+class Region(enum.Enum):
+    NILE_BASIN = 'Nile Basin'
+    CENTRAL_AMERICA = 'Central America'
+
+
 class Country(Base):
     """
     SQLAlchemy Country DB Model
@@ -23,16 +29,18 @@ class Country(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100))
+    region = Column(Enum(Region))
     default = Column(Boolean)
 
 
-def add_new_country(name, is_default):
+def add_new_country(name, region, is_default):
     """
     Persist new country.
     """
 
     new_country = Country(
         name=name,
+        region=Region(region),
         default=is_default
     )
 
@@ -62,13 +70,13 @@ def get_country(name):
     return country
 
 
-def get_all_countries():
+def get_all_countries(region):
     """
     Get all persisted countries.
     """
 
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
-    countries = session.query(Country).all()
+    countries = session.query(Country).filter_by(region=region).all()
     session.close()
     return countries
 
@@ -85,7 +93,7 @@ def update_default_country_in_db(name):
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     old_default_country = session.query(Country).filter_by(default="true").first()
     if old_default_country:
-        old_default_country.default = False   
+        old_default_country.default = False
     new_default_country = session.query(Country).filter_by(name=name).first()
     new_default_country.default = True
     session.commit()

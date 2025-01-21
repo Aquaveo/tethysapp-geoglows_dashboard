@@ -4,7 +4,7 @@ import json
 from tethys_sdk.routing import controller
 from django.http import JsonResponse
 
-from ..model import add_new_country, get_all_countries, remove_country, update_default_country_in_db
+from ..model import Region, add_new_country, get_all_countries, remove_country, update_default_country_in_db
 from ..analysis.hydrosos.compute_country_dry_level import compute_country_dry_level
 
 
@@ -23,11 +23,11 @@ def add_country(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
         country = data["country"]
-        is_default = data["isDefault"]
-        add_new_country(country, is_default)
+        add_new_country(country, data["region"], data["isDefault"])
         return JsonResponse(dict(res=f"{country} is added!"))
     elif request.method == "GET":
-        countries = get_all_countries()
+        region = request.GET.get('region', None)
+        countries = get_all_countries(Region(region))
         countries_dict = {}
         for country in countries:
             countries_dict[country.name] = {"default": country.default}
