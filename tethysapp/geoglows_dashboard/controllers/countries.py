@@ -23,14 +23,21 @@ def add_country(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
         country = data["country"]
-        add_new_country(country, data["region"], data["isDefault"])
+        add_new_country(
+            country, data["region"], data["isDefault"],
+            subbasins_data=data["subbasinsData"] if 'subbasinsData' in data else None,
+            hydrostations_data=data["hydrostationsData"] if 'hydroStationsData' in data else None)
         return JsonResponse(dict(res=f"{country} is added!"))
     elif request.method == "GET":
         region = request.GET.get('region', None)
         countries = get_all_countries(Region(region))
         countries_dict = {}
         for country in countries:
-            countries_dict[country.name] = {"default": country.default}
+            countries_dict[country.name] = {
+                "default": country.default,
+                "subbasinsData": country.subbasins_data,
+                "hydrostationsData": country.hydrostations_data
+            }
         return JsonResponse(dict(data=json.dumps(countries_dict)))
     elif request.method == "DELETE":
         data = json.loads(request.body.decode('utf-8'))

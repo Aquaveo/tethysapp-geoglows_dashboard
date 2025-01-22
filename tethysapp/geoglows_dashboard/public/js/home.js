@@ -1083,12 +1083,16 @@ let showAddCountryForm = function() {
 
 ///// add new country /////
 
-let addCountry = function() {
+let addCountry = function(subbasinsData, hydrostationsData) {
     let data = {
         country: $("#new-country-select").val(),
         region: region,
-        isDefault: $("#default-check").is(":checked")
-    }
+        isDefault: $("#default-check").is(":checked"),
+        subbasinsData: subbasinsData,
+        hydrostationsData: hydrostationsData
+    };
+    console.log(data);
+    console.log("country data size: ", new Blob([JSON.stringify(data)]).size); // Size in bytes
 
     $.ajax({
         type: "POST",
@@ -1108,10 +1112,33 @@ let addCountry = function() {
 
 
 // submit form
-$("#submit-btn").on("click", function() {
+
+let readFile = function(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            resolve(e.target.result);
+        };
+        reader.onerror = (e) => reject(e);
+        reader.readAsText(file);
+    });
+};
+
+
+$("#submit-btn").on("click", async function() {
     $(this).prop("disabled", true);
     $(this).find(".spinner-border").removeClass("d-none");
-    addCountry();
+    let subbasinFile = $('#subbasins-file-input')[0].files[0];
+    let hydrostationFile =  $('#hydrostations-file-input')[0].files[0];
+    let subbasinsData, hydrostationsData;
+    if (subbasinFile) {
+        subbasinsData = await readFile(subbasinFile);
+    }
+    if (hydrostationFile) {
+        hydrostationsData = await readFile(hydrostationFile);
+    }
+    // TODO check file size before send it to the backend
+    addCountry(subbasinsData, hydrostationsData);
 })
 
 // disable "reload site" warning

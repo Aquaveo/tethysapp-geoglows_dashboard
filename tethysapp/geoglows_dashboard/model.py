@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index, Enum
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DATE, insert, Index, Enum, JSON
 from sqlalchemy.orm import sessionmaker
 import enum
 from geoalchemy2 import Geometry
@@ -31,9 +31,11 @@ class Country(Base):
     name = Column(String(100))
     region = Column(Enum(Region))
     default = Column(Boolean)
+    subbasins_data = Column(JSON)
+    hydrostations_data = Column(JSON)
 
 
-def add_new_country(name, region, is_default):
+def add_new_country(name, region, is_default, subbasins_data, hydrostations_data):
     """
     Persist new country.
     """
@@ -41,7 +43,9 @@ def add_new_country(name, region, is_default):
     new_country = Country(
         name=name,
         region=Region(region),
-        default=is_default
+        default=is_default,
+        subbasins_data=subbasins_data,
+        hydrostations_data=hydrostations_data
     )
 
     # Get connection/session to database
