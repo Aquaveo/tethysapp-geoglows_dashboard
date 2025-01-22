@@ -19,15 +19,11 @@ const COLOR_ORANGE = "#ff7800"
 const HYDROSOS_STREAMFLOW_LAYER_NAME = "HydroSOS Streamflow";
 const GEOGLOWS_STREAMFLOW_LAYER_NAME = "Geoglows Streamflow";
 const NILE_SUBBASIN_LAYER_NAME = "Nile Subbasins";
-const KENYA_SUBBASIN_LAYER_NAME = "Kenya Subbasins";
-const KENYA_HYDRO_STATIONS_LAYER_NAME = "Kenya Hydro Stations";
 
 const MAP_LAYERS = {
     [GEOGLOWS_STREAMFLOW_LAYER_NAME]: null,
     [HYDROSOS_STREAMFLOW_LAYER_NAME]: null,
     [NILE_SUBBASIN_LAYER_NAME]: null,
-    [KENYA_SUBBASIN_LAYER_NAME]: null,
-    [KENYA_HYDRO_STATIONS_LAYER_NAME]: null,   
 }
 
 // region
@@ -62,7 +58,7 @@ $(async function() {
 *                       INITIALIZE MAP CARD HEADER
 *************************************************************************/
 
-let updateSelectedReachByID = function(reachID, isSubbasinOutlet=false) {
+let updateSelectedRiverByID = function(reachID, isSubbasinOutlet=false) {
     $('#reach-id-input').val(reachID);
     findLatLonByReachID(reachID, isSubbasinOutlet)
         .then(initSelectedPlots)
@@ -77,11 +73,11 @@ let selectedYearMonth = $yearMonthPicker.val();
 let initMapCardHeader = function() {
     let initStreamSearchBox = function() {
         $('#search-addon').click(function() {
-            updateSelectedReachByID($('#reach-id-input').val(), isSubbasinOutlet=false)
+            updateSelectedRiverByID($('#reach-id-input').val(), isSubbasinOutlet=false)
         });
         $('#reach-id-input').keydown(event => {
             if (event.keyCode === 13) {
-                updateSelectedReachByID($('#reach-id-input').val(), isSubbasinOutlet=false);
+                updateSelectedRiverByID($('#reach-id-input').val(), isSubbasinOutlet=false);
             }
         })
     }
@@ -154,8 +150,9 @@ const basemaps = {
 // map layers
 let $layerControl;
 let geoglowsLegend, hydroSOSLegend;
+let selectedCountry = {name: null, subbasinsLayer: null, hydrostationsLayer: null};
 let selectedReachID, selectedStream, selectedCountryLayer, selectedStreamflowLayer,
-    selectedNileSubbasinLayer, selectedKenyaSubbasinLayer, selectedStationLayer;
+    selectedNileSubbasinLayer, selectedSubbasinLayer, selectedStationLayer;
 
 let initGeoglowsStreamflowLegend = function() {
     geoglowsLegend = L.control({position: 'bottomright'});
@@ -212,58 +209,32 @@ let addLayerToMapAndLayerControl = function(layer, name, showLayer=true) {
     }
 }
 
-let removeLayerFromMapAndlayerControl = function(layer) {
+let removeLayerFromMapAndLayerControl = function(layer) {
     if (layer) {
         mapObj.removeLayer(layer);
         $layerControl.removeLayer(layer);   
     }
 }
 
-let addGeoJSONLayerFomFile = function(layerName, filePath, showLayer=true, style={}, onEachFeature=null) {
-    layer = MAP_LAYERS[layerName];
+let addGeoJSONLayerFomFile = function(layerName, dataJSON, showLayer=true, options) {
+    layer = MAP_LAYERS[layerName]; 
     if (!layer) {
-        return fetch(filePath)
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error(`${filePath} was not ok`);
-                }
-                return response.json()
-            })
-            .then((data) => {
-                data = JSON.parse(JSON.stringify(data));
-                if (layerName == KENYA_HYDRO_STATIONS_LAYER_NAME) {
-                    MAP_LAYERS[layerName] = L.geoJSON(data, {
-                        onEachFeature: onEachFeature,
-                        pointToLayer: function(feature, latlng) {
-                            return L.circleMarker(latlng, style);
-                        }
-                    })
-                } else {
-                    MAP_LAYERS[layerName] = L.geoJSON(data, {style: style, onEachFeature: onEachFeature});
-                }
-                addLayerToMapAndLayerControl(MAP_LAYERS[layerName], layerName, showLayer);
-                return MAP_LAYERS[layerName]
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-            });
-    } else {
-        addLayerToMapAndLayerControl(layer, layerName, showLayer);
-        return layer
+        MAP_LAYERS[layerName] = L.geoJSON(dataJSON, options);
     }
+    addLayerToMapAndLayerControl(MAP_LAYERS[layerName], layerName, showLayer);
+    return MAP_LAYERS[layerName];
 }
 
-let addKenyaSubbasinLayer = function() {
+let addSubbasinLayer = function(layerName, dataJSON) {
     function onEachFeature(feature, layer) {
         let riverID = feature.properties['LINKNO'];
-
         layer.on('click', function() {
-            if (selectedKenyaSubbasinLayer) {
-                selectedKenyaSubbasinLayer.setStyle({'fillOpacity': 0});
+            if (selectedSubbasinLayer) { // clear the old selected layer
+                selectedSubbasinLayer.setStyle({'fillOpacity': 0}); 
             }
             layer.setStyle({'fillOpacity': 0.1});
-            selectedKenyaSubbasinLayer = layer;
-            updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+            selectedSubbasinLayer = layer;
+            updateSelectedRiverByID(riverID, isSubbasinOutlet=true);
         })
     };
 
@@ -275,16 +246,15 @@ let addKenyaSubbasinLayer = function() {
         "fillOpacity": 0
     };
 
-    addGeoJSONLayerFomFile(
-        layerName=KENYA_SUBBASIN_LAYER_NAME,
-        filePath="/static/geoglows_dashboard/data/geojson/kenya_sub_basins.geojson",
+    return addGeoJSONLayerFomFile(
+        layerName=layerName,
+        data=dataJSON,
         showLayer=true,
-        style=style,
-        onEachFeature=onEachFeature
+        options={style: style, onEachFeature: onEachFeature}
     );
 }
 
-let addKenyaHydroStationLayer = function() {
+let addHydroStationLayer = function(layerName, dataJSON) {
     function onEachFeature(feature, layer) {
         let riverID = feature.properties['LINKNO'];
         let popupContent = `
@@ -308,25 +278,30 @@ let addKenyaHydroStationLayer = function() {
             const $button = $(`#popup-btn-${feature.properties.NAT_ID}`);
             if ($button) {
                 $button.on('click', function() {
-                    updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+                    updateSelectedRiverByID(riverID, isSubbasinOutlet=true);
                 })
             }
         });
     };
 
-    addGeoJSONLayerFomFile(
-        layerName=KENYA_HYDRO_STATIONS_LAYER_NAME,
-        filePath="/static/geoglows_dashboard/data/geojson/kenya_stations.geojson",
+    return addGeoJSONLayerFomFile(
+        layerName=layerName,
+        filePath=dataJSON,
         showLayer=true,
-        style={
-            radius: 6,
-            fillColor: COLOR_BLUE,
-            color: "#000",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-        },
-        onEachFeature=onEachFeature
+        options={
+            style: {
+                radius: 6,
+                fillColor: COLOR_BLUE,
+                color: "#000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            },
+            onEachFeature: onEachFeature,
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, style);
+            }
+        }
     );
 }
 
@@ -340,23 +315,36 @@ let addNileSubbasinLayer = function() {
             }
             layer.setStyle({'fillOpacity': 0.1});
             selectedNileSubbasinLayer = layer;
-            updateSelectedReachByID(riverID, isSubbasinOutlet=true);
+            updateSelectedRiverByID(riverID, isSubbasinOutlet=true);
         })
     }
 
-    addGeoJSONLayerFomFile(
-        layerName=NILE_SUBBASIN_LAYER_NAME,
-        filePath="/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson",
-        showLayer=false,
-        style={
-            "color": COLOR_BLUE,
-            "weight": 2,
-            "opacity": 1,
-            "fillColor": COLOR_BLUE,
-            "fillOpacity": 0
-        },
-        onEachFeature=onEachFeature
-    )
+    let filePath = "/static/geoglows_dashboard/data/geojson/nile_sub_basins.geojson";
+    fetch(filePath)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`${filePath} was not ok`);
+            }
+            return response.json();
+        })
+        .then((data) => {
+            addGeoJSONLayerFomFile(
+                layerName=NILE_SUBBASIN_LAYER_NAME,
+                data=data,
+                showLayer=false,
+                options={
+                    style: {
+                        "color": COLOR_BLUE,
+                        "weight": 2,
+                        "opacity": 1,
+                        "fillColor": COLOR_BLUE,
+                        "fillOpacity": 0
+                    },
+                    onEachFeature: onEachFeature
+                }
+            )
+        })
+
 }
 
 let addMapLayers = async function() {
@@ -430,8 +418,8 @@ let initMapCardBody = async function() {
             mapObj.fitBounds(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME].getBounds());
             MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs({0: 'vpu = 122'});
             $countrySelect.val(SELECT_A_COUNTRY_OPTION_VALUE);
-            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
-            removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
+            removeLayerFromMapAndLayerControl(selectedCountry.subbasinsLayer);
+            removeLayerFromMapAndLayerControl(selectedCountry.hydrostationsLayer);
         }
     })
 
@@ -449,8 +437,8 @@ let initMapCardBody = async function() {
 
     mapObj.on('click', function(event) {
         let point = turf.point([event.latlng.lng, event.latlng.lat]);
-        // If kenya_subbasin_layer is on, don't find the reach id
-        if (isPointInSelectedArea(point) && (!MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME] || !mapObj.hasLayer(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]))) {
+        // If subbasinsLayer is on, don't find the river id 
+        if (isPointInSelectedArea(point) && (!selectedCountry.subbasinsLayer || !mapObj.hasLayer(selectedCountry.subbasinsLayer))) {
             let zoom = mapObj.getZoom();
             if (zoom < MIN_QUERY_ZOOM) {
                 mapObj.setView(event.latlng, MIN_QUERY_ZOOM);
@@ -941,6 +929,7 @@ let initCountryList = function() {
 
             for (let country in existingCountries) {
                 let isDefault = existingCountries[country]["default"];
+
                 let newListItem = $(
                     `<li class="list-group-item" id="${country}-li">
                     <div class="row option-div">
@@ -1052,14 +1041,23 @@ let zoomInToCountry = function(country) {
     MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
     updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
 
-    // add or remove Kenya layers
-    if (country == "Kenya") {
-        addKenyaSubbasinLayer();
-        addKenyaHydroStationLayer();
-    } else {
-        removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_SUBBASIN_LAYER_NAME]);
-        removeLayerFromMapAndlayerControl(MAP_LAYERS[KENYA_HYDRO_STATIONS_LAYER_NAME]);
+    // remove old layers
+    removeLayerFromMapAndLayerControl(selectedCountry.subbasinsLayer);
+    removeLayerFromMapAndLayerControl(selectedCountry.hydrostationsLayer);
+    // add new layers
+    let subbasinsData = existingCountries[country]["subbasinsData"];
+    let hydrostationsData = existingCountries[country]["hydrostationsData"];
+    let newSubbasinsLayer, newHydrostationsLayer;
+    if (subbasinsData) {
+        newSubbasinsLayer = addSubbasinLayer(`${country} Subbasins`, JSON.parse(subbasinsData));
     }
+    if (hydrostationsData) {
+        newHydrostationsLayer = addHydroStationLayer(`${country} Hydrostations`, JSON.parse(hydrostationsData));
+    }
+    //update selectedCountry
+    selectedCountry.name = country;
+    selectedCountry.subbasinsLayer = newSubbasinsLayer;
+    selectedCountry.hydrostationsLayer = newHydrostationsLayer;
 }
 
 
@@ -1091,7 +1089,6 @@ let addCountry = function(subbasinsData, hydrostationsData) {
         subbasinsData: subbasinsData,
         hydrostationsData: hydrostationsData
     };
-    console.log(data);
     console.log("country data size: ", new Blob([JSON.stringify(data)]).size); // Size in bytes
 
     $.ajax({

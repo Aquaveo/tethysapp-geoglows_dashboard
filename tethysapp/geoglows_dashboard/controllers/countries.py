@@ -26,7 +26,7 @@ def add_country(request):
         add_new_country(
             country, data["region"], data["isDefault"],
             subbasins_data=data["subbasinsData"] if 'subbasinsData' in data else None,
-            hydrostations_data=data["hydrostationsData"] if 'hydroStationsData' in data else None)
+            hydrostations_data=data["hydrostationsData"] if 'hydrostationsData' in data else None)
         return JsonResponse(dict(res=f"{country} is added!"))
     elif request.method == "GET":
         region = request.GET.get('region', None)
