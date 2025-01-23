@@ -354,6 +354,28 @@ let addMapLayers = async function() {
         {"Geoglows Streamflow": MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME], "HydroSOS Streamflow": MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]},
         {collapsed: true, position: 'topleft'}
     ).addTo(mapObj);
+    const webMapId = "a69f14ea2e784e019f4a4b6835ffd376";
+    const webMapUrl = `https://www.arcgis.com/sharing/rest/content/items/${webMapId}/data?f=json`;
+    fetch(webMapUrl)
+      .then(response => response.json())
+      .then(data => {
+        let layerGroup = [];
+        data.baseMap.baseMapLayers.forEach((basemap) => {
+            let layer;
+            if (basemap.layerType === 'ArcGISTiledMapServiceLayer') {
+                layer = L.esri.tiledMapLayer({url: basemap.url, opacity: basemap.opacity || 1,})
+            } else if (basemap.layerType === 'VectorTileLayer') {
+                layer = L.esri.Vector.vectorTileLayer(basemap.itemId, {opacity: basemap.opacity || 1})
+            }
+            layerGroup.push(layer);
+        })
+        let environmentMap = L.layerGroup(layerGroup).addTo(mapObj);
+        $layerControl.addBaseLayer(environmentMap, "ESRI Environment");
+      })
+      .catch(error => {
+        console.error("Error loading Web Map:", error);
+      });
+
     MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
     if (region == REGION_NILE_BASIN) {
         addNileSubbasinLayer();
@@ -503,7 +525,6 @@ let initMapCardBody = async function() {
     $('.timecontrol-play').on('click', refreshGeoglowsStreamflowLayer);
 
     // init map layers
-    basemaps["ESRI Grey"].addTo(mapObj);
     await addMapLayers();
 };
 
