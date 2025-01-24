@@ -1072,6 +1072,7 @@ let zoomInToCountry = function(country) {
     let newSubbasinsLayer, newHydrostationsLayer;
     if (subbasinsData) {
         newSubbasinsLayer = addSubbasinLayer(`${country} Subbasins`, JSON.parse(subbasinsData));
+    }
     if (hydrostationsData) {
         newHydrostationsLayer = addHydroStationLayer(`${country} Hydrostations`, JSON.parse(hydrostationsData));
     }
@@ -1103,8 +1104,9 @@ let showAddCountryForm = function() {
 ///// add new country /////
 
 let addCountry = function(subbasinsData, hydrostationsData) {
+    let country = $("#new-country-select").val();
     let data = {
-        country: $("#new-country-select").val(),
+        country: country,
         region: region,
         isDefault: $("#default-check").is(":checked"),
         subbasinsData: subbasinsData,
@@ -1120,6 +1122,7 @@ let addCountry = function(subbasinsData, hydrostationsData) {
             $("#submit-btn").prop("disabled", false);
             $("#submit-btn").find(".spinner-border").addClass("d-none");
             showCountryList();
+            zoomInToCountry(country);
         },
         error: function(error) {
             $("#submit-btn").prop("disabled", false);
