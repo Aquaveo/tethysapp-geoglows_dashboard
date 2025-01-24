@@ -145,34 +145,38 @@
             <div class="row" id="country-list-div">
               <ul class="list-group" id="country-list-ul"></ul>
             </div>
-            <div class="row" id="add-country-form" style="display: none">
-              <form method="get">
-                <h5 style="padding-top:10px;">Add New Country</h5>
-                <div class="form-group">
-                  <label for="new-country-select">Area</label>
-                  <select class="form-control" id="new-country-select"></select>
+            <form class="row needs-validation" id="add-country-form" style="display: none" method="get" novalidate>
+              <h5 style="padding-top:10px;">Add New Country</h5>
+              <div class="form-group">
+                <label for="new-country-select">Area</label>
+                <select class="form-control" id="new-country-select"></select>
+              </div>
+              <div class="form-group">
+                <label for="subbasins-file-input">Subbasins Data</label><br>
+                <input type="file" class="form-control-file" id="subbasins-file-input" accept=".json, .geojson">
+                <div class="invalid-feedback" id="subbasins-invalid-feedback">
+                  Please select a valid state.
                 </div>
-                <div class="form-group">
-                  <label for="subbasins-file-input">Subbasins</label><br>
-                  <input type="file" class="form-control-file" id="subbasins-file-input">
+              </div>
+              <div class="form-group">
+                <label for="hydrostations-file-input">Hydrostations Data</label><br>
+                <input type="file" class="form-control-file" id="hydrostations-file-input" accept=".json, .geojson">
+                <div class="invalid-feedback" id="hydrostations-invalid-feedback">
+                  Please select a valid state.
                 </div>
-                <div class="form-group">
-                  <label for="hydrostations-file-input">Hydrostations</label><br>
-                  <input type="file" class="form-control-file" id="hydrostations-file-input">
-                </div>
-                <div class="form-group">
-                  <input type="checkbox" class="form-check-input" id="default-check">
-                  <label class="form-check-label" for="default-check">Make the default country</label>
-                </div>
-                <div>
-                  <button type="button" class="btn btn-secondary cancel-btn" onclick="showCountryList()">Cancel</button>
-                  <button type="button" class="btn btn-success" id="submit-btn">
-                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                    Submit
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+              <div class="form-group">
+                <input type="checkbox" class="form-check-input" id="default-check">
+                <label class="form-check-label" for="default-check">Make the default country</label>
+              </div>
+              <div>
+                <button type="button" class="btn btn-secondary cancel-btn" onclick="showCountryList()">Cancel</button>
+                <button type="submit" class="btn btn-success" id="submit-btn">
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                  Submit
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

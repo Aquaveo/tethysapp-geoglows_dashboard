@@ -1110,22 +1110,21 @@ let addCountry = function(subbasinsData, hydrostationsData) {
         subbasinsData: subbasinsData,
         hydrostationsData: hydrostationsData
     };
-    console.log("country data size: ", new Blob([JSON.stringify(data)]).size); // Size in bytes
 
-    $.ajax({
-        type: "POST",
-        url: URL_country,
-        data: JSON.stringify(data),
-        dataType: "json",
-        success: function(_response) {
-            $("#submit-btn").prop("disabled", false);
-            $("#submit-btn").find(".spinner-border").addClass("d-none");
-            showCountryList();
-        },
-        error: function(error) {
-            console.log(error);
-        }
-    })
+    // $.ajax({
+    //     type: "POST",
+    //     url: URL_country,
+    //     data: JSON.stringify(data),
+    //     dataType: "json",
+    //     success: function(_response) {
+    //         $("#submit-btn").prop("disabled", false);
+    //         $("#submit-btn").find(".spinner-border").addClass("d-none");
+    //         showCountryList();
+    //     },
+    //     error: function(error) {
+    //         console.log(error);
+    //     }
+    // })
 }
 
 
@@ -1142,6 +1141,35 @@ let readFile = function(file) {
     });
 };
 
+// $('#add-country-form').on('submit', async function(event) {
+//     let subbasinsData, hydrostationsData;
+//     if (subbasinFile) {
+//         subbasinsData = await readFile($('#subbasins-file-input')[0].files[0]);
+//     }
+//     if (hydrostationFile) {
+//         hydrostationsData = await readFile($('#hydrostations-file-input')[0].files[0]);
+//     }
+
+//     // TODO check file size before send it to the backend
+//     let data = {
+//         country: $("#new-country-select").val(),
+//         region: region,
+//         isDefault: $("#default-check").is(":checked"),
+//         subbasinsData: subbasinsData,
+//         hydrostationsData: hydrostationsData
+//     };
+//     const size = new Blob([JSON.stringify(data)]).size;
+//     if (size >= 104857600) {
+        
+//     }
+
+//     // TODO check properties
+//     const subbasinsDataJSON = JSON.parse(subbasinsData);
+//     console.log(subbasinsData);
+
+//     addCountry(subbasinsData, hydrostationsData);
+// })
+
 
 $("#submit-btn").on("click", async function() {
     $(this).prop("disabled", true);
@@ -1155,8 +1183,14 @@ $("#submit-btn").on("click", async function() {
     if (hydrostationFile) {
         hydrostationsData = await readFile(hydrostationFile);
     }
-    // TODO check file size before send it to the backend
-    addCountry(subbasinsData, hydrostationsData);
+
+    // TODO check properties
+    const subbasinsDataJSON = JSON.parse(subbasinsData);
+    const properties = subbasinsDataJSON.features[0].properties;
+    if (('LINKNO' in properties)) {
+        $('#hydrostations-invalid-feedback').html(`This file should have the property 'LINKNO'`)
+    }
+    // addCountry(subbasinsData, hydrostationsData);
 })
 
 // disable "reload site" warning
