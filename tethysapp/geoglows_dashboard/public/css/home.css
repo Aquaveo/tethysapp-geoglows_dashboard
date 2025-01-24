@@ -205,3 +205,8 @@ button {
 .popup-btn {
     width: 100%;
 }
+
+.is-valid {
+    border-color: initial !important;
+    box-shadow: none !important;
+}

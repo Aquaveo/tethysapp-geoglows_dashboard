@@ -257,13 +257,14 @@ let addSubbasinLayer = function(layerName, dataJSON) {
 let addHydroStationLayer = function(layerName, dataJSON) {
     function onEachFeature(feature, layer) {
         let riverID = feature.properties['LINKNO'];
+        let propsContent = '';
+        for (let property in feature.properties) {
+            propsContent += `<tr><td><b></b>${property}</td><td>${feature.properties[property]}</td></tr>`;
+        }
         let popupContent = `
-            <table class="popup-table">
-                <tr><td><b>Water Body</b></td><td>${feature.properties['Water Body']}</td></tr>
-                <tr><td><b>Sub Region</b></td><td>${feature.properties['Sub-Region']}</td></tr>
-            </table>
+            <table class="popup-table">${propsContent}</table>
             <div style="text-align: center; margin-top: 5px">
-                <button type="button" class="btn btn-primary btn-sm popup-btn" id="popup-btn-${feature.properties.NAT_ID}">Show Plot</button>
+                <button type="button" class="btn btn-primary btn-sm popup-btn" id="popup-btn-${feature.properties.Nat_ID}">Show Plot</button>
             </div>
         `;
         layer.bindPopup(popupContent);
@@ -275,7 +276,7 @@ let addHydroStationLayer = function(layerName, dataJSON) {
             selectedStationLayer = layer;
         });
         layer.on('popupopen', function() {
-            const $button = $(`#popup-btn-${feature.properties.NAT_ID}`);
+            const $button = $(`#popup-btn-${feature.properties.Nat_ID}`);
             if ($button) {
                 $button.on('click', function() {
                     updateSelectedRiverByID(riverID, isSubbasinOutlet=true);
@@ -1111,20 +1112,22 @@ let addCountry = function(subbasinsData, hydrostationsData) {
         hydrostationsData: hydrostationsData
     };
 
-    // $.ajax({
-    //     type: "POST",
-    //     url: URL_country,
-    //     data: JSON.stringify(data),
-    //     dataType: "json",
-    //     success: function(_response) {
-    //         $("#submit-btn").prop("disabled", false);
-    //         $("#submit-btn").find(".spinner-border").addClass("d-none");
-    //         showCountryList();
-    //     },
-    //     error: function(error) {
-    //         console.log(error);
-    //     }
-    // })
+    $.ajax({
+        type: "POST",
+        url: URL_country,
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(_response) {
+            $("#submit-btn").prop("disabled", false);
+            $("#submit-btn").find(".spinner-border").addClass("d-none");
+            showCountryList();
+        },
+        error: function(error) {
+            $("#submit-btn").prop("disabled", false);
+            $("#submit-btn").find(".spinner-border").addClass("d-none");
+            console.log(error);
+        }
+    })
 }
 
 
@@ -1141,57 +1144,56 @@ let readFile = function(file) {
     });
 };
 
-// $('#add-country-form').on('submit', async function(event) {
-//     let subbasinsData, hydrostationsData;
-//     if (subbasinFile) {
-//         subbasinsData = await readFile($('#subbasins-file-input')[0].files[0]);
-//     }
-//     if (hydrostationFile) {
-//         hydrostationsData = await readFile($('#hydrostations-file-input')[0].files[0]);
-//     }
+$('#add-country-form').on('submit', async function(event) {
+    event.preventDefault();
 
-//     // TODO check file size before send it to the backend
-//     let data = {
-//         country: $("#new-country-select").val(),
-//         region: region,
-//         isDefault: $("#default-check").is(":checked"),
-//         subbasinsData: subbasinsData,
-//         hydrostationsData: hydrostationsData
-//     };
-//     const size = new Blob([JSON.stringify(data)]).size;
-//     if (size >= 104857600) {
-        
-//     }
+    let isValid = true;
 
-//     // TODO check properties
-//     const subbasinsDataJSON = JSON.parse(subbasinsData);
-//     console.log(subbasinsData);
-
-//     addCountry(subbasinsData, hydrostationsData);
-// })
-
-
-$("#submit-btn").on("click", async function() {
-    $(this).prop("disabled", true);
-    $(this).find(".spinner-border").removeClass("d-none");
     let subbasinFile = $('#subbasins-file-input')[0].files[0];
     let hydrostationFile =  $('#hydrostations-file-input')[0].files[0];
     let subbasinsData, hydrostationsData;
     if (subbasinFile) {
         subbasinsData = await readFile(subbasinFile);
+        const props = JSON.parse(subbasinsData).features[0].properties;
+        if (!('LINKNO' in props)) {
+            $('#subbasins-invalid-feedback').html("The subbasins data should have property: LINKNO");
+            $('#subbasins-file-input').addClass('is-invalid');
+            isValid = false;
+        }
     }
     if (hydrostationFile) {
         hydrostationsData = await readFile(hydrostationFile);
+        const props = JSON.parse(hydrostationsData).features[0].properties;
+        if (!('LINKNO' in props && 'Nat_ID' in props)) {
+            $('#hydrostations-invalid-feedback').html("The hydrostations data should have properties: Nat_ID, LINKNO");
+            $('#hydrostations-file-input').addClass('is-invalid');
+            isValid = false;
+        }
     }
 
-    // TODO check properties
-    const subbasinsDataJSON = JSON.parse(subbasinsData);
-    const properties = subbasinsDataJSON.features[0].properties;
-    if (('LINKNO' in properties)) {
-        $('#hydrostations-invalid-feedback').html(`This file should have the property 'LINKNO'`)
+    let data = {
+        country: $("#new-country-select").val(),
+        region: region,
+        isDefault: $("#default-check").is(":checked"),
+        subbasinsData: subbasinsData,
+        hydrostationsData: hydrostationsData
+    };
+
+    const size = new Blob([JSON.stringify(data)]).size;
+    if (size > 104857600) {
+        $('#file-size-invalid-feedback').css('display', 'block');
+        isValid = false;
+    } else {
+        $('#file-size-invalid-feedback').css('display', 'none');
     }
-    // addCountry(subbasinsData, hydrostationsData);
+
+    if (isValid) {
+        $("#submit-btn").prop("disabled", true);
+        $("#submit-btn").find(".spinner-border").removeClass("d-none");
+        addCountry(subbasinsData, hydrostationsData);
+    }
 })
+
 
 // disable "reload site" warning
 window.onbeforeunload = null;
