@@ -257,13 +257,14 @@ let addSubbasinLayer = function(layerName, dataJSON) {
 let addHydroStationLayer = function(layerName, dataJSON) {
     function onEachFeature(feature, layer) {
         let riverID = feature.properties['LINKNO'];
+        let propsContent = '';
+        for (let property in feature.properties) {
+            propsContent += `<tr><td><b></b>${property}</td><td>${feature.properties[property]}</td></tr>`;
+        }
         let popupContent = `
-            <table class="popup-table">
-                <tr><td><b>Water Body</b></td><td>${feature.properties['Water Body']}</td></tr>
-                <tr><td><b>Sub Region</b></td><td>${feature.properties['Sub-Region']}</td></tr>
-            </table>
+            <table class="popup-table">${propsContent}</table>
             <div style="text-align: center; margin-top: 5px">
-                <button type="button" class="btn btn-primary btn-sm popup-btn" id="popup-btn-${feature.properties.NAT_ID}">Show Plot</button>
+                <button type="button" class="btn btn-primary btn-sm popup-btn" id="popup-btn-${feature.properties.Nat_ID}">Show Plot</button>
             </div>
         `;
         layer.bindPopup(popupContent);
@@ -275,7 +276,7 @@ let addHydroStationLayer = function(layerName, dataJSON) {
             selectedStationLayer = layer;
         });
         layer.on('popupopen', function() {
-            const $button = $(`#popup-btn-${feature.properties.NAT_ID}`);
+            const $button = $(`#popup-btn-${feature.properties.Nat_ID}`);
             if ($button) {
                 $button.on('click', function() {
                     updateSelectedRiverByID(riverID, isSubbasinOutlet=true);
@@ -927,7 +928,7 @@ let initAllCountries = function() {
                     allCountries[name] = feature;
                 }
             }
-            initCountryList();
+            initCountryList(true);
         })
         .catch((error) => {
             console.error("Error:", error);
@@ -937,7 +938,7 @@ let initAllCountries = function() {
 ///// Get all countries /////
 
 // Dispaly all existing countries in the country list
-let initCountryList = function() {
+let initCountryList = function(firstTime) {
     $.ajax({
         type: "GET",
         url: URL_country + L.Util.getParamString({region: region}),
@@ -998,7 +999,7 @@ let initCountryList = function() {
                     })
                 })
 
-                if (isDefault) {
+                if (firstTime && isDefault) {
                     zoomInToCountry(country);
                 }
             }
@@ -1087,7 +1088,7 @@ let zoomInToCountry = function(country) {
 let showCountryList = function() {
     $("#remove-confirmation-modal").modal('hide');
     $("#admin-modal").modal('show');    
-    initCountryList(); // refresh the country list
+    initCountryList(false); // refresh the country list
     $("#country-list-div").css("display", "flex");
     $("#add-country-form").css("display", "none");
 }
@@ -1095,7 +1096,7 @@ let showCountryList = function() {
 let showAddCountryForm = function() {
     $("#remove-confirmation-modal").modal('hide');
     $("#admin-modal").modal('show');
-    initCountryList();
+    initCountryList(false);
     $("#country-list-div").css("display", "none");
     $("#add-country-form").css("display", "flex");
 }
@@ -1103,14 +1104,14 @@ let showAddCountryForm = function() {
 ///// add new country /////
 
 let addCountry = function(subbasinsData, hydrostationsData) {
+    let country = $("#new-country-select").val();
     let data = {
-        country: $("#new-country-select").val(),
+        country: country,
         region: region,
         isDefault: $("#default-check").is(":checked"),
         subbasinsData: subbasinsData,
         hydrostationsData: hydrostationsData
     };
-    console.log("country data size: ", new Blob([JSON.stringify(data)]).size); // Size in bytes
 
     $.ajax({
         type: "POST",
@@ -1121,8 +1122,11 @@ let addCountry = function(subbasinsData, hydrostationsData) {
             $("#submit-btn").prop("disabled", false);
             $("#submit-btn").find(".spinner-border").addClass("d-none");
             showCountryList();
+            zoomInToCountry(country);
         },
         error: function(error) {
+            $("#submit-btn").prop("disabled", false);
+            $("#submit-btn").find(".spinner-border").addClass("d-none");
             console.log(error);
         }
     })
@@ -1142,22 +1146,56 @@ let readFile = function(file) {
     });
 };
 
+$('#add-country-form').on('submit', async function(event) {
+    event.preventDefault();
 
-$("#submit-btn").on("click", async function() {
-    $(this).prop("disabled", true);
-    $(this).find(".spinner-border").removeClass("d-none");
+    let isValid = true;
+
     let subbasinFile = $('#subbasins-file-input')[0].files[0];
     let hydrostationFile =  $('#hydrostations-file-input')[0].files[0];
     let subbasinsData, hydrostationsData;
     if (subbasinFile) {
         subbasinsData = await readFile(subbasinFile);
+        const props = JSON.parse(subbasinsData).features[0].properties;
+        if (!('LINKNO' in props)) {
+            $('#subbasins-invalid-feedback').html("The subbasins data should have property: LINKNO");
+            $('#subbasins-file-input').addClass('is-invalid');
+            isValid = false;
+        }
     }
     if (hydrostationFile) {
         hydrostationsData = await readFile(hydrostationFile);
+        const props = JSON.parse(hydrostationsData).features[0].properties;
+        if (!('LINKNO' in props && 'Nat_ID' in props)) {
+            $('#hydrostations-invalid-feedback').html("The hydrostations data should have properties: Nat_ID, LINKNO");
+            $('#hydrostations-file-input').addClass('is-invalid');
+            isValid = false;
+        }
     }
-    // TODO check file size before send it to the backend
-    addCountry(subbasinsData, hydrostationsData);
+
+    let data = {
+        country: $("#new-country-select").val(),
+        region: region,
+        isDefault: $("#default-check").is(":checked"),
+        subbasinsData: subbasinsData,
+        hydrostationsData: hydrostationsData
+    };
+
+    const size = new Blob([JSON.stringify(data)]).size;
+    if (size > 104857600) {
+        $('#file-size-invalid-feedback').css('display', 'block');
+        isValid = false;
+    } else {
+        $('#file-size-invalid-feedback').css('display', 'none');
+    }
+
+    if (isValid) {
+        $("#submit-btn").prop("disabled", true);
+        $("#submit-btn").find(".spinner-border").removeClass("d-none");
+        addCountry(subbasinsData, hydrostationsData);
+    }
 })
+
 
 // disable "reload site" warning
 window.onbeforeunload = null;
