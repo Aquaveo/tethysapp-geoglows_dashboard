@@ -928,7 +928,7 @@ let initAllCountries = function() {
                     allCountries[name] = feature;
                 }
             }
-            initCountryList();
+            initCountryList(true);
         })
         .catch((error) => {
             console.error("Error:", error);
@@ -938,7 +938,7 @@ let initAllCountries = function() {
 ///// Get all countries /////
 
 // Dispaly all existing countries in the country list
-let initCountryList = function() {
+let initCountryList = function(firstTime) {
     $.ajax({
         type: "GET",
         url: URL_country + L.Util.getParamString({region: region}),
@@ -999,7 +999,7 @@ let initCountryList = function() {
                     })
                 })
 
-                if (isDefault) {
+                if (firstTime && isDefault) {
                     zoomInToCountry(country);
                 }
             }
@@ -1088,7 +1088,7 @@ let zoomInToCountry = function(country) {
 let showCountryList = function() {
     $("#remove-confirmation-modal").modal('hide');
     $("#admin-modal").modal('show');    
-    initCountryList(); // refresh the country list
+    initCountryList(false); // refresh the country list
     $("#country-list-div").css("display", "flex");
     $("#add-country-form").css("display", "none");
 }
@@ -1096,7 +1096,7 @@ let showCountryList = function() {
 let showAddCountryForm = function() {
     $("#remove-confirmation-modal").modal('hide');
     $("#admin-modal").modal('show');
-    initCountryList();
+    initCountryList(false);
     $("#country-list-div").css("display", "none");
     $("#add-country-form").css("display", "flex");
 }
