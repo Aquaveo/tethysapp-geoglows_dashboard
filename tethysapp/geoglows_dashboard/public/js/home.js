@@ -1072,7 +1072,6 @@ let zoomInToCountry = function(country) {
     let newSubbasinsLayer, newHydrostationsLayer;
     if (subbasinsData) {
         newSubbasinsLayer = addSubbasinLayer(`${country} Subbasins`, JSON.parse(subbasinsData));
-    }
     if (hydrostationsData) {
         newHydrostationsLayer = addHydroStationLayer(`${country} Hydrostations`, JSON.parse(hydrostationsData));
     }
