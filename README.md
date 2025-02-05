@@ -31,17 +31,6 @@
     tethys install -d
     ```
 
-### Set Up Google Earth Engine
-
-1. Create a service account registered with Google Earth Engine
-    - [How do I create a service account](https://developers.google.com/earth-engine/guides/service_account#how-do-i-create-a-service-account) 
-
-2. Create Service Account Key
-    - See "1. Create Service Account Key" in this [tutorial](http://docs.tethysplatform.org/en/stable/tutorials/google_earth_engine/part_3/service_account.html)
-
-3. Set Service Account Settings for the App
-    - see "2. Set Service Account Settings for the App" in this [tutorial](http://docs.tethysplatform.org/en/stable/tutorials/google_earth_engine/part_3/prepare.html)
-
 ### Set Up the Database
 1. Download the Docker Desktop for your laptop: https://www.docker.com/products/docker-desktop/
 
@@ -82,7 +71,7 @@
      - Note: The username and password for the persistent store service must be a superuser to use spatial persistent stores. Note that the default installation of Tethys Portal includes a superuser named "tethys_super", password: "pass".
    - Press **Save** to create the new **Persistent Store Service**.
 
-   <img src="./tethysapp/geoglows_dashboard/public/images/persistent store service.png" alt="image-20240208095349756" style="zoom:50%;" />
+   <img src="./tethysapp/geoglows_dashboard/public/images/persistent store service.png" alt="persisten store service" style="zoom:50%;" />
 
 6. Assign the new **Persistent Store Service** to the Geoglows Dashboard App:
 
@@ -91,7 +80,7 @@
    - Scroll down to the **Tethys Apps** section and select the **Installed App** link.
    - Select the **Geoglows Dashboard** link.
    - Scroll down to the **Persistent Store Database Settings** section.
-   - Assign the **Persistent Store Service** that you created in the last step to the **country_db** setting.
+   - Assign the **Persistent Store Service** that you created in the last step to the **primary_db** setting.
    - Press **Save** to save the settings.
 
 7. View the database in [pgAdmin](https://www.pgadmin.org/download/)
@@ -112,7 +101,7 @@
 
 8. Add the `postgis` extension to the database:
 
-   - Right click the `geoglows_dashboard_country_db` database -> Create -> Extension
+   - Right click the `geoglows_dashboard_primary_db` database -> Create -> Extension
    - In the General tab, use drop down menu to choose the "postgis" extension, then Save 
 
 9. Execute the **syncstores** command to create the tables in the Persistent Store database: 
@@ -123,7 +112,7 @@
 
 10. Load the data to the database:
    - Enter the folder `tethysapp-geoglows_dashboard/tethysapp/geoglows_dashboard`
-   - Run the command `tethys manage shell < init_river_tables.py`, then wait for 3~6 hours for it to be finished
+   - Run the command `tethys manage shell < init_database.py`, then wait for 3~6 hours for it to be finished
 
 ### Set Up the GeoServer 
 
