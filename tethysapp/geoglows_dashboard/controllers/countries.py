@@ -27,7 +27,7 @@ def add_country(request):
             country, data["region"], data["isDefault"],
             subbasins_data=data["subbasinsData"] if 'subbasinsData' in data else None,
             hydrostations_data=data["hydrostationsData"] if 'hydrostationsData' in data else None)
-        return JsonResponse(dict(res=f"{country} is added!"))
+        return JsonResponse({"message": f"{country} is added!"})
     elif request.method == "GET":
         region = request.GET.get('region', None)
         countries = get_all_countries(Region(region))
@@ -38,7 +38,7 @@ def add_country(request):
                 "subbasinsData": country.subbasins_data,
                 "hydrostationsData": country.hydrostations_data
             }
-        return JsonResponse(dict(data=json.dumps(countries_dict)))
+        return JsonResponse(countries_dict)
     elif request.method == "DELETE":
         data = json.loads(request.body.decode('utf-8'))
         country = data["country"]
