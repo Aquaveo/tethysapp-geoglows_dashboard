@@ -30,11 +30,11 @@ except Exception as e:
 # create the style layer in GeoServer
 
 categories = [
-    {"value": "extremely dry", "color": "#CD233F"},
-    {"value": "dry", "color": "#FFA885"},
-    {"value": "normal range", "color": "#E7E2BC"},
-    {"value": "wet", "color": "#8ECEEE"},
-    {"value": "extremely wet", "color": "#2C7DCD"}
+    {"value": "EXTREMELY_DRY", "color": "#CD233F"},
+    {"value": "DRY", "color": "#FFA885"},
+    {"value": "NORMAL_RANGE", "color": "#E7E2BC"},
+    {"value": "WET", "color": "#8ECEEE"},
+    {"value": "EXTREMELY_WET", "color": "#2C7DCD"}
 ]
 context = {
     "categories": categories,
