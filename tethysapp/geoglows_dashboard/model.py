@@ -20,6 +20,14 @@ class Region(enum.Enum):
     CENTRAL_AMERICA = 'Central America'
 
 
+class HydroSOSCategory(enum.Enum):
+    EXTREMELY_DRY = 'extremely dry'
+    DRY = 'dry'
+    NORMAL_RANGE = 'normal range'
+    WET = 'wet'
+    EXTREMELY_WET = 'extremely wet'
+
+
 class Country(Base):
     """
     SQLAlchemy Country DB Model
@@ -111,11 +119,12 @@ class River(Base):
     stream_order = Column(Integer, index=True)
     geometry = Column(Geometry())
     river_country = Column(String(100))
+    vpu = Column(Integer)
 
 
-def add_new_river(rivid, stream_order, geometry):
+def add_new_river(river_id, stream_order, geometry):
     new_river = River(
-        id=rivid,
+        id=river_id,
         strmOrder=stream_order,
         geometry=geometry
     )
@@ -132,9 +141,9 @@ def add_new_river_bulk(river_dict):
     session.close()
 
 
-def update_river_data(rivid, country):
+def update_river_data(river_id, country):
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
-    session.query(River).filter(River.id == rivid).update({'river_country': country})
+    session.query(River).filter(River.id == river_id).update({'river_country': country})
     session.commit()
     session.close()
 
@@ -151,17 +160,17 @@ class RiverHydroSOS(Base):
     __tablename__ = 'river_hydrosos'
 
     id = Column(Integer, primary_key=True)
-    rivid = Column(Integer, ForeignKey('rivers.id'), nullable=False)
-    month = Column(DATE)
-    category = Column(String)
+    river_id = Column(Integer, ForeignKey('rivers.id'), nullable=False)
+    date = Column(DATE)
+    category = Column(Enum(HydroSOSCategory), nullable=True)
     # TODO add unique constraint
 
 
-def add_new_river_hydrosos(rivid, month, category):
+def add_new_river_hydrosos(river_id, month, category):
     new_river_hydrosos = RiverHydroSOS(
-        rivid=rivid,
+        river_id=river_id,
         month=month,
-        category=category
+        category=HydroSOSCategory(category)
     )
     session = app.get_persistent_store_database(db_name, as_sessionmaker=True)()
     session.add(new_river_hydrosos)
@@ -188,7 +197,7 @@ def init_primary_db(engine, first_time):
     river_hydrosos_table = RiverHydroSOS.__table__
 
     try:
-        month_index = Index('river_hydrosos_month_idx', river_hydrosos_table.c.month, postgresql_using='hash')
+        month_index = Index('river_hydrosos_month_idx', river_hydrosos_table.c.date, postgresql_using='hash')
         month_index.create(engine)
         session.commit()
         session.close()
