@@ -7,8 +7,8 @@ const forecastPlotID = "forecast",
         SSIOneMonthPlotID = "ssi-one-month";
 
 const plotsData = {
-    "startDate": "1940-01",
-    "endDate": "2022-12",
+    "startDate": "2000-01",
+    "endDate": "2024-12",
     "plots": {
         [forecastPlotID]: {
             "name": "Forecast",

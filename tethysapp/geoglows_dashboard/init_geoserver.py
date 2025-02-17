@@ -82,7 +82,7 @@ try:
             {
                 'name': 'is_vpu',
                 'default_value': 'False',
-                'regex_validator': '^(True|False)$'
+                'regex_validator': '^(True|true|False|false)$'
             },
             {
                 'name': 'country',

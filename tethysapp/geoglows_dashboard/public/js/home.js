@@ -88,8 +88,8 @@ let initMapCardHeader = function() {
         $yearMonthPicker.datepicker({
             minViewMode: 1,
             format: 'yyyy-mm-01',
-            startDate: '1940-01',
-            endDate: '2022-12'
+            startDate: '2000-01',
+            endDate: '2024-12'
         });
     
         $yearMonthPicker.on('changeDate', function() {

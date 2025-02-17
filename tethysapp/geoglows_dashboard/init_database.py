@@ -1,18 +1,77 @@
-import xarray
-import scipy.stats as stats
+import pandas as pd
 import numpy as np
+import xarray as xr
+import geopandas as gpd
+import os
 import json
 from shapely.geometry import shape
 
-from tethysapp.geoglows_dashboard.model import add_new_river_bulk, add_new_river_hydrosos_bulk, add_new_country
+from tethysapp.geoglows_dashboard.model import (
+    HydroSOSCategory, add_new_river_bulk, add_new_river_hydrosos_bulk, add_new_country
+)
+from tethysapp.geoglows_dashboard.app import GeoglowsDashboard as app
 
 
-class HydroSOSRiverDataInitializer:
-    def __init__(self, data_dir, vpu):
+class HydroSOSDataInitializer:
+    def __init__(self, data_dir, vpu, stdStart, stdEnd):
         self.data_dir = data_dir
         self.vpu = vpu
+        self.stdStart = stdStart
+        self.stdEnd = stdEnd
 
-    def insert_geometry_data(self):
+    def insert_hydrosos_data(self):
+        os.environ["AWS_NO_SIGN_REQUEST"] = "YES"
+        month_timeseries = xr.open_zarr('s3://rfs-v2/retrospective/monthly-timeseries.zarr',
+                                        storage_options={'anon': True})
+        xr.open_zarr('s3://rfs-v2/retrospective/monthly-timeseries.zarr', storage_options={'anon': True})
+        linkno_raw = pd.read_parquet(
+            f's3://rfs-v2/routing-configs/{self.vpu}/routing_parameters.parquet',
+            storage_options={'anon': True})["river_id"].to_numpy()
+        linkno_benchmark = gpd.read_file(self.data_dir + f"river_features_{self.vpu}.geojson")['rivid'].to_numpy()
+        linkno = [x for x in linkno_raw if x in linkno_benchmark]
+        flowdata = month_timeseries.sel(river_id=linkno).to_dataframe().unstack(level='river_id')
+        flowdata.columns = flowdata.columns.droplevel(0)
+        flowdata["month"] = flowdata.index.month
+        flowdata["year"] = flowdata.index.year
+        flowdata = flowdata.reset_index()
+        river_ids = flowdata.columns[1:-2]
+        results = []
+        for i in range(len(river_ids)):
+            river_id = river_ids[i]
+            river_df = flowdata[['time', 'year', 'month', river_id]]\
+                .rename(columns={river_id: 'flow', 'time': 'date'}).dropna()
+            # Calculate Long-Term Average (LTA)
+            lta = river_df[(river_df['year'] >= self.stdStart)
+                           & (river_df['year'] <= self.stdEnd)].groupby('month')['flow'].mean()
+            # Compute mean monthly flows as a percentage of LTA using transform (vectorized)
+            river_df['percentile_flow'] = river_df['flow'] / river_df['month'].map(lta).replace({np.nan: pd.NA}) * 100
+            # Compute Weibull rank percentiles in a vectorized way
+            river_df['weibell_rank'] = (
+                river_df.groupby('month')['percentile_flow']
+                .rank(method='average', na_option='keep') /
+                (river_df.groupby('month')['percentile_flow'].transform('count') + 1)
+            )
+            conditions = [
+                river_df['weibell_rank'] <= 0.13,
+                river_df['weibell_rank'] <= 0.28,
+                river_df['weibell_rank'] <= 0.71999,
+                river_df['weibell_rank'] <= 0.86999,
+                river_df['weibell_rank'] > 0.86999,
+            ]
+            choices = [HydroSOSCategory('extremely dry'), HydroSOSCategory('dry'),
+                       HydroSOSCategory('normal range'), HydroSOSCategory('wet'), HydroSOSCategory('extremely wet')]
+            river_df['category'] = np.select(conditions, choices, default=None)
+            river_df['river_id'] = river_id
+            river_df = river_df.drop(columns=['year', 'month', 'flow', 'percentile_flow', 'weibell_rank'])
+            river_df = river_df[river_df['date'] >= '2000-01-01']
+            results.append(river_df)
+            if i != 0 and (i % 1000 == 0 or i == len(river_ids) - 1):
+                df = pd.concat(results, ignore_index=True)
+                add_new_river_hydrosos_bulk(df.to_dict(orient='records'))
+                results = []
+                print(f'Hydrosos data {i} is inserted! (progress: {i / len(river_ids): .1%})')
+
+    def insert_river_data(self):
         rivers_features = json.load(open(self.data_dir + f"river_features_{self.vpu}.geojson"))
         rivers = []
         for river in rivers_features["features"]:
@@ -22,76 +81,29 @@ class HydroSOSRiverDataInitializer:
                 'id': rivid,
                 'stream_order': properties["strmOrder"],
                 'geometry': f"SRID=4326;{shape(river['geometry']).wkt}",
-                'river_country': properties['RiverCountry']
+                'river_country': properties['RiverCountry'],
+                'vpu': self.vpu
             })
         add_new_river_bulk(rivers)
-        print("all river geometry is inserted!")
-
-    def insert_hydrosos_data(self):
-        all_data = xarray.open_dataset(self.data_dir + f"combined_all_data_{self.vpu}.nc")
-        monthly_data = xarray.open_dataset(self.data_dir + f"combined_monthly_data_{self.vpu}.nc")
-        df_avg = monthly_data.monthly_average.sel(variable="Qout").to_dataframe().reset_index()
-        df_std = monthly_data.monthly_std_dev.sel(variable="Qout").to_dataframe().reset_index()
-        df_stat = df_avg[['rivid', 'month', 'monthly_average']].merge(
-            df_std[['rivid', 'month', 'monthly_std_dev']], on=['rivid', 'month'], how='outer'
-        )
-
-        def get_hydrosos_data_sample(start_year, end_year):
-            df_filtered_data = all_data["ds_grouped_avg"].sel(
-                variable="Qout",
-                time=(all_data["ds_grouped_avg"]["time"].dt.year >= start_year) &
-                (all_data["ds_grouped_avg"]["time"].dt.year < end_year)
-            ).to_dataframe().reset_index()
-            df_filtered_data = df_filtered_data.drop_duplicates(['time', 'rivid'])
-            df_filtered_data['year'] = df_filtered_data['time'].dt.year
-            df_filtered_data['month'] = df_filtered_data['time'].dt.month
-            df_filtered_data = df_filtered_data[['time', 'year', 'month', 'rivid', 'ds_grouped_avg']]
-
-            df_merge = df_filtered_data.merge(
-                df_stat[['rivid', 'month', 'monthly_average', 'monthly_std_dev']], on=['rivid', 'month'], how='left'
-            )
-            df_merge['z_score'] = (
-                (df_merge['ds_grouped_avg'] - df_merge['monthly_average']) / df_merge['monthly_std_dev']
-            )
-            df_merge['probability'] = stats.norm.cdf(df_merge['z_score'])
-
-            # Map the exceedance_probability values to categories
-            categories = ["extremely dry", "dry", "normal range", "wet", "extremely wet"]
-            df_merge['category'] = np.select(
-                [df_merge['probability'] >= 0.87,
-                    (df_merge['probability'] >= 0.72) & (df_merge['probability'] < 0.87),
-                    (df_merge['probability'] >= 0.28) & (df_merge['probability'] < 0.72),
-                    (df_merge['probability'] >= 0.13) & (df_merge['probability'] < 0.28),
-                    df_merge['probability'] < 0.13],
-                categories, default="unknown"
-            )
-            df_merge['time'] = df_merge['time'].dt.strftime('%Y-%m-01')
-            df_merge = df_merge.drop(columns=['year', 'month']).rename(columns={'time': 'month'})
-            return df_merge[["rivid", "month", "category"]]
-
-        df_time = all_data['time'].to_dataframe()
-        df_time['year'] = df_time['time'].dt.year
-        years = np.sort(df_time['year'].unique())
-
-        for i in range(len(years)):
-            year = years[i]
-            print(f"processing year {year} ...")
-            df_hydrosos_data = get_hydrosos_data_sample(year, year + 1)
-            print(f"inserting year {year} ...")
-            add_new_river_hydrosos_bulk(df_hydrosos_data.to_dict(orient='records'))
-            print(f"year {year} is inserted!")
+        print("All river data is inserted!")
 
     def insert_default_country(self):
-        add_new_country("All Countries", True)
+        add_new_country(
+            name="All Countries",
+            region=app.get_custom_setting('region'),
+            is_default=True,
+            subbasins_data=None,
+            hydrostations_data=None
+        )
         print("Set 'All Countries' as default")
 
     def insert_all_data(self):
         self.insert_default_country()
-        self.insert_geometry_data()
+        self.insert_river_data()
         self.insert_hydrosos_data()
 
 
 vpu = 122
 data_dir = f"workspaces/app_workspace/hydrosos/streamflow/vpu_{vpu}/"
-initializer = HydroSOSRiverDataInitializer(data_dir, vpu)
+initializer = HydroSOSDataInitializer(data_dir, vpu, 1990, 2020)
 initializer.insert_all_data()

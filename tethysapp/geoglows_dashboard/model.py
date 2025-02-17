@@ -26,7 +26,7 @@ class HydroSOSCategory(enum.Enum):
     NORMAL_RANGE = 'normal range'
     WET = 'wet'
     EXTREMELY_WET = 'extremely wet'
-    
+
 
 class Country(Base):
     """
