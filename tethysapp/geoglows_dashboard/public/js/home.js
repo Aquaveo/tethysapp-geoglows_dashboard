@@ -488,7 +488,7 @@ let initMapCardBody = async function() {
     mapObj.on("zoomend", function() {
         let date = $yearMonthPicker.val();
         let newMinStreamOrder = getMinStreamOrder();
-        let isVPU = MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME] && mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]);
+        let isVPU = MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME] && mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) ? true : false;
         let country = $countrySelect.val();
         let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
         if (newMinStreamOrder != minStreamOrder) {
