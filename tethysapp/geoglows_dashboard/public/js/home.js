@@ -50,8 +50,8 @@ const SELECT_A_COUNTRY_OPTION_VALUE = "";
 $(async function() {
     initPlotCards();
     initMapCardHeader();
-    await initMapCardBody();
     initAdminSettings();
+    await initMapCardBody();
 })
 
 /************************************************************************
@@ -351,7 +351,7 @@ let addNileSubbasinLayer = function() {
 }
 
 let addMapLayers = async function() {
-    await updateHydroSOSStreamflowLayer($("#year-month-picker").val(), $countrySelect.val());
+    await updateHydroSOSStreamflowLayer($yearMonthPicker.val(), $countrySelect.val());
     $layerControl = L.control.layers(
         basemaps,
         {"Geoglows Streamflow": MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME], "HydroSOS Streamflow": MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]},
@@ -372,13 +372,13 @@ let addMapLayers = async function() {
             }
             layerGroup.push(layer);
         })
-        let environmentMap = L.layerGroup(layerGroup).addTo(mapObj);
+        let environmentMap = L.layerGroup(layerGroup);
         $layerControl.addBaseLayer(environmentMap, "ESRI Environment");
       })
       .catch(error => {
         console.error("Error loading Web Map:", error);
       });
-
+      basemaps["ESRI Grey"].addTo(mapObj);
     MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].addTo(mapObj);
     if (region == REGION_NILE_BASIN) {
         addNileSubbasinLayer();
@@ -438,6 +438,7 @@ let initMapCardBody = async function() {
             $('#year-month-picker-div').css('display', 'flex')
             hydroSOSLegend.addTo(mapObj);
             selectedStreamflowLayer = MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME];
+            updateHydroSOSStreamflowLayer($yearMonthPicker.val(), $countrySelect.val());
         } else if (e.layer == MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) {
             selectedCountryLayer.clearLayers();
             mapObj.fitBounds(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME].getBounds());
@@ -486,14 +487,10 @@ let initMapCardBody = async function() {
 
     // update the HydroSOS Streamflow layer every time zooming in/out
     mapObj.on("zoomend", function() {
-        let date = $yearMonthPicker.val();
         let newMinStreamOrder = getMinStreamOrder();
-        let isVPU = MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME] && mapObj.hasLayer(MAP_LAYERS[NILE_SUBBASIN_LAYER_NAME]) ? true : false;
-        let country = $countrySelect.val();
-        let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${country}`;
         if (newMinStreamOrder != minStreamOrder) {
             minStreamOrder = newMinStreamOrder;
-            MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME].setParams({viewparams: vparams});
+            updateHydroSOSStreamflowLayer($yearMonthPicker.val(), $countrySelect.val());
         }
     })
 
@@ -571,9 +568,14 @@ let getMinStreamOrder = function() {
 
 let minStreamOrder;
 let updateHydroSOSStreamflowLayer = async function(date, country) {
-    let isVPU = country == ALL_COUNTRIES_OPTION_VALUE ? 'True' : 'False';
-    let countryValue = isVPU === 'True' ? '' : country;
+    if (country == ALL_COUNTRIES_OPTION_VALUE || country == SELECT_A_COUNTRY_OPTION_VALUE) {
+        isVPU = true;
+    } else {
+        isVPU = false;
+    }
+    let countryValue = isVPU ? '' : country;
     let vparams = `selected_month:${date};min_stream_order:${getMinStreamOrder()};is_vpu:${isVPU};country:${countryValue}`;
+    console.log(vparams);
 
     if (!MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME]) {
         try {
@@ -1035,7 +1037,7 @@ let zoomInToCountry = function(country) {
 
     // update streamflow layers
     MAP_LAYERS[GEOGLOWS_STREAMFLOW_LAYER_NAME].setLayerDefs(country == ALL_COUNTRIES_OPTION_VALUE ? null : {0: `rivercountry = '${country}'`});
-    updateHydroSOSStreamflowLayer($("#year-month-picker").val(), country);
+    updateHydroSOSStreamflowLayer($yearMonthPicker.val(), country);
 
     // remove old layers
     removeLayerFromMapAndLayerControl(selectedCountry.subbasinsLayer);
