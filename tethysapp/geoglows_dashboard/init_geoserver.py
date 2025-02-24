@@ -86,7 +86,7 @@ try:
             },
             {
                 'name': 'country',
-                'default_value': 'Egypt',
+                'default_value': 'Costa Rica',
                 'regex_validator': "^.{0,100}$"
             }
         )
