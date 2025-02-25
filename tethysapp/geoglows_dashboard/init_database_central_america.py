@@ -25,11 +25,9 @@ class HydroSOSDataInitializer:
         df_river_country = df_river_country[df_river_country['RiverCountry'].isin(countries)]
         linkno_benchmark = set(df_river_country["LINKNO"])
         linkno = []
+        dir_path = 'workspaces/app_workspace/hydrosos/streamflow/routing-configs'
         for vpu in ["716", "614", "701"]:
-            linkno_raw = pd.read_parquet(
-                f"s3://rfs-v2/routing-configs/{vpu}/routing_parameters.parquet",
-                storage_options={"anon": True}
-            )["river_id"].to_numpy()
+            linkno_raw = pd.read_parquet(f"{dir_path}/vpu={vpu}/routing_parameters.parquet")["river_id"].to_numpy()
             linkno.extend([x for x in linkno_raw if x in linkno_benchmark])
 
         # Get flow data
@@ -73,7 +71,7 @@ class HydroSOSDataInitializer:
             results.append(river_df)
             if i != 0 and (i % 1000 == 0 or i == len(river_ids) - 1):
                 df = pd.concat(results, ignore_index=True)
-                add_new_river_hydrosos_bulk(df.to_dict(orient='records'))
+                # add_new_river_hydrosos_bulk(df.to_dict(orient='records'))
                 results = []
                 print(f'Hydrosos data {i} is inserted! (progress: {i / len(river_ids): .1%})')
 
