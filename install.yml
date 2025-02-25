@@ -23,6 +23,7 @@ requirements:
     - psycopg2
     - pyogrio
     - urllib3<2
+    - plotly<6
 
   pip:
 
