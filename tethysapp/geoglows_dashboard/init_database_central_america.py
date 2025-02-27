@@ -21,7 +21,10 @@ class HydroSOSDataInitializer:
         os.environ["AWS_NO_SIGN_REQUEST"] = "YES"
         # Get link numbers
         countries = ["Belize", "Panama", "Costa Rica", "El Salvador", "Guatemala", "Honduras", "Nicaragua"]
-        df_river_country = pd.read_parquet("s3://geoglows-v2/tables/v2-countries-table.parquet")
+        df_river_country = pd.read_parquet(
+            "s3://geoglows-v2/tables/v2-countries-table.parquet",
+            storage_options={'anon': True}
+        )
         df_river_country = df_river_country[df_river_country['RiverCountry'].isin(countries)]
         linkno_benchmark = set(df_river_country["LINKNO"])
         linkno = []
@@ -71,7 +74,7 @@ class HydroSOSDataInitializer:
             results.append(river_df)
             if i != 0 and (i % 1000 == 0 or i == len(river_ids) - 1):
                 df = pd.concat(results, ignore_index=True)
-                # add_new_river_hydrosos_bulk(df.to_dict(orient='records'))
+                add_new_river_hydrosos_bulk(df.to_dict(orient='records'))
                 results = []
                 print(f'Hydrosos data {i} is inserted! (progress: {i / len(river_ids): .1%})')
 
