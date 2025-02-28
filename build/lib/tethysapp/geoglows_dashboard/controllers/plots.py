@@ -12,7 +12,7 @@ from ..analysis.streamflow.ssi_plots import plot_ssi_each_month_since_year, plot
 
 @controller(url='get_geoserver_endpoint')
 def get_geoserver_endpoint(request):
-    endpoint = app.get_spatial_dataset_service('primary_geoserver', as_endpoint=True)
+    endpoint = app.get_spatial_dataset_service('primary_geoserver', as_public_endpoint=True)
     return JsonResponse(dict(endpoint=endpoint.split('/rest')[0]))
 
 
