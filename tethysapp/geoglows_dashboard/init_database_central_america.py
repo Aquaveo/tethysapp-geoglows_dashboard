@@ -28,9 +28,11 @@ class HydroSOSDataInitializer:
         df_river_country = df_river_country[df_river_country['RiverCountry'].isin(countries)]
         linkno_benchmark = set(df_river_country["LINKNO"])
         linkno = []
-        dir_path = 'workspaces/app_workspace/hydrosos/streamflow/routing-configs'
         for vpu in ["716", "614", "701"]:
-            linkno_raw = pd.read_parquet(f"{dir_path}/vpu={vpu}/routing_parameters.parquet")["river_id"].to_numpy()
+            linkno_raw = pd.read_parquet(
+                f"s3://rfs-v2/routing-configs/vpu={vpu}/routing_parameters.parquet",
+                storage_options={"anon": True}
+            )["river_id"].to_numpy()
             linkno.extend([x for x in linkno_raw if x in linkno_benchmark])
 
         # Get flow data
@@ -105,8 +107,8 @@ class HydroSOSDataInitializer:
         print("Set 'All Countries' as default")
 
     def insert_all_data(self):
-        self.insert_default_country()
-        self.insert_river_data()
+        # self.insert_default_country()
+        # self.insert_river_data()
         self.insert_hydrosos_data()
 
 
