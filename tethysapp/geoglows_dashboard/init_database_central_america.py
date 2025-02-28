@@ -21,13 +21,16 @@ class HydroSOSDataInitializer:
         os.environ["AWS_NO_SIGN_REQUEST"] = "YES"
         # Get link numbers
         countries = ["Belize", "Panama", "Costa Rica", "El Salvador", "Guatemala", "Honduras", "Nicaragua"]
-        df_river_country = pd.read_parquet("s3://geoglows-v2/tables/v2-countries-table.parquet")
+        df_river_country = pd.read_parquet(
+            "s3://geoglows-v2/tables/v2-countries-table.parquet",
+            storage_options={'anon': True}
+        )
         df_river_country = df_river_country[df_river_country['RiverCountry'].isin(countries)]
         linkno_benchmark = set(df_river_country["LINKNO"])
         linkno = []
         for vpu in ["716", "614", "701"]:
             linkno_raw = pd.read_parquet(
-                f"s3://rfs-v2/routing-configs/{vpu}/routing_parameters.parquet",
+                f"s3://rfs-v2/routing-configs/vpu={vpu}/routing_parameters.parquet",
                 storage_options={"anon": True}
             )["river_id"].to_numpy()
             linkno.extend([x for x in linkno_raw if x in linkno_benchmark])
