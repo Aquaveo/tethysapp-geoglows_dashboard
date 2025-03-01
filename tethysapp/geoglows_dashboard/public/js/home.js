@@ -488,7 +488,7 @@ let initMapCardBody = async function() {
 
     // update the HydroSOS Streamflow layer every time zooming in/out
     mapObj.on("zoomend", function() {
-        if (mapObj.hasLayer(MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME])) {
+        if (MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME] && mapObj.hasLayer(MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME])) {
             let newMinStreamOrder = getMinStreamOrder();
             if (newMinStreamOrder != minStreamOrder) {
                 minStreamOrder = newMinStreamOrder;
