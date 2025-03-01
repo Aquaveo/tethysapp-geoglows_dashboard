@@ -287,19 +287,20 @@ let addHydroStationLayer = function(layerName, dataJSON) {
         });
     };
 
+    let style = {
+        radius: 6,
+        fillColor: COLOR_BLUE,
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    };
+
     return addGeoJSONLayerFomFile(
         layerName=layerName,
         filePath=dataJSON,
         showLayer=true,
         options={
-            style: {
-                radius: 6,
-                fillColor: COLOR_BLUE,
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
-            },
             onEachFeature: onEachFeature,
             pointToLayer: function(feature, latlng) {
                 return L.circleMarker(latlng, style);
@@ -487,7 +488,7 @@ let initMapCardBody = async function() {
 
     // update the HydroSOS Streamflow layer every time zooming in/out
     mapObj.on("zoomend", function() {
-        if (mapObj.hasLayer(MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME])) {
+        if (MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME] && mapObj.hasLayer(MAP_LAYERS[HYDROSOS_STREAMFLOW_LAYER_NAME])) {
             let newMinStreamOrder = getMinStreamOrder();
             if (newMinStreamOrder != minStreamOrder) {
                 minStreamOrder = newMinStreamOrder;
