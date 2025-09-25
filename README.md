@@ -1,5 +1,7 @@
 # SERVIR EA - Geoglows Dashboard
 
+<img src="./tethysapp/geoglows_dashboard/public/images/app.png" alt="App Screenshot" style="zoom:50%;" />
+
 ## Run it locally
 
 ### Install the app
